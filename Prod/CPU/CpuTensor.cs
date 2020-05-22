@@ -42,4 +42,61 @@ namespace SharpNet.CPU
         public CpuTensor(int[] shape, T[] data = null) : this(shape, data, typeof(T).IsValueType ?Marshal.SizeOf(typeof(T)) : IntPtr.Size)
         {
         }
-        private CpuTensor(int[] shape, CpuTensor<T> m
+        private CpuTensor(int[] shape, CpuTensor<T> memoryOwner, int startIndex) : base(shape, memoryOwner.TypeSize, false)
+        {
+            Content = memoryOwner.Content.Slice(startIndex, Utils.Product(shape));
+            CapacityInBytes = (ulong)(Content.Length * TypeSize);
+            _ptrToOwnerPinnedMemory = memoryOwner.Pointer + TypeSize * startIndex;
+        }
+        public static CpuTensor<T> New(T[] content, int columns)
+        {
+            if (content == null || content.Length == 0)
+            {
+                return null;
+            }
+            Debug.Assert(content.Length % columns == 0);
+            int rows = content.Length / columns;
+            return new CpuTensor<T>(new[] { rows, columns }, content);
+        }
+        #endregion
+
+        /// <summary>
+        /// pointer to (pinned) host memory (in CPU)
+        /// </summary>
+        public override IntPtr Pointer
+        {
+            get
+            {
+                if (!IsOwnerOfMemory)
+                {
+                    //the memory owner has its memory already pinned
+                    Debug.Assert(_ptrToOwnerPinnedMemory != IntPtr.Zero);
+                    return _ptrToOwnerPinnedMemory;
+                }
+                Debug.Assert(_ptrToOwnerPinnedMemory == IntPtr.Zero);
+                if (_hostPinnedMemory == null)
+                {
+                    _hostPinnedMemory = new HostPinnedMemory<T>(Content);
+                }
+                return _hostPinnedMemory.Pointer;
+            }
+        }
+
+        /// <summary>
+        /// true if the tensor memory is currently pinned
+        /// </summary>
+        private bool HasPinnedMemory => !IsOwnerOfMemory || _hostPinnedMemory != null;
+
+        public override void WordEmbeddingForwardPropagation(Tensor x, Tensor wordEmbedding, int xIndexInLastDimensionToUse, int yIndexInLastDimensionToUse, int copyCountBeforeIndex, int copyCountAfterIndex)
+        {
+            var y = this;
+            Debug.Assert(wordEmbedding.Shape.Length == 2);
+            Debug.Assert(x.Shape[0] == y.Shape[0]); //same batchSize
+            Debug.Assert(x.Shape[1] == y.Shape[1]); //same timeSteps
+            Debug.Assert(x.Shape.Length == 3);
+            Debug.Assert(y.Shape.Length == 3);
+
+            Debug.Assert(xIndexInLastDimensionToUse>=0);
+            Debug.Assert(yIndexInLastDimensionToUse>=0);
+            var timeSteps = x.Shape[1];
+            var embeddingDim = wordEmbedding
