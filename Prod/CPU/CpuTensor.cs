@@ -99,4 +99,46 @@ namespace SharpNet.CPU
             Debug.Assert(xIndexInLastDimensionToUse>=0);
             Debug.Assert(yIndexInLastDimensionToUse>=0);
             var timeSteps = x.Shape[1];
-            var embeddingDim = wordEmbedding
+            var embeddingDim = wordEmbedding.Shape[1];
+
+            void ProcessBatch(int batchIndex)
+            {
+                var xSpan = x.AsReadonlyFloatCpuSpan;
+                var ySpan = y.AsFloatCpuSpan;
+                var wordEmbeddingSpan = wordEmbedding.AsReadonlyFloatCpuSpan;
+
+                for (int timeStep = 0; timeStep < timeSteps; ++timeStep)
+                {
+                    int xTimeStepIndex = x.Idx(batchIndex, timeStep, xIndexInLastDimensionToUse);
+                    int yTimeStepIndex = y.Idx(batchIndex, timeStep, yIndexInLastDimensionToUse);
+
+
+                    //for the current timeStep, we copy the elements from 'x' to 'y' before 'indexInLastDimensionToUse'
+                    //int xElementsBeforeEmbeddingIndex = indexInLastDimensionToUse;
+                    if (copyCountBeforeIndex > 0)
+                    {
+                        //we copy 'xElementsBeforeEmbeddingIndex' elements before index 'indexInLastDimensionToUse'
+                        xSpan.Slice(xTimeStepIndex- copyCountBeforeIndex, copyCountBeforeIndex).CopyTo(ySpan.Slice(yTimeStepIndex- copyCountBeforeIndex, copyCountBeforeIndex));
+                    }
+
+                    int wordIndex = (int)(xSpan[xTimeStepIndex] + 0.1);
+                    wordEmbeddingSpan.Slice(wordIndex*embeddingDim, embeddingDim).CopyTo(ySpan.Slice(yTimeStepIndex, embeddingDim));
+
+                    //for the current timeStep, we copy the elements from 'x' to 'y' after 'indexInLastDimensionToUse'
+                    //int xElementsAfterEmbeddingIndex = inputSize - indexInLastDimensionToUse - 1;
+                    if (copyCountAfterIndex > 0)
+                    {
+                        //we copy the 'xElementsAfterEmbeddingIndex' elements after index 'indexInLastDimensionToUse'
+                        xSpan.Slice(xTimeStepIndex+ 1, copyCountAfterIndex).CopyTo(ySpan.Slice(yTimeStepIndex+ embeddingDim, copyCountAfterIndex));
+                    }
+                }
+            }
+            Parallel.For(0, x.Shape[0], ProcessBatch);
+        }
+
+        public override void WordEmbeddingBackwardPropagation(/*in*/ Tensor x, /*out*/ Tensor dx, /*in*/ Tensor dy, int dxIndexInLastDimensionToUse, int dyIndexInLastDimensionToUse, int copyCountBeforeIndex, int copyCountAfterIndex)
+        {
+            var dW = this;
+
+            Debug.Assert(dW.Shape.Length == 2);
+            Debug.Assert(x.Shape.Len
