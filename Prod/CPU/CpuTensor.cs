@@ -141,4 +141,49 @@ namespace SharpNet.CPU
             var dW = this;
 
             Debug.Assert(dW.Shape.Length == 2);
-            Debug.Assert(x.Shape.Len
+            Debug.Assert(x.Shape.Length == 3);
+            Debug.Assert(dy.Shape.Length == 3);
+            Debug.Assert(x.Shape[0] == dy.Shape[0]); //same batchSize
+            Debug.Assert(x.Shape[1] == dy.Shape[1]); //same timeSteps
+            Debug.Assert(dxIndexInLastDimensionToUse >= 0);
+            Debug.Assert(dyIndexInLastDimensionToUse >= 0);
+
+            var xCpu = (CpuTensor<float>)x;
+            var dyCpu = (CpuTensor<float>)dy;
+
+            dW.ZeroMemory();
+            var batchSize = dy.Shape[0];
+            var timeSteps = x.Shape[1];
+            var embeddingDim = dW.Shape[1];
+
+            var xSpan = x.AsReadonlyFloatCpuSpan;
+            var dxSpan = dx.AsFloatCpuSpan;
+            var dWSpan = dW.AsFloatCpuSpan;
+            var dySpan = dy.AsReadonlyFloatCpuSpan;
+
+            for (int batchIndex = 0; batchIndex < batchSize; ++batchIndex)
+            {
+                for (int timeStep = 0; timeStep < timeSteps; ++timeStep)
+                {
+                    //we initialize 'dw' for the current batchIndex & timeStep
+                    int wordIndex = (int)(xSpan[xCpu.Idx(batchIndex, timeStep, dxIndexInLastDimensionToUse)] + 0.1);
+                    int indexInDw = dW.Idx(wordIndex, 0);
+                    int indexIndY = dyCpu.Idx(batchIndex, timeStep, dyIndexInLastDimensionToUse);
+                    for (int embeddingId = 0; embeddingId < embeddingDim; ++embeddingId)
+                    {
+                        dWSpan[indexInDw] += dySpan[indexIndY];
+                        ++indexInDw;
+                        ++indexIndY;
+                    }
+
+
+                    int dyTimeStepIndex = dy.Idx(batchIndex, timeStep, dyIndexInLastDimensionToUse);
+                    int dxTimeStepIndex = dx.Idx(batchIndex, timeStep, dxIndexInLastDimensionToUse);
+
+                    //we initialize 'dx' for the current batchIndex & timeStep
+                    //for the current timeStep, we copy the elements from 'dy' to 'dx' before 'indexInLastDimensionToUse'
+                    //int dyElementsBeforeEmbeddingIndex = prevXIndexInLastDimensionToUse==-1?xIndexInLastDimensionToUse:(xIndexInLastDimensionToUse-prevXIndexInLastDimensionToUse-1);
+                    if (copyCountBeforeIndex > 0)
+                    {
+                        //we copy 'xElementsBeforeEmbeddingIndex' elements before index 'xIndexInLastDimensionToUse'
+                        dySpan.Slice(dyTimeStepIndex- copyCountBeforeIndex, copyCountBeforeIndex).CopyTo(dxSpan.S
