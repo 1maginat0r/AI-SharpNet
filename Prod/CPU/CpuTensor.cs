@@ -186,4 +186,62 @@ namespace SharpNet.CPU
                     if (copyCountBeforeIndex > 0)
                     {
                         //we copy 'xElementsBeforeEmbeddingIndex' elements before index 'xIndexInLastDimensionToUse'
-                        dySpan.Slice(dyTimeStepIndex- copyCountBeforeIndex, copyCountBeforeIndex).CopyTo(dxSpan.S
+                        dySpan.Slice(dyTimeStepIndex- copyCountBeforeIndex, copyCountBeforeIndex).CopyTo(dxSpan.Slice(dxTimeStepIndex- copyCountBeforeIndex, copyCountBeforeIndex));
+                    }
+                    dxSpan[dxTimeStepIndex] = 0;
+                    //for the current timeStep, we copy the elements from 'dy' to 'dx' after 'xIndexInLastDimensionToUse'
+                    //int dyElementsAfterEmbeddingIndex = nextXIndexInLastDimensionToUse==-1 ? (inputSize - xIndexInLastDimensionToUse - 1):(nextXIndexInLastDimensionToUse-xIndexInLastDimensionToUse-1);
+                    if (copyCountAfterIndex > 0)
+                    {
+                        //we copy the 'xElementsAfterEmbeddingIndex' elements after index 'indexInLastDimensionToUse'
+                        dySpan.Slice(dyTimeStepIndex + embeddingDim, copyCountAfterIndex).CopyTo(dxSpan.Slice(dxTimeStepIndex + 1, copyCountAfterIndex));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// resize the current Cpu tensor to a different shape (both bigger or smaller)
+        /// </summary>
+        /// <param name="newShape"></param>
+        public override void ReshapeInPlace(params int[] newShape)
+        {
+            newShape = FillMinusOneIfAny(Shape, newShape);
+            if (SameShape(newShape))
+            {
+                return;
+            }
+            else if (HasEnoughCapacityForTensor(newShape))
+            {
+                //smaller shape
+                Shape = newShape;
+            }
+            else
+            {
+                //bigger shape
+                if (!IsOwnerOfMemory)
+                {
+                    throw new ArgumentException("must be memory owner to increase memory associated with the 'this' Tensor");
+                }
+                _hostPinnedMemory?.Dispose();
+                _hostPinnedMemory = null;
+                Content = new T[Utils.Product(newShape)];
+                CapacityInBytes = (ulong)(Content.Length * TypeSize);
+                Shape = newShape;
+            }
+            RecomputeMultDim();
+        }
+        public override Tensor Reshape(params int[] newShape)
+        {
+            AssertIsNotDisposed();
+            newShape = FillMinusOneIfAny(Shape, newShape);
+            if (SameShape(newShape))
+            {
+                return this;
+            }
+            if (ReallyNeededMemoryInBytesForShape(newShape) <= CapacityInBytes)
+            {
+                return new CpuTensor<T>(newShape, this, 0);
+            }
+            //bigger shape : we do not have enough space to store it
+            t
