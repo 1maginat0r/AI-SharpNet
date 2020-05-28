@@ -244,4 +244,68 @@ namespace SharpNet.CPU
                 return new CpuTensor<T>(newShape, this, 0);
             }
             //bigger shape : we do not have enough space to store it
-            t
+            throw new ArgumentException("CapacityInBytes: " + CapacityInBytes + " but need memory  " + ReallyNeededMemoryInBytesForShape(newShape) + " for " + this);
+        }
+
+
+        public T this[int i]
+        {
+            get => ReadonlyContent[i];
+            set => SpanContent[i] = value;
+        }
+
+        public override void Switch_First_2_axis(Tensor target)
+        {
+            Debug.Assert(target.Count == Count);
+            Debug.Assert(Shape.Length >= 2);
+            int aLength = Shape[0];
+            int bLength = Shape[1];
+            int cLength = MultDim1;
+            int multDim0 = bLength * cLength;
+            var srcContent = AsReadonlyFloatCpuSpan;
+            var targetContent = target.AsFloatCpuSpan;
+
+            for (int idx_src = 0; idx_src < Count; ++idx_src)
+            {
+                int a_src = idx_src / multDim0;
+                int tmp = idx_src % multDim0;
+                int b_src = tmp / cLength;
+                int c_src = tmp % cLength;
+                int idx_target = b_src * aLength * cLength + a_src * cLength + c_src;
+                targetContent[idx_target] = srcContent[idx_src];
+            }
+
+            var targetShape = (int[]) Shape.Clone();
+            targetShape[0] = bLength;
+            targetShape[1] = aLength;
+            target.ReshapeInPlace(targetShape);
+        }
+
+        public override void SwitchSecondAndThirdDimension(Tensor target)
+        {
+            Debug.Assert(Shape.Length == 3 || (Shape.Length==4&&Shape[3] == 1));
+            var srcContent = AsReadonlyFloatCpuSpan;
+            var targetContent = target.AsFloatCpuSpan;
+            for (int n = 0; n < Shape[0]; ++n)
+            {
+                for (int c = 0; c < Shape[1]; ++c)
+                {
+                    for (int h = 0; h < Shape[2]; ++h)
+                    {
+                        targetContent[target.Idx(n, h, c)] = srcContent[Idx(n, c, h)];
+                    }
+                }
+            }
+        }
+
+        public override void TransposeSecondAndThirdDimension(Tensor target)
+        {
+            Debug.Assert(Shape.Length >= 3);
+            var targetShape = (int[])Shape.Clone();
+            (targetShape[1], targetShape[2]) = (targetShape[2], targetShape[1]);
+            target.ReshapeInPlace(targetShape);
+            var src = Reshape(Shape[0], Shape[1], Shape[2], -1);
+            var srcSpan = src.AsFloatCpuSpan;
+            var targetSpan = target.AsFloatCpuSpan;
+
+            in
