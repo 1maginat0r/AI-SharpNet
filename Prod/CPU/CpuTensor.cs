@@ -308,4 +308,65 @@ namespace SharpNet.CPU
             var srcSpan = src.AsFloatCpuSpan;
             var targetSpan = target.AsFloatCpuSpan;
 
-            in
+            int A = Shape[0];
+            int B = Shape[1];
+            int C = Shape[2];
+            int D = Count/(A*B*C);
+            for (int a=0;a<A;++a)
+            for(int b=0;b<B;++b)
+            for(int c=0;c<C;++c)
+            for (int d = 0; d < D; ++d)
+            {
+                targetSpan[target.Idx(a, c, b, d)] = srcSpan[src.Idx(a, b, c, d)];
+            }
+        }
+        
+
+        public override Tensor ChangeAxis(int[] targetAxisToSrcAxis)
+        {
+            Debug.Assert(targetAxisToSrcAxis.Length == Dimension);
+            Debug.Assert(targetAxisToSrcAxis.Min() == 0);
+            Debug.Assert(targetAxisToSrcAxis.Max() == Dimension-1);
+
+            var srcAxisToTargetAxis = new int[Dimension];
+            for (int targetAxis = 0; targetAxis < Dimension; ++targetAxis)
+            {
+                srcAxisToTargetAxis[targetAxisToSrcAxis[targetAxis]] = targetAxis;
+            }
+
+            var targetShape = new int[Dimension];
+            for (int targetAxis = 0; targetAxis < Dimension; ++targetAxis)
+            {
+                targetShape[targetAxis] = Shape[targetAxisToSrcAxis[targetAxis]];
+            }
+
+            var result = new CpuTensor<T>(targetShape);
+
+            var idxInSrcAxis = new int[Dimension];
+            var srcMultDim = new int[Dimension];
+            var idxInTargetAxis =  new int[Dimension];
+            var targetMultDim = new int[Dimension];
+            srcMultDim[^1] = 1;
+            targetMultDim[^1] = 1;
+            for (int dim = Dimension - 2; dim >= 0; --dim)
+            {
+                srcMultDim[dim] = Shape[dim + 1] * srcMultDim[dim + 1];
+                targetMultDim[dim] = targetShape[dim + 1] * targetMultDim[dim + 1];
+            }
+
+            void ProcessDimension(int axisSrc)
+            {
+                for (int idxInAxis = 0; idxInAxis < Shape[axisSrc]; ++idxInAxis)
+                {
+                    idxInTargetAxis[srcAxisToTargetAxis[axisSrc]] = idxInAxis;
+                    idxInSrcAxis[axisSrc] = idxInAxis;
+                    if (axisSrc == Dimension - 1)
+                    {
+                        int targetIdx = 0;
+                        int srcIdx = 0;
+                        for (int axis = 0; axis < Dimension; ++axis)
+                        {
+                            srcIdx += idxInSrcAxis[axis] * srcMultDim[axis];
+                            targetIdx += idxInTargetAxis[srcAxisToTargetAxis[axis]] * targetMultDim[srcAxisToTargetAxis[axis]];
+                        }
+    
