@@ -369,4 +369,76 @@ namespace SharpNet.CPU
                             srcIdx += idxInSrcAxis[axis] * srcMultDim[axis];
                             targetIdx += idxInTargetAxis[srcAxisToTargetAxis[axis]] * targetMultDim[srcAxisToTargetAxis[axis]];
                         }
-    
+                        result[targetIdx] = this[srcIdx];
+                    }
+                    else
+                    {
+                        ProcessDimension(axisSrc + 1);
+                    }
+                }
+            }
+
+            ProcessDimension(0);
+            return result;
+        }
+
+        public override bool IsOwnerOfMemory => _ptrToOwnerPinnedMemory == IntPtr.Zero;
+        public ReadOnlySpan<T> ReadonlyContent => Content.Slice(0, Count).Span;
+        public Span<T> SpanContent => Content.Slice(0, Count).Span;
+        public T Get(int n, int c)
+        {
+            return this[Idx(n, c)];
+        }
+        public T Get(int n, int c, int h)
+        {
+            Debug.Assert(Dimension == 3);
+            return this[Idx(n, c, h)];
+        }
+        public T Get(int n, int c, int h, int w)
+        {
+            Debug.Assert(Dimension == 4);
+            return this[Idx(n, c, h, w)];
+        }
+        public void Set(int n, int c, T t)
+        {
+            Debug.Assert(Dimension == 2);
+            this[Idx(n, c)] = t;
+        }
+        // ReSharper disable once MemberCanBeProtected.Global
+        public void Set(int n, int c, int h, T t)
+        {
+            Debug.Assert(Dimension == 3);
+            this[Idx(n, c, h)] = t;
+        }
+        public void Set(int n, int c, int h, int w, T t)
+        {
+            Debug.Assert(Dimension == 4);
+            this[Idx(n, c, h, w)] = t;
+        }
+        public void Map(Func<T, T> func, CpuTensor<T> result)
+        {
+            Debug.Assert(Count == result.Count);
+            for (int i = 0; i < Count; ++i)
+            {
+                result[i] = func(this[i]);
+            }
+        }
+
+
+        /// <summary>
+        /// Transform the 'this' tensor into another tensor by transforming:
+        ///   each element 'val' of the  'this' tensor at position (m,c,h,w)
+        /// into
+        ///   the value returned by the method func(m,c,val)
+        /// </summary>
+        /// <typeparam name="TY"></typeparam>
+        /// <param name="func"></param>
+        /// <returns></returns>
+        public CpuTensor<TY> Select<TY>(Func<int,int, T, TY> func) where TY : struct
+        {
+            var result = new CpuTensor<TY>(Shape);
+            Debug.Assert(SameShape(result));
+            var content = ReadonlyContent;
+            for (int m = 0; m < Shape[0]; ++m)
+            {
+                for (int c = 0; c < Shape[1]; +
