@@ -441,4 +441,57 @@ namespace SharpNet.CPU
             var content = ReadonlyContent;
             for (int m = 0; m < Shape[0]; ++m)
             {
-                for (int c = 0; c < Shape[1]; +
+                for (int c = 0; c < Shape[1]; ++c)
+                {
+                    int startIdx = Idx(m, c);
+                    for (int idx = startIdx; idx < (startIdx + MultDim1); ++idx)
+                    {
+                        result[idx] = func(m, c, content[idx]);
+                    }
+                }
+            }
+            return result;
+        }
+
+        public CpuTensor<TY> Select<TY>(Func<T, TY> func) where TY : struct
+        {
+            var result = new CpuTensor<TY>(Shape);
+            Debug.Assert(SameShape(result));
+            var content = ReadonlyContent;
+            var resultSpan = result.SpanContent;
+            for (int i = 0; i < Count; ++i)
+            {
+                resultSpan[i] = func(content[i]);
+            }
+            return result;
+        }
+
+        #region Tensor implementation
+        public override void UpdateSGDOptimizer(double learningRate, double momentum, bool usenesterov, Tensor dW, Tensor velocity)
+        {
+            var W = this;
+            var wContent = W.AsFloatCpuSpan;
+            var dWContent = dW.AsFloatCpuSpan;
+            var velocityContent = velocity.AsFloatCpuSpan;
+            var learningRateFloat = (float) learningRate;
+            var momentumFloat = (float)momentum;
+            for (int i = 0; i < W.Count; ++i)
+            {
+                velocityContent[i] = (momentumFloat * velocityContent[i]) - (dWContent[i] * learningRateFloat);
+                if (usenesterov)
+                {
+                    wContent[i] += momentumFloat * velocityContent[i] - (dWContent[i] * learningRateFloat);
+                }
+                else
+                {
+                    wContent[i] += velocityContent[i];
+                }
+            }
+        }
+        public override void BatchNormalization(Tensor y, Tensor scale, Tensor bias, double exponentialAverageSmoothingFactor, Tensor runningInputMean, Tensor runningInputVariance, cudnnBatchNormMode_t mode, double epsilon, Tensor meanBuffer, Tensor invertOfUnbiasedVolatilityBuffer, bool isTraining)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor>{x,y,scale,bias,runningInputMean,runningInputVariance,meanBuffer,invertOfUnbiasedVolatilityBuffer}));
+            Debug.Assert(x.SameShape(y));
+            Debug.Assert(scale.SameShape(bias, runningInputMean, runningInputVariance, meanBuffer, invertOfUnbiasedVolatilityBuffer));
+            bool is1
