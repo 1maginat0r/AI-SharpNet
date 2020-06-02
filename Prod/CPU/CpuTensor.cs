@@ -494,4 +494,50 @@ namespace SharpNet.CPU
             Debug.Assert(AreCompatible(new List<Tensor>{x,y,scale,bias,runningInputMean,runningInputVariance,meanBuffer,invertOfUnbiasedVolatilityBuffer}));
             Debug.Assert(x.SameShape(y));
             Debug.Assert(scale.SameShape(bias, runningInputMean, runningInputVariance, meanBuffer, invertOfUnbiasedVolatilityBuffer));
-            bool is1
+            bool is1C11Shape = bias.Count == bias.Shape[1];
+            var meanDivider = Count / bias.Count;  // = batchSize if (1,C,H,W) , and = batchSize*H*W if (1,C,1,1)
+
+            
+            var batchSize = x.Shape[0];
+
+            var xContent = x.AsFloatCpuSpan;
+            var yContent = y.AsFloatCpuSpan;
+            var scaleContent = scale.AsFloatCpuSpan;
+            var biasContent = bias.AsFloatCpuSpan;
+
+            // 'meanBuffer' & 'invertOfUnbiasedVolatilityBuffer' will only be used when isTraining = true
+            var meanContent = isTraining?meanBuffer.AsFloatCpuSpan:null;
+            var invertOfUnbiasedVolatility = isTraining ? invertOfUnbiasedVolatilityBuffer.AsFloatCpuSpan:null;
+
+            var runningInputMeanContent = runningInputMean.AsFloatCpuSpan;
+            var runningInputVarianceContent = runningInputVariance.AsFloatCpuSpan;
+
+
+            if (isTraining)
+            {
+                //'invertOfUnbiasedVolatilityBuffer' will temporary store the variance of the input 
+                Compute_Column_Mean_Variance(meanBuffer, invertOfUnbiasedVolatilityBuffer);
+                var variance = invertOfUnbiasedVolatilityBuffer.AsFloatCpuSpan;
+
+                //we need to update 'runningInputMean' and 'runningInputVariance'
+                for (int j = 0; j < runningInputVariance.Count; ++j)
+                {
+                    runningInputMeanContent[j] = (float) (meanContent[j] * exponentialAverageSmoothingFactor + runningInputMeanContent[j] * (1 - exponentialAverageSmoothingFactor));
+                    runningInputVarianceContent[j] = (float)(variance[j] * exponentialAverageSmoothingFactor + runningInputVarianceContent[j] * (1 - exponentialAverageSmoothingFactor));
+                }
+
+                //we update 'invertOfUnbiasedVolatilityBuffer' so that it stores the invert of the unbiased volatility of the input
+                for (int j = 0; j < invertOfUnbiasedVolatilityBuffer.Count; ++j)
+                {
+                    invertOfUnbiasedVolatility[j] = (float)(1.0 / Math.Sqrt(((meanDivider - 1) * variance[j]) / meanDivider + epsilon));
+                }
+            }
+
+            int idx = 0;
+            for (int n = 0; n < batchSize; ++n)
+            {
+                for (int j = 0; j < MultDim0; ++j)
+                {
+                    int scaleIndex = is1C11Shape ? (j / MultDim1) : j;
+                    var xTarget = isTraining
+                  
