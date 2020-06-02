@@ -540,4 +540,50 @@ namespace SharpNet.CPU
                 {
                     int scaleIndex = is1C11Shape ? (j / MultDim1) : j;
                     var xTarget = isTraining
-                  
+                        ? ((xContent[idx] - meanContent[scaleIndex]) * invertOfUnbiasedVolatility[scaleIndex])
+                        : (float)((xContent[idx] - runningInputMeanContent[scaleIndex]) / Math.Sqrt(runningInputVarianceContent[scaleIndex] + epsilon));
+                    yContent[idx++] = scaleContent[scaleIndex] * xTarget + biasContent[scaleIndex];
+                }
+            }
+        }
+        public override void BatchNormalizationBackward(Tensor dy, Tensor dx, Tensor scale, Tensor scaleGradient, Tensor biasGradient, cudnnBatchNormMode_t mode, double epsilon, Tensor meanBuffer, Tensor invertOfUnbiasedVolatilityBuffer)
+        {
+            var x = this;
+            var batchSize = x.Shape[0];
+            Debug.Assert(AreCompatible(new List<Tensor> {x, dy, dx, scale, scaleGradient, biasGradient, meanBuffer, invertOfUnbiasedVolatilityBuffer}));
+            Debug.Assert(x.SameShape(dy, dx));
+            Debug.Assert(scale.SameShape(scaleGradient, biasGradient, meanBuffer, invertOfUnbiasedVolatilityBuffer));
+            bool is1C11Shape = scale.Count == scale.Shape[1];
+            var meanDivider = Count / scale.Count;  // = batchSize if (1,C,H,W) , and = batchSize*H*W if (1,C,1,1)
+            scaleGradient.ZeroMemory();
+            dx?.ZeroMemory();
+
+            //we compute resultBnBiasDiff
+            dy.AsFloatCpu.ComputeSumByColumn(biasGradient);
+            //we compute resultBnScaleDiff
+            var xContent = x.AsFloatCpuSpan;
+            var dyContent = dy.AsFloatCpuSpan;
+            Span<float> dxContent = null;
+            if (dx != null)
+            {
+                dxContent = dx.AsFloatCpuSpan;
+            }
+
+            var biasGradientContent = biasGradient.AsFloatCpuSpan;
+            var scaleGradientContent = scaleGradient.AsFloatCpuSpan;
+            var scaleContent = scale.AsFloatCpuSpan;
+            var meanBufferContent = meanBuffer.AsFloatCpuSpan;
+            var invertOfUnbiasedVolatility = invertOfUnbiasedVolatilityBuffer.AsFloatCpuSpan;
+            for (int j = 0; j < MultDim0; ++j)
+            {
+                int meanIndex = is1C11Shape ? (j / MultDim1) : j;
+                double result = 0.0;
+                for (int n = 0; n < batchSize; ++n)
+                {
+
+                    int idx = n * MultDim0 + j;
+                    result += dyContent[idx] * (xContent[idx] - meanBufferContent[meanIndex]);
+                }
+                scaleGradientContent[meanIndex] += (float) (result * invertOfUnbiasedVolatility[meanIndex]);
+            }
+            /
