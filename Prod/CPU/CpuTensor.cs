@@ -638,4 +638,64 @@ namespace SharpNet.CPU
         public override void StandardizeRowsInPlaceBroadcastGammasBetas(Tensor row_mean, Tensor row_variance, float epsilon, Tensor col_gammas, Tensor col_betas)
         {
             var x = this;
-            Debug.Assert(AreCompatible(new Lis
+            Debug.Assert(AreCompatible(new List<Tensor> { this, row_mean, row_variance }));
+            Debug.Assert(row_mean.SameShape(row_variance));
+            //we'll standardize each row
+            int rows = row_mean.Count;
+            if (x.Count % rows != 0)
+            {
+                throw new ArgumentException("The number of elements in the tensor must be a multiple of the number of rows");
+            }
+            int cols = x.Count / rows;
+            void ProcessRow(int row)
+            {
+                var xSpan = x.AsFloatCpuSpan;
+                var row_mean_value = row_mean.AsFloatCpuSpan[row];
+                var row_variance_value = row_variance.AsFloatCpuSpan[row];
+                var col_gammas_span = col_gammas.AsReadonlyFloatCpuSpan;
+                var col_betas_span = col_betas.AsReadonlyFloatCpuSpan;
+
+                int startIndex = row * cols;
+                int endIndex = startIndex + cols - 1;
+                int col = 0;
+                for (int i = startIndex; i <= endIndex; ++i)
+                {
+                    xSpan[i] = (xSpan[i] - row_mean_value) / MathF.Sqrt(row_variance_value + epsilon);
+                    xSpan[i] = col_gammas_span[col]* xSpan[i] + col_betas_span[col];
+                    ++col;
+                }
+            }
+            Parallel.For(0, rows, ProcessRow);
+        }
+
+        public override void numpy_sum(Tensor sum_result, int axis)
+        {
+            var a = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { a, sum_result}));
+            sum_result.ZeroMemory();
+            var sum_result_as_span = sum_result.AsFloatCpuSpan;
+            var aSpan = a.AsReadonlyFloatCpuSpan;
+            if (axis == 1)
+            {
+                int rows = sum_result.Count;
+                if (a.Count % rows != 0)
+                {
+                    throw new ArgumentException("x.Count % rows != 0");
+                }
+                int cols = a.Count / rows;
+                for (int row = 0; row < rows; ++row)
+                {
+                    var row_sum = 0.0f;
+                    for (int col = 0; col < cols; ++col)
+                    {
+                        row_sum += aSpan[row * cols + col];
+                    }
+                    sum_result_as_span[row] = row_sum;
+                }
+
+                return;
+            }
+            if (axis == 0)
+            {
+                int cols = sum_result.Count;
+                
