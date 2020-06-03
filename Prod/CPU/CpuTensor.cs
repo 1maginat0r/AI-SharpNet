@@ -586,4 +586,56 @@ namespace SharpNet.CPU
                 }
                 scaleGradientContent[meanIndex] += (float) (result * invertOfUnbiasedVolatility[meanIndex]);
             }
-            /
+            //we compute dx
+            for (int i = 0; i < batchSize; ++i)
+            {
+                for (int j = 0; j < MultDim0; ++j)
+                {
+                    int meanIndex = is1C11Shape ? (j / MultDim1) : j;
+                    int idx = i * MultDim0 + j;
+                    double result = meanDivider * dyContent[idx] - biasGradientContent[meanIndex] - scaleGradientContent[meanIndex] * invertOfUnbiasedVolatility[meanIndex] * (xContent[idx] - meanBufferContent[meanIndex]);
+                    if (dxContent != null)
+                    {
+                        dxContent[idx] += (float) ((scaleContent[meanIndex] * invertOfUnbiasedVolatility[meanIndex] * result) /meanDivider);
+                    }
+                }
+            }
+        }
+
+
+        public override void StandardizeInPlace(Tensor row_mean, Tensor row_variance, int axis, float epsilon)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { this, row_mean, row_variance}));
+            Debug.Assert(row_mean.SameShape(row_variance));
+            if (axis == 1)
+            {
+                //we'll standardize each row
+                int rows = row_mean.Count;
+                if (x.Count % rows != 0)
+                {
+                    throw new ArgumentException("The number of elements in the tensor must be a multiple of the number of rows");
+                }
+                int cols = x.Count / rows;
+                void ProcessRow(int row)
+                {
+                    var xSpan = x.AsFloatCpuSpan;
+                    var row_mean_value = row_mean.AsFloatCpuSpan[row];
+                    var row_variance_value = row_variance.AsFloatCpuSpan[row];
+                    int startIndex = row * cols;
+                    int endIndex = startIndex + cols - 1;
+                    for (int i = startIndex; i <= endIndex; ++i)
+                    {
+                        xSpan[i] = (xSpan[i] - row_mean_value) / MathF.Sqrt(row_variance_value + epsilon);
+                    }
+                }
+                Parallel.For(0, rows, ProcessRow);
+                return;
+            }
+            throw new NotSupportedException("Only axis=1 is supported");
+        }
+
+        public override void StandardizeRowsInPlaceBroadcastGammasBetas(Tensor row_mean, Tensor row_variance, float epsilon, Tensor col_gammas, Tensor col_betas)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new Lis
