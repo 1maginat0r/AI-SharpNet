@@ -756,4 +756,55 @@ namespace SharpNet.CPU
             Debug.Assert(AreCompatible(new List<Tensor> { x, dy, dx, col_gammas, row_mean, row_variance}));
             Debug.Assert(x.SameShape(dy, dx));
             Debug.Assert(row_mean.SameShape(row_variance));
-          
+            int rows = row_mean.Count;
+            int cols= col_gammas.Count;
+            if (x.Count != rows * cols)
+            {
+                throw new ArgumentException("x.Count != rows * cols");
+            }
+
+            void ComputeDxForRow(int row)
+            {
+                var gammaSpan = col_gammas.AsFloatCpuSpan;
+                var mean_row = row_mean.AsFloatCpuSpan[row];
+                var variance_row = row_variance.AsFloatCpuSpan[row];
+                var volatility_row = MathF.Sqrt(variance_row + epsilon);
+                var x_row = x.AsFloatCpu.SpanSlice(row * cols, cols);
+                var dy_row = dy.AsFloatCpu.SpanSlice(row * cols, cols);
+                var dvariance_row = 0f;
+                var dmean_row = 0f;
+                for (int col = 0; col < cols; ++col)
+                {
+                    var tmp0 = (dy_row[col] * gammaSpan[col]);
+                    dvariance_row += tmp0 * (x_row[col]-mean_row);
+                    dmean_row -= tmp0;
+                }
+                dvariance_row *= (-0.5f * MathF.Pow(variance_row + epsilon, -1.5f));
+                dmean_row /= volatility_row;
+                for (int col = 0; col < cols; ++col)
+                {
+                    dmean_row += dvariance_row*(x_row[col] -mean_row) * (-2f/cols);
+                }
+                var dx_row = dx.AsFloatCpu.SpanSlice(row * cols, cols);
+                for (int col = 0; col < cols; ++col)
+                {
+                    dx_row[col] = (dy_row[col] * gammaSpan[col]) /volatility_row
+                                + dvariance_row * (2f / cols) * (x_row[col] - mean_row)
+                                + dmean_row / cols;
+                }
+            }
+            Parallel.For(0, rows, ComputeDxForRow);
+        }
+
+        public override void DropoutForward(Tensor y, double dropoutRate, bool isTraining, Random dropoutRandom, Tensor dropoutReservedSpaceForTraining)
+        {
+            var x = this;
+            if (!isTraining)
+            {
+                x.CopyTo(y);
+                return;
+            }
+            Debug.Assert(!dropoutReservedSpaceForTraining.UseGPU);
+            var dropoutRateFloat = (float)dropoutRate;
+            Utils.UniformDistribution(dropoutReservedSpaceForTraining.AsFloatCpuSpan, dropoutRandom, 0.0, 1.0);
+            y.AsFloatCpu.BuildEntirelyFromInput(x, dropoutReservedSpaceForTraining, (prevLayer, prob) => pro
