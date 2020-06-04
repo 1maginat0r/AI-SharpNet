@@ -698,4 +698,62 @@ namespace SharpNet.CPU
             if (axis == 0)
             {
                 int cols = sum_result.Count;
-                
+                if (a.Count % cols != 0)
+                {
+                    throw new ArgumentException("x.Count % cols != 0");
+                }
+                int rows = a.Count / cols;
+                for (int row = 0; row < rows; ++row)
+                {
+                    for (int col = 0; col < cols; ++col)
+                    {
+                        sum_result_as_span[col] += aSpan[row * cols + col];
+                    }
+                }
+                return;
+            }
+            throw new ArgumentException("axis != 0 && axis != 1");
+        }
+        
+
+        public override void Compute_Row_Mean_Variance(Tensor row_mean, Tensor row_variance, bool unbiasedVariance)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { this, row_mean, row_variance}));
+            Debug.Assert(row_mean.SameShape(row_variance));
+            int rows = row_mean.Count;
+            if (x.Count % rows != 0)
+            {
+                throw new ArgumentException("x.Count % rows != 0");
+            }
+            int cols = x.Count / rows;
+
+            void ProcessBlock(int rowId)
+            {
+                var xSpan = x.AsFloatCpuSpan;
+                int startIndex = rowId * cols;
+                int endIndex = startIndex + cols - 1;
+                double sum = 0.0;
+                double sumSquare = 0.0;
+                for (int i = startIndex; i <= endIndex; ++i)
+                {
+                    double xValue = xSpan[i];
+                    sum += xValue;
+                    sumSquare += xValue * xValue;
+                }
+                var row_mean_value = (sum / cols);
+                var divider = unbiasedVariance ? (cols - 1) : cols;
+                var row_variance_value = Math.Abs(sumSquare - cols * row_mean_value * row_mean_value) / divider;
+                row_mean.AsFloatCpuSpan[rowId] = (float)row_mean_value;
+                row_variance.AsFloatCpuSpan[rowId] = (float)row_variance_value;
+            }
+            Parallel.For(0, rows, ProcessBlock);
+        }
+
+        public override void LayerNormalizationBackward(Tensor dy, Tensor dx, Tensor col_gammas, Tensor row_mean, Tensor row_variance, float epsilon, Tensor dmean, Tensor dvariance)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { x, dy, dx, col_gammas, row_mean, row_variance}));
+            Debug.Assert(x.SameShape(dy, dx));
+            Debug.Assert(row_mean.SameShape(row_variance));
+          
