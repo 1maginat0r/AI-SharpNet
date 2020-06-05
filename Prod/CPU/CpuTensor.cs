@@ -850,4 +850,48 @@ namespace SharpNet.CPU
                     Debug.Assert(activationParameter.Dimension == 1);
                     CpuTensorActivationFunctions.SoftmaxWithHierarchy(x, y, activationParameter);
                     return;
-                case cudnnActivationMode_t.CUDNN_AC
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SWISH:
+                    CpuTensorActivationFunctions.Swish(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_LN:
+                    CpuTensorActivationFunctions.Ln(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_IDENTITY:
+                    x.CopyTo(y);
+                    return;
+                default:
+                    throw new ArgumentException("invalid activation mode " + activationType);
+            }
+        }
+        public override void ActivationBackward(cudnnActivationMode_t activationType, Tensor activationParameter, Tensor dy, Tensor x, Tensor y)
+        {
+            var dx = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { y, dy, x, dx }));
+            switch (activationType)
+            {
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_RELU:
+                    CpuTensorActivationFunctions.ReluGradient(y, dy, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_LEAKY_RELU:
+                    Debug.Assert(activationParameter.Dimension == 1);
+                    Debug.Assert(activationParameter.Count == 1);
+                    CpuTensorActivationFunctions.LeakyReluGradient(y, dy, dx, activationParameter.AsReadonlyFloatCpuSpan[0]);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_ELU:
+                    CpuTensorActivationFunctions.EluGradient(y, dy, x, dx, 1f);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_TANH:
+                    CpuTensorActivationFunctions.TanhGradient(y, dy, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID:
+                    CpuTensorActivationFunctions.SigmoidGradient(y, dy, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_LAST_DIMENSION:
+                    CpuTensorActivationFunctions.SoftmaxGradientLastDimension(y, dy, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX:
+                    CpuTensorActivationFunctions.SoftmaxGradient(y, dy, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_WITH_HIERARCHY:
+                    Debug.Assert(activationParameter.Dimension == 1);
+                    CpuTensorActivationFunctions.SoftmaxGradientWitHierarchy
