@@ -807,4 +807,47 @@ namespace SharpNet.CPU
             Debug.Assert(!dropoutReservedSpaceForTraining.UseGPU);
             var dropoutRateFloat = (float)dropoutRate;
             Utils.UniformDistribution(dropoutReservedSpaceForTraining.AsFloatCpuSpan, dropoutRandom, 0.0, 1.0);
-            y.AsFloatCpu.BuildEntirelyFromInput(x, dropoutReservedSpaceForTraining, (prevLayer, prob) => pro
+            y.AsFloatCpu.BuildEntirelyFromInput(x, dropoutReservedSpaceForTraining, (prevLayer, prob) => prob < dropoutRate ? 0f : prevLayer / (1 - dropoutRateFloat));
+        }
+        public override void DropoutBackward(Tensor dy, Tensor dx, double dropoutRate, Tensor dropoutReserveSpace)
+        {
+            Debug.Assert(!dropoutReserveSpace.UseGPU);
+            var dropoutRateFloat = (float)dropoutRate;
+            dx.AsFloatCpu.BuildEntirelyFromInput(dy, dropoutReserveSpace, (dOutput, prob) => prob < dropoutRateFloat ? 0f : dOutput / (1 - dropoutRateFloat));
+        }
+        //this = dy
+
+        public override void ActivationForward(cudnnActivationMode_t activationType, Tensor activationParameter, Tensor y)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor> {x, y}));
+            switch (activationType)
+            {
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_RELU:
+                    CpuTensorActivationFunctions.Relu(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_LEAKY_RELU:
+                    Debug.Assert(activationParameter.Dimension == 1);
+                    Debug.Assert(activationParameter.Count == 1);
+                    CpuTensorActivationFunctions.LeakyRelu(x, y, activationParameter.AsReadonlyFloatCpuSpan[0]);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_ELU:
+                    CpuTensorActivationFunctions.Elu(x, y, 1.0);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_TANH:
+                    CpuTensorActivationFunctions.Tanh(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID:
+                    CpuTensorActivationFunctions.Sigmoid(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX:
+                    CpuTensorActivationFunctions.Softmax(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_LAST_DIMENSION:
+                    CpuTensorActivationFunctions.SoftmaxLastDimension(x, y);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_WITH_HIERARCHY:
+                    Debug.Assert(activationParameter.Dimension == 1);
+                    CpuTensorActivationFunctions.SoftmaxWithHierarchy(x, y, activationParameter);
+                    return;
+                case cudnnActivationMode_t.CUDNN_AC
