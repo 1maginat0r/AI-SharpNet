@@ -894,4 +894,66 @@ namespace SharpNet.CPU
                     return;
                 case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_WITH_HIERARCHY:
                     Debug.Assert(activationParameter.Dimension == 1);
-                    CpuTensorActivationFunctions.SoftmaxGradientWitHierarchy
+                    CpuTensorActivationFunctions.SoftmaxGradientWitHierarchy(y, dy, dx, activationParameter);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SWISH:
+                    CpuTensorActivationFunctions.SwishGradient(y, dy, x, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_LN:
+                    CpuTensorActivationFunctions.LnGradient(dy, x, dx);
+                    return;
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_IDENTITY:
+                    dy.CopyTo(dx);
+                    return;
+                default:
+                    throw new ArgumentException("invalid activation mode " + activationType);
+            }
+        }
+
+        public override void Update_Adding_Alpha_X(float alpha, Tensor x)
+        {
+            var y = this;
+            Debug.Assert(AreCompatible(new List<Tensor> {y, x}));
+            Debug.Assert(x.Count == y.Count);
+            MKL_BLAS.cblas_saxpy(x.Count, alpha, x.AsFloatPointer, 1, y.AsFloatPointer, 1);
+        }
+
+        // compute: this = alpha * x + beta * this
+        public override void AddTensor(float alpha, Tensor x, float beta)
+        {
+            // this = beta * this
+            Update_Multiplying_By_Alpha(beta);
+            // this = alpha * x + beta * this
+            Update_Adding_Alpha_X(alpha, x);
+        }
+
+        public override void LinearFunction(float slope, Tensor x, float intercept)
+        {
+            Debug.Assert(this.SameShape(x));
+            var yAsSpan = AsFloatCpuSpan;
+            var xAsSpan = x.AsReadonlyFloatCpuSpan;
+            for (int i = 0; i < xAsSpan.Length; ++i)
+            {
+                yAsSpan[i] = slope * xAsSpan[i] + intercept;
+            }
+        }
+
+        public override void MultiplyTensor(Tensor a, Tensor diagonalMatrix)
+        {
+            Debug.Assert(this.SameShape(a));
+            Debug.Assert(a.Count >= diagonalMatrix.Count);
+            Debug.Assert(Count % diagonalMatrix.Count == 0);
+
+            var aFloat = a.AsFloatCpuSpan;
+            var xFloat = diagonalMatrix.AsFloatCpuSpan;
+            var thisFloat = AsFloatCpuSpan;
+            if (a.Count == diagonalMatrix.Count)
+            {
+                for (int i = 0; i < diagonalMatrix.Count; ++i)
+                {
+                    thisFloat[i] = aFloat[i] * xFloat[i];
+                }
+            }
+            else
+            {
+               
