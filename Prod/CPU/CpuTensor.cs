@@ -956,4 +956,50 @@ namespace SharpNet.CPU
             }
             else
             {
-               
+                Debug.Assert(diagonalMatrix.Shape[0]*diagonalMatrix.Shape[1] == diagonalMatrix.Count);
+                int indexInX = 0;
+                int indexInThis = 0;
+                int toAddInThis = a.Count / diagonalMatrix.Count;
+                while(indexInThis<Count)
+                {
+                    int endIndexInThis = indexInThis + toAddInThis;
+                    var alphaFromX = xFloat[indexInX++];
+                    while (indexInThis< endIndexInThis)
+                    {
+                        thisFloat[indexInThis] = aFloat[indexInThis] * alphaFromX;
+                        indexInThis++;
+                    }
+                }
+            }
+        }
+
+        public override void UpSampling2D(Tensor tensorBeforeUpSampling, int rowFactor, int colFactor, UpSampling2DLayer.InterpolationEnum interpolation)
+        {
+            Debug.Assert(rowFactor >= 1);
+            Debug.Assert(colFactor >= 1);
+            if (interpolation == UpSampling2DLayer.InterpolationEnum.Bilinear)
+            {
+                throw new NotImplementedException("only " + UpSampling2DLayer.InterpolationEnum.Nearest + " interpolation is supported (not " + interpolation + ")");
+            }
+            var beforeUpSampling = (CpuTensor<T>)tensorBeforeUpSampling;
+            var afterUpSampling = this;
+            Debug.Assert(rowFactor * beforeUpSampling.Shape[2] == afterUpSampling.Shape[2]);
+            Debug.Assert(colFactor * beforeUpSampling.Shape[3] == afterUpSampling.Shape[3]);
+            for (int m = 0; m < afterUpSampling.Shape[0]; ++m)
+            for (int c = 0; c < afterUpSampling.Shape[1]; ++c)
+            for (int row = 0; row < afterUpSampling.Shape[2]; ++row)
+            for (int col = 0; col < afterUpSampling.Shape[3]; ++col)
+            {
+                afterUpSampling.Set(m, c, row, col, beforeUpSampling.Get(m, c, row / rowFactor, col / colFactor));
+            }
+        }
+        public override void DownSampling2D(Tensor tensorBeforeDownSampling, int rowFactor, int colFactor)
+        {
+            var beforeDownSampling = (CpuTensor<float>)tensorBeforeDownSampling;
+            var afterDownSampling = AsFloatCpu;
+            afterDownSampling.ZeroMemory();
+            Debug.Assert(rowFactor >= 1);
+            Debug.Assert(colFactor >= 1);
+            Debug.Assert(rowFactor * afterDownSampling.Shape[2] == beforeDownSampling.Shape[2]);
+            Debug.Assert(colFactor * afterDownSampling.Shape[3] == beforeDownSampling.Shape[3]);
+          
