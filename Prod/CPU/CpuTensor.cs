@@ -1002,4 +1002,58 @@ namespace SharpNet.CPU
             Debug.Assert(colFactor >= 1);
             Debug.Assert(rowFactor * afterDownSampling.Shape[2] == beforeDownSampling.Shape[2]);
             Debug.Assert(colFactor * afterDownSampling.Shape[3] == beforeDownSampling.Shape[3]);
-          
+            for (int m = 0; m < beforeDownSampling.Shape[0]; ++m)
+            for (int c = 0; c < beforeDownSampling.Shape[1]; ++c)
+            for (int row = 0; row < beforeDownSampling.Shape[2]; ++row)
+            for (int col = 0; col < beforeDownSampling.Shape[3]; ++col)
+            {
+                var toAdd = beforeDownSampling.Get(m, c, row , col );
+                var prevValue = afterDownSampling.Get(m, c, row / rowFactor, col / colFactor);
+                afterDownSampling.Set(m, c, row / rowFactor, col / colFactor, toAdd + prevValue);
+            }
+        }
+
+        public override void MultiplyEachRowIntoSingleValue(Tensor a, Tensor b)
+        {
+            Debug.Assert(a.SameShape(b));
+            int nbRows = Count;
+            Debug.Assert(nbRows <= a.Count);
+            Debug.Assert(a.Count % nbRows == 0);
+            int nbColumns_in_a_and_b = b.Count / nbRows;
+            var thisFloat = AsFloatCpuSpan;
+            var aFloat = a.AsFloatCpuSpan;
+            var bFloat = b.AsFloatCpuSpan;
+            int indexIn_a_or_b = 0;
+            for (int row = 0; row < nbRows; ++row)
+            {
+                float rowSum = 0;
+                for (int col = 0; col < nbColumns_in_a_and_b; ++col)
+                {
+                    rowSum += aFloat[indexIn_a_or_b] * bFloat[indexIn_a_or_b];
+                    ++indexIn_a_or_b;
+                }
+                thisFloat[row] = rowSum;
+            }
+        }
+
+        public override void Clip(float lower, float upper)
+        {
+            Debug.Assert(upper >= lower);
+            var thisFloat = AsFloatCpuSpan;
+            for (int i = 0; i < Count; ++i)
+            {
+                var curValue = thisFloat[i];
+                thisFloat[i] = Math.Min(Math.Max(curValue, lower), upper);
+            }
+        }
+
+        public override void ZeroPadding(Tensor unpaddedTensor, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight)
+        {
+            //we are adding padding to 'unpaddedTensor' to initialize 'paddedTensor'
+            var paddedTensor = this;
+            paddedTensor.ZeroMemory();
+            ZeroPadding_and_Unpadding(unpaddedTensor, paddingTop, paddingLeft, false);
+        }
+        public override void ZeroUnpadding(Tensor paddedTensor, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight)
+        {
+            ((CpuTensor<T>)paddedTen
