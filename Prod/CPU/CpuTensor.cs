@@ -1056,4 +1056,57 @@ namespace SharpNet.CPU
         }
         public override void ZeroUnpadding(Tensor paddedTensor, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight)
         {
-            ((CpuTensor<T>)paddedTen
+            ((CpuTensor<T>)paddedTensor).ZeroPadding_and_Unpadding(this, paddingTop, paddingLeft, true);
+        }
+
+        private void ZeroPadding_and_Unpadding(Tensor unpaddedTensor, int paddingTop, int paddingLeft, bool isUnpadding)
+        {
+            var paddedTensor = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { paddedTensor, unpaddedTensor }));
+            Debug.Assert(paddedTensor.Dimension == 4);
+            Debug.Assert(paddedTensor.Dimension == unpaddedTensor.Dimension);
+            Debug.Assert(paddedTensor.Shape[0] == unpaddedTensor.Shape[0]); //same batch size
+            Debug.Assert(paddedTensor.Shape[1] == unpaddedTensor.Shape[1]); //same number of channels
+            int h_src = unpaddedTensor.Shape[2];
+            int w_src = unpaddedTensor.Shape[3];
+            // copy the row 'srcRowId' from 'src' tensor (n, c, h_src, w_src) to dest tensor (n, c, h_dest, w_dest)
+            // the number of distinct rows in 'src' tensor is : n*c*h_src
+
+            void ApplyZeroPaddingForRowId(int srcRowId)
+            {
+                // 0 <= srcRowId < n*c*h_src
+                int row_src = (srcRowId % h_src);
+                int unpaddedRowIndex = srcRowId * w_src;
+                int paddedRowIndex = ((srcRowId / h_src) * paddedTensor.Shape[2] + row_src + paddingTop) * paddedTensor.Shape[3] + paddingLeft;
+                if (isUnpadding)
+                {
+                    paddedTensor.CopyTo(paddedRowIndex, unpaddedTensor, unpaddedRowIndex, w_src);
+                }
+                else
+                {
+                    unpaddedTensor.CopyTo(unpaddedRowIndex, paddedTensor, paddedRowIndex, w_src);
+                }
+            }
+            Parallel.For(0, unpaddedTensor.Shape[0] * unpaddedTensor.Shape[1] * unpaddedTensor.Shape[2], ApplyZeroPaddingForRowId);
+        }
+
+        public override void AssertIsNotDisposed()
+        {
+            if (_disposed)
+            {
+                throw new Exception("Tensor is disposed " + this);
+            }
+        }
+        public override void Concatenate(IList<Tensor> tensors)
+        {
+            CheckConcatenate(tensors);
+            void ConcatenateSingleRow(int m)
+            {
+                int startIdx = Idx(m);
+                foreach (var t in tensors)
+                {
+                    t.CopyTo(t.Idx(m), this, startIdx, t.MultDim0);
+                    startIdx += t.MultDim0;
+                }
+            }
+            Parallel.For(0, Shape[0], ConcatenateSingl
