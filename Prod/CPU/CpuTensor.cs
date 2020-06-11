@@ -1109,4 +1109,66 @@ namespace SharpNet.CPU
                     startIdx += t.MultDim0;
                 }
             }
-            Parallel.For(0, Shape[0], ConcatenateSingl
+            Parallel.For(0, Shape[0], ConcatenateSingleRow);
+        }
+        public override void Split(IList<Tensor> tensors)
+        {
+            CheckConcatenate(tensors);
+            void SplitSingleRow(int m)
+            {
+                int startIdx = Idx(m);
+                foreach (var t in tensors)
+                {
+                    CopyTo(startIdx, t, t.Idx(m), t.MultDim0);
+                    startIdx += t.MultDim0;
+                }
+            }
+            Parallel.For(0, Shape[0], SplitSingleRow);
+        }
+
+        ///// <summary>
+        ///// return a (square) diagonal matrix of length (rowCount, rowCount)
+        ///// each element in the diagonal will be 1, all other will be 0
+        ///// </summary>
+        ///// <param name="rowCount">number of rows and columns of the diagonal matrix</param>
+        ///// <returns></returns>
+        //public static CpuTensor<float> NewFloatDiagonalMatrix(int rowCount)
+        //{
+        //    var data = new float[rowCount * rowCount];
+        //    for (int row = 0; row < rowCount; ++row)
+        //    {
+        //        data[row * rowCount + row] = 1f;
+        //    }
+        //    return new CpuTensor<float>(new[] { rowCount, rowCount }, data);
+        //}
+
+
+        // compute:     this = alpha * this
+        public override void Update_Multiplying_By_Alpha(float alpha)
+        {
+            MKL_BLAS.cblas_sscal(Count, alpha, AsFloatPointer, 1);
+        }
+        #region pooling layers
+
+        public override void Pooling(Tensor y, cudnnPoolingMode_t poolingMode, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride)
+        {
+            var x = this;
+#if DEBUG
+            Debug.Assert(AreCompatible(new List<Tensor> { x, y }));
+            Debug.Assert(x.Shape[0] == y.Shape[0]); //same batch size
+            Debug.Assert(x.Shape[1] == y.Shape[1]); //same number of channels
+            Debug.Assert(x.Dimension == y.Dimension);
+            Debug.Assert(x.Dimension == 4);
+            int hOutput = y.Shape[2];
+            int hInput = x.Shape[2];
+            int hExpected = (hInput - poolingHeight) / verticalStride + 1;
+            Debug.Assert(hOutput == hExpected);
+            int wOutput = y.Shape[3];
+            int wInput = x.Shape[3];
+            int wExpected = (wInput - poolingWidth) / horizontalStride + 1;
+            Debug.Assert(wOutput == wExpected);
+#endif
+            int batchSize = x.Shape[0];
+            if (PoolingLayer.IsMaxPooling(poolingMode))
+            {
+                Parallel.For(0, batchSize, elementIndex => x.MaxPoolingForSingleElement4D(y, p
