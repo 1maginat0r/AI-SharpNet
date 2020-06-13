@@ -1171,4 +1171,47 @@ namespace SharpNet.CPU
             int batchSize = x.Shape[0];
             if (PoolingLayer.IsMaxPooling(poolingMode))
             {
-                Parallel.For(0, batchSize, elementIndex => x.MaxPoolingForSingleElement4D(y, p
+                Parallel.For(0, batchSize, elementIndex => x.MaxPoolingForSingleElement4D(y, poolingHeight, poolingWidth, verticalStride, horizontalStride, elementIndex ));
+            }
+            else
+            {
+                Parallel.For(0, batchSize, elementIndex => x.AvgPoolingForSingleElement4D(y, poolingHeight, poolingWidth, verticalStride, horizontalStride, elementIndex));
+            }
+        }
+        private void AvgPoolingForSingleElement4D(Tensor y, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride, int elementIndex)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { x, y }));
+            Debug.Assert(x.Dimension == y.Dimension);
+            Debug.Assert(x.Dimension == 4);
+            int hOutput = y.Shape[2];
+            int wOutput = y.Shape.Length>=4?y.Shape[3]:1;
+            //the first (top left) point in 'y' is computed from a filter starting at (0,0)
+            for (int c = 0; c < x.Shape[1]; ++c)
+            {
+                int row_filter_start = 0;
+                for (int rowAfterPooling = 0; rowAfterPooling < hOutput; ++rowAfterPooling)
+                {
+                    int col_filter_start = 0;
+                    for (int colAfterPooling = 0; colAfterPooling < wOutput; ++colAfterPooling)
+                    {
+                        //we want to compute the point in y[n, channelId, row_output, col_output]
+                        //it is computed by applying an avg filter located (for its top left) in (row_filter_start,col_filter_start) in the x 
+                        float outputPointSum = 0f;
+                        int count = 0;
+                        for (int rowBeforePooling = row_filter_start; rowBeforePooling < (row_filter_start + poolingHeight); ++rowBeforePooling)
+                        {
+                            for (int colBeforePooling = col_filter_start; colBeforePooling < (col_filter_start + poolingWidth); ++colBeforePooling)
+                            {
+                                outputPointSum += x.AsFloatCpu.Get(elementIndex, c, rowBeforePooling, colBeforePooling);
+                                ++count;
+                            }
+                        }
+                        y.AsFloatCpu.Set(elementIndex, c, rowAfterPooling, colAfterPooling, outputPointSum / count);
+                        col_filter_start += horizontalStride;
+                    }
+                    row_filter_start += verticalStride;
+                }
+            }
+        }
+   
