@@ -1214,4 +1214,44 @@ namespace SharpNet.CPU
                 }
             }
         }
-   
+        private void MaxPoolingForSingleElement4D(Tensor y, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride, int elementIndex)
+        {
+            var x = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { x, y }));
+            Debug.Assert(x.Dimension == y.Dimension);
+            Debug.Assert(x.Dimension == 4);
+            int hOutput = y.Shape[2];
+            int wOutput = y.Shape[3];
+            //the first (top left) point in 'y' is computed from a filter starting at (0,0)
+            for (int c = 0; c < x.Shape[1]; ++c)
+            {
+                int row_filter_start = 0;
+                for (int rowAfterPooling = 0; rowAfterPooling < hOutput; ++rowAfterPooling)
+                {
+                    int col_filter_start = 0;
+                    for (int colAfterPooling = 0; colAfterPooling < wOutput; ++colAfterPooling)
+                    {
+                        //we want to compute the point in y[n, channelId, row_output, col_output]
+                        //it is computed by applying a max filter located (for its top left) in (row_filter_start,col_filter_start) in the x 
+                        float outputPointResult = float.MinValue;
+                        for (int rowBeforePooling = row_filter_start; rowBeforePooling < (row_filter_start + poolingHeight); ++rowBeforePooling)
+                        {
+                            for (int colBeforePooling = col_filter_start; colBeforePooling < (col_filter_start + poolingWidth); ++colBeforePooling)
+                            {
+                                outputPointResult = Math.Max(outputPointResult, x.AsFloatCpu.Get(elementIndex, c, rowBeforePooling, colBeforePooling));
+                            }
+                        }
+                        y.AsFloatCpu.Set(elementIndex, c, rowAfterPooling, colAfterPooling, outputPointResult);
+                        col_filter_start += horizontalStride;
+                    }
+                    row_filter_start += verticalStride;
+                }
+            }
+        }
+        public override void PoolingGradient(Tensor yNotUsed, Tensor x, Tensor dx, cudnnPoolingMode_t poolingMode, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride)
+        {
+            var dy = this;
+            int batchSize = x.Shape[0];
+#if DEBUG
+            Debug.Assert(AreCompatible(new List<Tensor> { dy, x, dx }));
+            Debug.Assert(x.Shape[0] == dy.Sh
