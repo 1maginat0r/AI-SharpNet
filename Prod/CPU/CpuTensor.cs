@@ -1254,4 +1254,46 @@ namespace SharpNet.CPU
             int batchSize = x.Shape[0];
 #if DEBUG
             Debug.Assert(AreCompatible(new List<Tensor> { dy, x, dx }));
-            Debug.Assert(x.Shape[0] == dy.Sh
+            Debug.Assert(x.Shape[0] == dy.Shape[0]); //same batchSize
+            Debug.Assert(x.Shape[1] == dy.Shape[1]); //same number of channels
+            Debug.Assert(dx.SameShape(x));
+            Debug.Assert(x.Shape.Length == 4);
+            Debug.Assert(dx.Shape.Length == 4);
+            Debug.Assert(dy.Shape.Length == 4);
+            int hOutput = dy.Shape[2];
+            int wOutput = dy.Shape[3];
+            Debug.Assert(hOutput == ((x.Shape[2] - poolingHeight) / verticalStride + 1));
+            Debug.Assert(wOutput == ((x.Shape[3] - poolingWidth) / horizontalStride + 1));
+#endif
+            dx.ZeroMemory();
+            if (PoolingLayer.IsMaxPooling(poolingMode))
+            {
+                Parallel.For(0, batchSize, elementIndex => dy.MaxPoolingGradientForSingleElement4D(x, dx, poolingHeight, poolingWidth, verticalStride, horizontalStride, elementIndex));
+            }
+            else
+            {
+                Parallel.For(0, batchSize, elementIndex => dy.AvgPoolingGradientForSingleElement4D(x, dx, poolingHeight, poolingWidth, verticalStride, horizontalStride, elementIndex));
+            }
+        }
+        private void AvgPoolingGradientForSingleElement4D(Tensor x, Tensor dx, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride, int elementIndex)
+        {
+            var dy = this;
+            int hOutput = dy.Shape[2];
+            int wOutput = dy.Shape[3];
+            double doubleMultiplier = 1.0 / (poolingHeight * poolingWidth);
+            float floatMultiplier = (float)doubleMultiplier;
+
+            for (int c = 0; c < x.Shape[1]; ++c)
+            {
+                int row_filter_start = 0;
+                for (int rowAfterPooling = 0; rowAfterPooling < hOutput; ++rowAfterPooling)
+                {
+                    int col_filter_start = 0;
+                    for (int colAfterPooling = 0; colAfterPooling < wOutput; ++colAfterPooling)
+                    {
+                        for (int rowBeforePooling = row_filter_start; rowBeforePooling < (row_filter_start + poolingHeight); ++rowBeforePooling)
+                        {
+                            for (int colBeforePooling = col_filter_start; colBeforePooling < (col_filter_start + poolingWidth); ++colBeforePooling)
+                            {
+                                var pointGradient = dy.AsFloatCpu.Get(elementIndex, c, rowAfterPooling, colAfterPooling);
+                                dx.AsFloatCpu.Set(elementIndex, c, rowBeforePooling, colBeforePooling, floatMultiplier * pointGradie
