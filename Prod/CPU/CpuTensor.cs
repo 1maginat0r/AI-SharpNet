@@ -1296,4 +1296,47 @@ namespace SharpNet.CPU
                             for (int colBeforePooling = col_filter_start; colBeforePooling < (col_filter_start + poolingWidth); ++colBeforePooling)
                             {
                                 var pointGradient = dy.AsFloatCpu.Get(elementIndex, c, rowAfterPooling, colAfterPooling);
-                                dx.AsFloatCpu.Set(elementIndex, c, rowBeforePooling, colBeforePooling, floatMultiplier * pointGradie
+                                dx.AsFloatCpu.Set(elementIndex, c, rowBeforePooling, colBeforePooling, floatMultiplier * pointGradient);
+                            }
+                        }
+                        col_filter_start += horizontalStride;
+                    }
+                    row_filter_start += verticalStride;
+                }
+            }
+        }
+        //compute 'dx' from ('dy' and 'x')
+        private void MaxPoolingGradientForSingleElement4D(Tensor x, Tensor dx, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride, int elementIndex)
+        {
+            var dy = this;
+            int hOutput = dy.Shape[2];
+            int wOutput = dy.Shape[3];
+
+            for (int c = 0; c < x.Shape[1]; ++c)
+            {
+                int row_filter_start = 0;
+                for (int rowAfterPooling = 0; rowAfterPooling < hOutput; ++rowAfterPooling)
+                {
+                    int col_filter_start = 0;
+                    for (int colAfterPooling = 0; colAfterPooling < wOutput; ++colAfterPooling)
+                    {
+                        //we retrieve the coordinate of the max value in 'x'
+                        double outputPointResult = double.MinValue;
+                        int maxRowBeforePooling = 0;
+                        int maxColBeforePooling = 0;
+                        for (int rowBeforePooling = row_filter_start; rowBeforePooling < (row_filter_start + poolingHeight); ++rowBeforePooling)
+                        {
+                            for (int colBeforePooling = col_filter_start; colBeforePooling < (col_filter_start + poolingWidth); ++colBeforePooling)
+                            {
+                                var currentPointValue = x.AsFloatCpu.Get(elementIndex, c, rowBeforePooling, colBeforePooling);
+                                if (currentPointValue > outputPointResult)
+                                {
+                                    outputPointResult = currentPointValue;
+                                    maxRowBeforePooling = rowBeforePooling;
+                                    maxColBeforePooling = colBeforePooling;
+                                }
+                            }
+                        }
+                        var pointGradient = dy.AsFloatCpu.Get(elementIndex, c, rowAfterPooling, colAfterPooling);
+                        dx.AsFloatCpu.Set(elementIndex, c, maxRowBeforePooling, maxColBeforePooling, pointGradient);
+                        col_fil
