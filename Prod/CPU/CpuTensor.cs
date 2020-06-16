@@ -1394,4 +1394,42 @@ namespace SharpNet.CPU
             {
                 Debug.Assert(outputChannels == convolution.Shape[0]);
             }
-            Debug.Assert(AreCompatible(new List<
+            Debug.Assert(AreCompatible(new List<Tensor> {x, convolution, y}));
+            int batchSize = x.Shape[0];
+            int hInput = x.Shape[2];
+            int wInput = x.Shape[3];
+            int kernelHeight = convolution.Shape[2];
+            int kernelWidth = convolution.Shape[3];
+            int hOutput = y.Shape[2];
+            int wOutput = y.Shape[3];
+            Debug.Assert(batchSize == y.Shape[0]);
+
+            //the first (top left) point in 'y' is computed from a filter starting at (-padding,-padding)
+            void ComputeForBatch(int m)
+            {
+                var convolutionContentAsFloat = convolution.AsFloatCpuSpan;
+                var xContentAsFloat = x.AsFloatCpuSpan;
+
+                for (int outputChannelId = 0; outputChannelId < outputChannels; ++outputChannelId)
+                {
+                    int rowFilterStart = -paddingTop;
+                    for (int rowOutput = 0; rowOutput < hOutput; ++rowOutput)
+                    {
+                        int colFilterStart = -paddingLeft;
+                        var rowInputStart = Math.Max(0, rowFilterStart);
+                        var rowInputEndExcluded = Math.Min(hInput, rowFilterStart + kernelHeight);
+                        for (int colOutput = 0; colOutput < wOutput; ++colOutput)
+                        {
+                            //we want to compute the point in y[m, filterId, row_output, col_output]
+                            //it is computed by applying a filter located (for its top left) in (row_filter_start,col_filter_start) in the x 
+                            double outputPointResult = 0.0;
+                            var colInputStart = Math.Max(0, colFilterStart);
+                            var colInputEndExcluded = Math.Min(wInput, colFilterStart + kernelWidth);
+
+                            int startInputChannelId = isDepthwiseConvolution ? outputChannelId : 0;
+                            int endInputChannelId = isDepthwiseConvolution ? (outputChannelId+1) : inputChannels;
+                            for (int inputChannelId = startInputChannelId; inputChannelId < endInputChannelId; ++inputChannelId)
+                            {
+                                var convolutionIdxForStartRow = convolution.Idx(isDepthwiseConvolution?0:outputChannelId, inputChannelId, rowInputStart - rowFilterStart, colInputStart - colFilterStart);
+                                var xIdxForStartRow = x.Idx(m, inputChannelId, rowInputStart, colInputStart);
+        
