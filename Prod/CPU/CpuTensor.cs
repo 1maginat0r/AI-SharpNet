@@ -1339,4 +1339,59 @@ namespace SharpNet.CPU
                         }
                         var pointGradient = dy.AsFloatCpu.Get(elementIndex, c, rowAfterPooling, colAfterPooling);
                         dx.AsFloatCpu.Set(elementIndex, c, maxRowBeforePooling, maxColBeforePooling, pointGradient);
-                        col_fil
+                        col_filter_start += horizontalStride;
+                    }
+                    row_filter_start += verticalStride;
+                }
+            }
+        }
+        #endregion
+        public override void BroadcastAddVectorToOutput(Tensor y)
+        {
+            var bias = this;
+            Debug.Assert(AreCompatible(new List<Tensor> {bias, y}));
+            Debug.Assert(y.Dimension >= 2);
+            Debug.Assert(y.MultDim0 == Count);
+            var batchSize = y.Shape[0];
+
+            var singleRowMatrixContent = bias.AsFloatCpuSpan;
+            var yContent = y.AsFloatCpuSpan;
+            for (int colIndex = 0; colIndex < Count; ++colIndex)
+            {
+                var valueToAddToColumn = singleRowMatrixContent[colIndex];
+                for (int n = 0; n < batchSize; ++n)
+                {
+                    var idx = y.Idx(n, colIndex);
+                    yContent[idx] += valueToAddToColumn;
+                }
+            }
+        }
+
+        #region Convolution
+        public override void Convolution(Tensor convolution, int paddingTop, int paddingBottom, int paddingLeft,
+            int paddingRight, int stride, Tensor y, bool isDepthwiseConvolution,
+            ConvolutionAlgoPreference forwardAlgoPreference, TensorMemoryPool memoryPool)
+        {
+            if (forwardAlgoPreference != ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM)
+            {
+                throw new NotImplementedException("only "+ ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM+" is available on CPU ("+ forwardAlgoPreference+ " is not supported)");
+            }
+            var x = this;
+            int inputChannels = x.Shape[1];
+            int outputChannels = y.Shape[1];
+            Debug.Assert(inputChannels == convolution.Shape[1]);
+            if (isDepthwiseConvolution)
+            {
+                Debug.Assert(inputChannels == y.Shape[1]);
+                Debug.Assert(outputChannels == convolution.Shape[1]);
+                var depthMultiplier = convolution.Shape[0];
+                if (depthMultiplier != 1)
+                {
+                    throw new NotImplementedException("only depthMultiplier=1 is supported");
+                }
+            }
+            else
+            {
+                Debug.Assert(outputChannels == convolution.Shape[0]);
+            }
+            Debug.Assert(AreCompatible(new List<
