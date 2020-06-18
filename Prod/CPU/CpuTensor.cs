@@ -1432,4 +1432,54 @@ namespace SharpNet.CPU
                             {
                                 var convolutionIdxForStartRow = convolution.Idx(isDepthwiseConvolution?0:outputChannelId, inputChannelId, rowInputStart - rowFilterStart, colInputStart - colFilterStart);
                                 var xIdxForStartRow = x.Idx(m, inputChannelId, rowInputStart, colInputStart);
-        
+                                for (int rowInput = rowInputStart; rowInput < rowInputEndExcluded; ++rowInput)
+                                {
+                                    var convolutionIdx = convolutionIdxForStartRow;
+                                    var xIdx = xIdxForStartRow;
+                                    for (int colInput = colInputStart; colInput < colInputEndExcluded; ++colInput)
+                                    {
+                                        outputPointResult +=
+                                            convolutionContentAsFloat[convolutionIdx] *
+                                            xContentAsFloat[xIdx];
+                                        ++convolutionIdx;
+                                        ++xIdx;
+                                    }
+                                    convolutionIdxForStartRow += convolution.Shape[3];
+                                    xIdxForStartRow += x.Shape[3];
+                                }
+                            }
+                            y.AsFloatCpu.Set(m, outputChannelId, rowOutput, colOutput, (float) outputPointResult);
+                            colFilterStart += stride;
+                        }
+                        rowFilterStart += stride;
+                    }
+                }
+            }
+            Parallel.For(0, batchSize, ComputeForBatch);
+        }
+
+
+        public override void BroadcastConvolutionBiasToOutput(Tensor y)
+        {
+            var convolutionBias = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { convolutionBias, y }));
+            Debug.Assert(y.Dimension >= 2);
+            Debug.Assert(convolutionBias.Shape.SequenceEqual(new []{1, y.Shape[1], 1, 1}));
+            var batchSize = y.Shape[0];
+            var yContent = y.AsFloatCpuSpan;
+            for (int n = 0; n < batchSize; ++n)
+            {
+                int startIndex = n * y.MultDim0;
+                for (int filterId = 0; filterId < y.Shape[1]; ++filterId, startIndex += y.MultDim1)
+                {
+                    var toAdd = convolutionBias.AsFloatCpuSpan[filterId];
+                    for (int i = startIndex; i < (startIndex + y.MultDim1); ++i)
+                    {
+                        yContent[i] += toAdd;
+                    }
+                }
+            }
+        }
+
+        public override void ConvolutionGradient(Tensor convolution, Tensor dy, int paddingTop, int paddingBottom,
+            int paddingLeft, int pad
