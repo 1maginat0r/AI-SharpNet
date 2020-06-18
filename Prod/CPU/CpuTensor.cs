@@ -1482,4 +1482,51 @@ namespace SharpNet.CPU
         }
 
         public override void ConvolutionGradient(Tensor convolution, Tensor dy, int paddingTop, int paddingBottom,
-            int paddingLeft, int pad
+            int paddingLeft, int paddingRight, int stride, Tensor dx, Tensor convGradient, bool isDepthwiseConvolution,
+            ConvolutionAlgoPreference backwardAlgoPreference, TensorMemoryPool memoryPool)
+        {
+            if (backwardAlgoPreference != ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM)
+            {
+                throw new NotImplementedException("only " + ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM + " is available on CPU (" + backwardAlgoPreference + " is not supported)");
+            }
+            var x = this;
+            int inputChannels = x.Shape[1];
+            int outputChannels = dy.Shape[1];
+            Debug.Assert(inputChannels == convolution.Shape[1]);
+            Debug.Assert(dx == null ||dx.SameShape(x));
+            if (isDepthwiseConvolution)
+            {
+                Debug.Assert(inputChannels == dy.Shape[1]);
+                Debug.Assert(outputChannels == convolution.Shape[1]);
+                var depthMultiplier = convolution.Shape[0];
+                if (depthMultiplier != 1)
+                {
+                    throw new NotImplementedException("only depthMultiplier=1 is supported");
+                }
+            }
+            else
+            {
+                Debug.Assert(outputChannels == convolution.Shape[0]);
+            }
+            Debug.Assert(AreCompatible(new List<Tensor> { x, convolution, dy, dx, convGradient }));
+            int batchSize = x.Shape[0];
+            Debug.Assert(batchSize == dy.Shape[0]);
+            int hInput = x.Shape[2];
+            int wInput = x.Shape[3];
+            int kernelHeight = convolution.Shape[2];
+            int kernelWidth = convolution.Shape[3];
+            int hOutput = dy.Shape[2];
+            Debug.Assert(hOutput == ((hInput - kernelHeight + paddingTop+paddingBottom) / stride + 1));
+            int wOutput = dy.Shape[3];
+            Debug.Assert(wOutput == ((wInput - kernelWidth + paddingLeft+paddingRight) / stride + 1));
+            dx?.ZeroMemory();
+            convGradient.ZeroMemory();
+
+            //the first (top left) point in 'y' is computed from a filter starting at (-padding,-padding)
+
+            void ComputeForBatch(int m)
+            {
+                //every thread needs to update 'convolutionGradient'
+                //to be thread safe, each thread will update a local object 'convolutionGradientContent' and at the end
+                //will update the object 'convolutionGradient' with a local
+  
