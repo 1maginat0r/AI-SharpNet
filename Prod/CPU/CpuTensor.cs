@@ -1529,4 +1529,32 @@ namespace SharpNet.CPU
                 //every thread needs to update 'convolutionGradient'
                 //to be thread safe, each thread will update a local object 'convolutionGradientContent' and at the end
                 //will update the object 'convolutionGradient' with a local
-  
+                float[] convolutionGradientForLocalThreadFloat = new float[convGradient.Count];
+                for (int outputChannelId = 0; outputChannelId < outputChannels; ++outputChannelId)
+                {
+                    int rowFilterStart = -paddingTop;
+                    for (int rowOutput = 0; rowOutput < hOutput; ++rowOutput)
+                    {
+                        int colFilterStart = -paddingLeft;
+                        var rowInputStart = Math.Max(0, rowFilterStart);
+                        var rowInputEndExcluded = Math.Min(hInput, rowFilterStart + kernelHeight);
+                        for (int colOutput = 0; colOutput < wOutput; ++colOutput)
+                        {
+                            //we want to compute the point in y[m, filterId, rowOutput, colOutput]
+                            //it is computed by applying a filter located (for its top left) in (row_filter_start,col_filter_start) in the x 
+                            // and centered at this particular location
+                            var chainGradientFloat = dy.AsFloatCpu.Get(m, outputChannelId, rowOutput, colOutput);
+                            var colInputStart = Math.Max(0, colFilterStart);
+                            var colInputEndExcluded = Math.Min(wInput, colFilterStart + kernelWidth);
+                            int startInputChannelId = isDepthwiseConvolution ? outputChannelId : 0;
+                            int endInputChannelId = isDepthwiseConvolution ? (outputChannelId + 1) : inputChannels;
+                            for (int inputChannelId = startInputChannelId; inputChannelId < endInputChannelId; ++inputChannelId)
+                            {
+                                int convIdxStartRow = convGradient.Idx(isDepthwiseConvolution ? 0 : outputChannelId, inputChannelId, rowInputStart - rowFilterStart, colInputStart - colFilterStart);
+                                int APrevLayerIdxStartRow = x.Idx(m, inputChannelId, rowInputStart, colInputStart);
+
+                                for (int rowInput = rowInputStart; rowInput < rowInputEndExcluded; ++rowInput)
+                                {
+                                    var convIdx = convIdxStartRow;
+                                    var APrevLayerIdx = APrevLayerIdxStartRow;
+                      
