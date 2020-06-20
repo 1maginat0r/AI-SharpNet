@@ -1557,4 +1557,52 @@ namespace SharpNet.CPU
                                 {
                                     var convIdx = convIdxStartRow;
                                     var APrevLayerIdx = APrevLayerIdxStartRow;
-                      
+                                    for (int colInput = colInputStart; colInput < colInputEndExcluded; ++colInput)
+                                    {
+                                        convolutionGradientForLocalThreadFloat[convIdx] += x.AsFloatCpuSpan[APrevLayerIdx] * chainGradientFloat;
+                                        if (dx != null)
+                                        {
+                                            dx.AsFloatCpuSpan[APrevLayerIdx] += convolution.AsFloatCpuSpan[convIdx] * chainGradientFloat;
+                                        }
+                                        ++convIdx;
+                                        ++APrevLayerIdx;
+                                    }
+                                    convIdxStartRow += convGradient.Shape[3];
+                                    APrevLayerIdxStartRow += wInput;
+                                }
+                            }
+                            colFilterStart += stride;
+                        }
+                        rowFilterStart += stride;
+                    }
+                }
+                lock (convGradient)
+                {
+                    for (int i = 0; i < convGradient.Count; ++i)
+                    {
+                        convGradient.AsFloatCpuSpan[i] += convolutionGradientForLocalThreadFloat[i];
+                    }
+                }
+            }
+            Parallel.For(0, batchSize, ComputeForBatch);
+        }
+        public override void ConvolutionBackwardBias(Tensor bias)
+        {
+            var dy = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { dy, bias }));
+            Debug.Assert(bias.Dimension == 4);
+            Debug.Assert(bias.Shape[1] == bias.Count);
+            Debug.Assert(dy.Shape[1] == bias.Shape[1]); // number of distinct filters
+            Debug.Assert(dy.Dimension == 4);
+
+            bias.ZeroMemory();
+            var batchSize = dy.Shape[0];
+            for (int n = 0; n < batchSize; ++n)
+            {
+                for (int filterId = 0; filterId < dy.Shape[1]; ++filterId)
+                {
+                    int startIndex = n * dy.MultDim0 + filterId * dy.MultDim1;
+                    var endIndex = startIndex + dy.MultDim1;
+                    var convolutionBackwardBiasContent = bias.AsFloatCpuSpan;
+                    var dyContent = dy.AsFloatCpuSpan;
+          
