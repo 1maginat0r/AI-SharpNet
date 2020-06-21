@@ -1605,4 +1605,58 @@ namespace SharpNet.CPU
                     var endIndex = startIndex + dy.MultDim1;
                     var convolutionBackwardBiasContent = bias.AsFloatCpuSpan;
                     var dyContent = dy.AsFloatCpuSpan;
-          
+                    for (int i = startIndex; i < endIndex; ++i)
+                    {
+                        convolutionBackwardBiasContent[filterId] += dyContent[i];
+                    }
+                }
+            }
+        }
+        #endregion
+
+        public override void Compute_BiasGradient_from_dy(Tensor biasGradient)
+        {
+            ComputeSumByColumn(biasGradient);
+        }
+
+        /// <summary>
+        /// Use Adam optimizer (see https://arxiv.org/pdf/1412.6980.pdf)
+        /// this = Weights or Bias
+        /// </summary>
+        /// <param name="learningRate"></param>
+        /// <param name="beta1"></param>
+        /// <param name="beta2"></param>
+        /// <param name="epsilon"></param>
+        /// <param name="adamW_l2Regularization"></param>
+        /// <param name="dW"></param>
+        /// <param name="adam_vW">biased first moment estimate</param>
+        /// <param name="adam_sW">biased second raw moment estimate</param>
+        /// <param name="timeStep"></param>
+        public override void UpdateAdamOptimizer(double learningRate, double beta1, double beta2, double epsilon,
+            double adamW_l2Regularization, Tensor dW, Tensor adam_vW, Tensor adam_sW, int timeStep)
+        {
+            var beta1_power = Math.Pow(beta1, timeStep);
+            var beta2_power = Math.Pow(beta2, timeStep);
+
+            var W = this;
+            //Update biased first moment estimate
+            adam_vW.AsFloatCpu.Update(dW, (adam_vw, dw) => (float) (beta1 * adam_vw + (1 - beta1) * dw));
+            //Update biased second raw moment estimate
+            adam_sW.AsFloatCpu.Update(dW, (adam_sw, dw) => (float) (beta2 * adam_sw + (1 - beta2) * dw * dw));
+            var multiplicative_factor = learningRate * (Math.Sqrt(1.0 - beta2_power) / (1.0 - beta1_power));
+            //Update parameters
+            W.AsFloatCpu.Update(adam_vW, adam_sW, (w, adam_vw, adam_sw) => (float)(w - ( multiplicative_factor * (adam_vw / (Math.Sqrt(adam_sw) + epsilon)) + adamW_l2Regularization*w )));
+        }
+
+        public override void NormalDistribution(Random rand, double mean, double stdDev)
+        {
+            Utils.NormalDistribution(AsFloatCpuSpan, rand, mean, stdDev);
+        }
+
+
+        public override void UniformDistribution(Random rand, double minValue, double maxValue)
+        {
+            Utils.UniformDistribution(AsFloatCpuSpan, rand, minValue, maxValue);
+        }
+        
+        public override void SetVa
