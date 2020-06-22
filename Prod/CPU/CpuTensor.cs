@@ -1659,4 +1659,68 @@ namespace SharpNet.CPU
             Utils.UniformDistribution(AsFloatCpuSpan, rand, minValue, maxValue);
         }
         
-        public override void SetVa
+        public override void SetValue(float sameValue)
+        {
+            var array = AsFloatCpuSpan;
+            for (int i = 0; i < Count; ++i)
+            {
+                array[i] = sameValue;
+            }
+        }
+        public override float[] ContentAsFloatArray()
+        {
+            return AsFloatCpuSpan.ToArray();
+        }
+
+        public override Half[] ContentAsHalfArray()
+        {
+            return AsHalfCpuSpan.ToArray();
+        }
+
+
+        public override Tensor Clone()
+        {
+            var cloned = new CpuTensor<T>(Shape);
+            CopyTo(cloned);
+            return cloned;
+        }
+
+
+        private static bool IsAccuratePredictionForCategoricalCrossentropyWithHierarchy(float* expected, float* predicted, int endIndexExcluded, int *pNexIndexToCheck, int subCategoriesCount, List<int> observedPrediction)
+        {
+            int subCategoriesFound = 0;
+            int predictedSubCategoryId = -1;
+            float bestPredictedSubCategoryProba = -1.0f;
+            int expectedSubCategoryId = -1;
+            float bestExpectedSubCategoryProba = -1.0f;
+            bool isAccurate = true;
+            bool previousIndexWasProba = false;
+
+            while (subCategoriesFound < subCategoriesCount && (*pNexIndexToCheck < endIndexExcluded))
+            {
+                float expectedProba = expected[*pNexIndexToCheck];
+                float predictedProba = predicted[*pNexIndexToCheck];
+                if (fabsf(expectedProba) < 9.5f)
+                {
+                    previousIndexWasProba = true;
+                    ++subCategoriesFound;
+                    if (expectedProba > bestExpectedSubCategoryProba)
+                    {
+                        bestExpectedSubCategoryProba = expectedProba;
+                        expectedSubCategoryId = subCategoriesFound-1;
+                    }
+                    if (predictedProba > bestPredictedSubCategoryProba)
+                    {
+                        bestPredictedSubCategoryProba = predictedProba;
+                        predictedSubCategoryId = subCategoriesFound-1;
+                    }
+                    *pNexIndexToCheck += 1;
+                }
+                else
+                {
+                    int count = (int)(fabsf(expectedProba) + 0.5f) / 10;
+                    if (expectedProba < 0)
+                    {
+                        //we need to skip 'count' indexes
+                        *pNexIndexToCheck += count;
+  
