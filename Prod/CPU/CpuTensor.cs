@@ -1723,4 +1723,62 @@ namespace SharpNet.CPU
                     {
                         //we need to skip 'count' indexes
                         *pNexIndexToCheck += count;
-  
+                    }
+                    else
+                    {
+                        *pNexIndexToCheck += 1;
+                        bool subCategoryIsAccurate = IsAccuratePredictionForCategoricalCrossentropyWithHierarchy(expected, predicted, endIndexExcluded, pNexIndexToCheck, count, observedPrediction);
+                        isAccurate = subCategoryIsAccurate && isAccurate;
+                    }
+                    if (!previousIndexWasProba)
+                    {
+                        ++subCategoriesFound;
+                    }
+                    previousIndexWasProba = false;
+                }
+            }
+            observedPrediction.Insert(0, predictedSubCategoryId);
+            return (expectedSubCategoryId == predictedSubCategoryId) && isAccurate;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // ReSharper disable once InconsistentNaming
+        private static float fabsf(float f) {return Math.Abs(f);}
+
+        #region Compute of Evaluation Metrics
+
+        protected override double ComputePearsonCorrelation([NotNull] Tensor y_pred)
+        {
+            var y_true = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { y_true, y_pred }));
+            Debug.Assert(y_true.Shape.Length == 2);
+            Debug.Assert(y_true.Shape[1] == 1);
+            Debug.Assert(y_true.SameShape(y_pred));
+            Debug.Assert(!y_true.UseGPU);
+            var y_true_span = y_true.AsReadonlyFloatCpuSpan;
+            var y_pred_span = y_pred.AsReadonlyFloatCpuSpan;
+
+            var lr = new LinearRegression();
+            for (int i = 0; i < y_true_span.Length; i++)
+            {
+                lr.Add(y_true_span[i], y_pred_span[i]);
+            }
+            return lr.PearsonCorrelationCoefficient;  
+        }
+
+        protected override double ComputeSpearmanCorrelation([NotNull] Tensor y_pred)
+        {
+            static int[] CreateRankForSpearmanCorrelation(ReadOnlySpan<float> s)
+            {
+                var res = new int[s.Length];
+                var sorted = new List<Tuple<float, int>>();
+                for (int i = 0; i < s.Length; i++)
+                {
+                    sorted.Add(new Tuple<float, int>(s[i], i));
+                }
+                int currentRank = 0;
+                foreach (var e in sorted.OrderByDescending(a => a.Item1))
+                {
+                    res[e.Item2] = currentRank++;
+                }
+                retur
