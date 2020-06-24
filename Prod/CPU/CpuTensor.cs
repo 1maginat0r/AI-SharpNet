@@ -1836,4 +1836,59 @@ namespace SharpNet.CPU
             int maxIndexExpected = 0;
             for (int j = 1; j < numClass; ++j)
             {
-                if (yPr
+                if (yPredicted.Get(row, j) > yPredicted.Get(row, maxIndexPredicted))
+                {
+                    maxIndexPredicted = j;
+                }
+                if (yExpected.Get(row, j) > yExpected.Get(row, maxIndexExpected))
+                {
+                    maxIndexExpected = j;
+                }
+            }
+            if (maxIndexExpected == maxIndexPredicted)
+            {
+                return 1;
+            }
+            return 0;
+        }
+
+
+        protected override void SparseCategoricalCrossentropyLossBuffer([NotNull] Tensor yExpectedSparse, [NotNull] Tensor yPredicted)
+        {
+            var buffer = this;
+            (yExpectedSparse, yPredicted, _) = ReformatTo2DTensorsSparse(yExpectedSparse, yPredicted);
+            //yExpectedSparse shape:    (batchSize*timeSteps, 1)
+            //yPredicted shape:         (batchSize*timeSteps, numClass)
+
+            var bufferSpan = buffer.AsFloatCpuSpan;
+            var yExpectedSpan = yExpectedSparse.AsReadonlyFloatCpuSpan;
+            var yPredictedSpan = yPredicted.AsReadonlyFloatCpuSpan;
+            var numClass = yPredicted.MultDim0;
+            for (int row = 0; row < yExpectedSpan.Length; ++row)
+            {
+                var yClass = Utils.NearestInt(yExpectedSpan[row]);
+                Debug.Assert(yClass >= 0);
+                Debug.Assert(yClass < numClass);
+                float predicted = yPredictedSpan[row * numClass + yClass];
+                bufferSpan[row]= -MathF.Log(predicted);
+            }
+        }
+
+        protected override void CategoricalCrossentropyLossBuffer(Tensor yExpectedOneHot, Tensor yPredicted)
+        {
+            MergeInPlaceByRow(yExpectedOneHot.AsFloatCpu, yPredicted.AsFloatCpu, (expected, prediction) => -expected * MathF.Log(prediction), 1);
+        }
+
+        protected override void MaeLossBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            MergeInPlaceByRow(yExpected.AsFloatCpu, yPredicted.AsFloatCpu, (expected, prediction) => MathF.Abs(expected - prediction), yPredicted.MultDim0);
+        }
+
+        protected override void MseLossBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            MergeInPlaceByRow(yExpected.AsFloatCpu, yPredicted.AsFloatCpu, (expected, prediction) => MathF.Pow(expected - prediction, 2), yPredicted.MultDim0);
+        }
+
+        protected override void MeanSquaredLogErrorLossBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            MergeInPlaceByRow(yExpected.AsFloatCpu, yPredicted.AsFloatCpu, (expected, p
