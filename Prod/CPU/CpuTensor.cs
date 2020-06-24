@@ -1781,4 +1781,59 @@ namespace SharpNet.CPU
                 {
                     res[e.Item2] = currentRank++;
                 }
-                retur
+                return res;
+            }
+            
+            var y_true = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { y_true, y_pred }));
+            Debug.Assert(y_true.Shape.Length == 2);
+            Debug.Assert(y_true.Shape[1] == 1);
+            Debug.Assert(y_true.SameShape(y_pred));
+            Debug.Assert(!y_true.UseGPU);
+            var y_true_rank = CreateRankForSpearmanCorrelation(y_true.AsReadonlyFloatCpuSpan);
+            var y_pred_rank = CreateRankForSpearmanCorrelation(y_pred.AsReadonlyFloatCpuSpan);
+
+            double sum_delta_rank_square = 0;
+            for (int i = 0; i < y_true_rank.Length; i++)
+            {
+                double delta_rank = y_true_rank[i] - y_pred_rank[i];
+                sum_delta_rank_square += delta_rank * delta_rank;
+            }
+            double n = y_true.Shape[0];
+            var spearmanCorrelation  = 1.0 - (6 * sum_delta_rank_square) / (n * (n * n - 1));
+            Debug.Assert(spearmanCorrelation < 1.001);
+            Debug.Assert(spearmanCorrelation > -1.001);
+            return spearmanCorrelation;
+        }
+
+        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        protected override void ComputeAccuracyBuffer([NotNull] Tensor yExpected, [NotNull] Tensor yPredicted)
+        {
+            var buffer = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { yExpected, yPredicted }));
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(!yExpected.UseGPU);
+            Debug.Assert(buffer.Shape.Length == 1);
+            Debug.Assert(buffer.Shape[0] == yPredicted.Shape[0]);
+            int batchSize = yExpected.Shape[0];
+
+            var bufferPointer = (float*)buffer.Pointer;
+            var yExpectedCpu = yExpected.AsFloatCpu;
+            var yPredictedCpu = yPredicted.AsFloatCpu;
+            Parallel.For(0, batchSize, row => bufferPointer[row] = ComputeSingleAccuracy(yExpectedCpu, yPredictedCpu, row));
+        }
+
+        private static float ComputeSingleAccuracy(CpuTensor<float> yExpected, CpuTensor<float> yPredicted, int row)
+        {
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            int maxIndexPredicted = 0;
+            var numClass = yExpected.Shape[1];
+            if (numClass == 1)
+            {
+                var error = Math.Abs(yExpected.Get(row, 0) - yPredicted.Get(row, 0));
+                return (error < 0.5) ? 1 : 0;
+            }
+            int maxIndexExpected = 0;
+            for (int j = 1; j < numClass; ++j)
+            {
+                if (yPr
