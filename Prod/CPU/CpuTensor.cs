@@ -1941,4 +1941,53 @@ namespace SharpNet.CPU
             MergeInPlaceByRow(yPredicted.AsFloatCpu, yExpected.AsFloatCpu, (y_pred, y_true) => BinaryCrossentropyLossBufferSingle(y_true, y_pred) , yPredicted.MultDim0);
         }
 
-        private static float BinaryCrossentropy
+        private static float BinaryCrossentropyLossBufferSingle(float y_true, float y_pred)
+        {
+            const float epsilon = 1e-9f;
+            if (y_true > (1-epsilon))
+            {
+                return -MathF.Log(Math.Max(epsilon, y_pred));
+            }
+            if (y_true < epsilon)
+            {
+                return -MathF.Log(Math.Max(epsilon, 1 - y_pred));
+            }
+            return -y_true * MathF.Log(Math.Max(epsilon, y_pred)) - (1 - y_true) * MathF.Log(Math.Max(epsilon, 1 - y_pred));
+        }
+
+        protected override void BCEContinuousYLossBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            MergeInPlaceByRow(yPredicted.AsFloatCpu, yExpected.AsFloatCpu, (prediction, expected) => -MathF.Log(1 - MathF.Abs(prediction - expected)), yPredicted.MultDim0);
+        }
+
+        protected override void BCEWithFocalLossLossBuffer(Tensor yExpected, Tensor yPredicted, float percentageInTrueClass, float gamma)
+        {
+            var bceWithFocalLossLossBuffer = this;
+            // all tensors must be of shape (rows, 1)
+            Debug.Assert(yExpected.Shape.Length == 2);
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(bceWithFocalLossLossBuffer.Count == yPredicted.Shape[0]);
+            var y_true = yExpected.AsFloatCpuSpan;
+            var y_pred = yPredicted.AsFloatCpuSpan;
+            var loss = bceWithFocalLossLossBuffer.AsFloatCpuSpan;
+
+            //loss = -POWER(ABS(y_true-y_pred)/MAX(y_true;1-y_true);gamma)*LN(1-ABS(y_true-y_pred))
+
+            int idx = 0;
+            var rows = yExpected.Shape[0];
+            var numClass = yExpected.Shape[1];
+            var imbalancedCoeffForTrueClass = 1 / (2 * percentageInTrueClass);
+            var imbalancedCoeffForFalseClass = 1 / (2 * (1 - percentageInTrueClass));
+
+            for (int row = 0; row < rows; ++row)
+            {
+                float rowLoss = 0;
+                for (int col = 0; col < numClass; ++col)
+                {
+                    //the gradient value for standard binary cross entropy (without focal loss)
+                    var absNonScaledGradient = MathF.Abs(y_pred[idx] - y_true[idx]);
+                    var nonScaledLoss = -MathF.Log(Math.Max(1 - absNonScaledGradient, 1e-6f));
+                    var focalLossCoeff = 1.0f;
+                    if (gamma > 0)
+                    {
+                        //we need to adjust the loss 
