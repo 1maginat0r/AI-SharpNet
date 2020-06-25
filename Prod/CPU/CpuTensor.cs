@@ -1891,4 +1891,54 @@ namespace SharpNet.CPU
 
         protected override void MeanSquaredLogErrorLossBuffer(Tensor yExpected, Tensor yPredicted)
         {
-            MergeInPlaceByRow(yExpected.AsFloatCpu, yPredicted.AsFloatCpu, (expected, p
+            MergeInPlaceByRow(yExpected.AsFloatCpu, yPredicted.AsFloatCpu, (expected, prediction) => MathF.Pow(MathF.Log(1 + expected) - MathF.Log(1 + prediction), 2f), yPredicted.MultDim0);
+        }
+
+        protected override void CategoricalCrossentropyWithHierarchyLossBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            var batchSize = yPredicted.Shape[0];
+            var buffer = this;
+            Parallel.For(0, batchSize, m => { buffer.AsFloatCpuSpan[m] = CategoricalCrossentropyWithHierarchyLossBuffer_Helper(yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan); });
+        }
+        private static float CategoricalCrossentropyWithHierarchyLossBuffer_Helper(ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted)
+        {
+            Debug.Assert(expected.Length == predicted.Length);
+            double loss = 0;
+            for (int i = 0; i < expected.Length; ++i)
+            {
+                var expectedValue = expected[i];
+                if (Math.Abs(expectedValue) < 9.5f)
+                {
+                    //expectedValue contains a proba between 0 and 1
+                    Debug.Assert(expectedValue >= 0);
+                    Debug.Assert(expectedValue <= 1.0);
+                    Debug.Assert(predicted[i] >= 0.0);
+                    Debug.Assert(predicted[i] <= 1.0);
+                    if (expectedValue > 1e-6)
+                    {
+                        Debug.Assert(Math.Abs(expectedValue - 1.0) < 1e-6);
+                        loss += expectedValue * Math.Log(Math.Max(1e-6, predicted[i]));
+                    }
+                }
+                else
+                {
+                    //expectedValue contains a description : there is no associated loss
+                    if (expectedValue < 0)
+                    {
+                        var count = (int)(Math.Abs(expectedValue) + 0.5) / 10;
+                        //we need to skip 'count' indexes
+                        i += count - 1; //-1 because the for(;;) loop will also increment 'i'
+                    }
+                }
+            }
+            return -(float)loss;
+        }
+
+
+
+        protected override void BinaryCrossentropyLossBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            MergeInPlaceByRow(yPredicted.AsFloatCpu, yExpected.AsFloatCpu, (y_pred, y_true) => BinaryCrossentropyLossBufferSingle(y_true, y_pred) , yPredicted.MultDim0);
+        }
+
+        private static float BinaryCrossentropy
