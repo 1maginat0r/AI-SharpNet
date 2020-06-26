@@ -2038,4 +2038,67 @@ namespace SharpNet.CPU
             return expectedClassIndex == predictedClassIndex ? 1 : 0;
         }
 
-        public overrid
+        public override void ComputeAUCBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            var buffer = this;
+            Debug.Assert(buffer.Count == 1);
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(yExpected.Shape.Length == 2);
+            Debug.Assert(yExpected.Shape[1] == 1);
+
+            var yExpectedCpu = yExpected.AsFloatCpu.SpanContent;
+            var yPredictedCpu = yPredicted.AsFloatCpu.SpanContent;
+
+            int batchSize = yExpected.Shape[0];
+            List<Tuple<float, float>> data = new(batchSize);
+            for (var i = 0; i < batchSize; ++i)
+            {
+                data.Add(Tuple.Create(yExpectedCpu[i], yPredictedCpu[i]));
+            }
+            data.Sort((x,y)=>x.Item2.CompareTo(y.Item2));
+            double falseCount = 0;
+            double auc = 0;
+            for (int i = 0; i < batchSize; ++i)
+            {
+                float y_i = data[i].Item1;
+                falseCount += (1 - y_i);
+                auc += y_i * falseCount;
+            }
+
+            if (falseCount == 0 || falseCount == batchSize)
+            {
+                auc = 0.0;
+            }
+            else
+            {
+                auc /= (falseCount * (batchSize - falseCount));
+            }
+            buffer.AsFloatCpu[0] = (float)auc;
+        }
+
+        public override void ComputeAveragePrecisionScoreBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            var buffer = this;
+            Debug.Assert(buffer.Count == 1);
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(yExpected.Shape.Length == 2);
+            Debug.Assert(yExpected.Shape[1] == 1);
+
+            var y_true_cpu = yExpected.AsFloatCpu.SpanContent;
+            var y_pred_cpu = yPredicted.AsFloatCpu.SpanContent;
+
+            List<Tuple<float, float>> data = new(y_true_cpu.Length);
+            float trueCount = 0;
+            for (var i = 0; i < y_true_cpu.Length; ++i)
+            {
+                data.Add(Tuple.Create(y_true_cpu[i], y_pred_cpu[i]));
+                trueCount += y_true_cpu[i];
+            }
+            data.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+            float cumSum = 0;
+            float res = 0;
+            float recall_i_minus_1 = 0f;
+            for (int i = 0; i < y_true_cpu.Length; ++i)
+            {
+                cumSum+= data[i].Item1;
+                float precisio
