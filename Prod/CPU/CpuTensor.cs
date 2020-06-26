@@ -1990,4 +1990,52 @@ namespace SharpNet.CPU
                     var focalLossCoeff = 1.0f;
                     if (gamma > 0)
                     {
-                        //we need to adjust the loss 
+                        //we need to adjust the loss value for focal loss
+                        float maxValueForNonScaledGradient = Math.Max(y_true[idx], 1 - y_true[idx]);
+                        focalLossCoeff = MathF.Pow(absNonScaledGradient / maxValueForNonScaledGradient, gamma);
+                    }
+
+                    // we take into account the imbalance between the true and false class
+                    // if one class is over represented, we reduce the loss value for this class
+                    float imbalancedCoeffForCurrentClass = imbalancedCoeffForFalseClass + y_true[idx] * (imbalancedCoeffForTrueClass - imbalancedCoeffForFalseClass);
+
+                    rowLoss += focalLossCoeff * imbalancedCoeffForCurrentClass * nonScaledLoss;
+                    ++idx;
+                }
+                loss[row] = rowLoss/numClass;
+            }
+        }
+        
+
+        protected override void ComputeSparseAccuracyBuffer(Tensor yExpectedSparse, Tensor yPredicted)
+        {
+            var buffer = this;
+            (yExpectedSparse,yPredicted,_) = ReformatTo2DTensorsSparse(yExpectedSparse, yPredicted);
+            //yExpectedSparse shape:    (batchSize*timeSteps, 1)
+            //yPredicted shape:         (batchSize*timeSteps, numClass)
+            Debug.Assert(buffer.Shape.Length == 1);
+            Debug.Assert(yExpectedSparse.Count == buffer.Shape[0]);
+
+            int rows = yPredicted.Shape[0];
+            var bufferPointer = (float*)buffer.Pointer;
+            var yExpectedSparseCpu = yExpectedSparse.AsFloatCpu;
+            var yPredictedCpu = yPredicted.AsFloatCpu;
+            Parallel.For(0, rows, row => bufferPointer[row] = ComputeSparseAccuracyBuffer_Helper(yExpectedSparseCpu, yPredictedCpu, row));
+        }
+
+        private static float ComputeSparseAccuracyBuffer_Helper(CpuTensor<float> yExpectedSparse, CpuTensor<float> yPredicted, int row)
+        {
+            int expectedClassIndex = Utils.NearestInt(yExpectedSparse.Get(row, 0));
+            var yPredictedSpan = yPredicted.RowSpanSlice(row, 1);
+            int predictedClassIndex = 0;
+            for (int j = 1; j < yPredictedSpan.Length; ++j)
+            {
+                if (yPredictedSpan[j] > yPredictedSpan[predictedClassIndex])
+                {
+                    predictedClassIndex = j;
+                }
+            }
+            return expectedClassIndex == predictedClassIndex ? 1 : 0;
+        }
+
+        public overrid
