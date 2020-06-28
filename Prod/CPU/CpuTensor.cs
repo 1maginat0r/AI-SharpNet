@@ -2101,4 +2101,58 @@ namespace SharpNet.CPU
             for (int i = 0; i < y_true_cpu.Length; ++i)
             {
                 cumSum+= data[i].Item1;
-                float precisio
+                float precision_i = cumSum / (i + 1);
+                float recall_i = trueCount<=0?1:(cumSum / trueCount);
+                res+= precision_i*(recall_i- recall_i_minus_1);
+                recall_i_minus_1 = recall_i;
+            }
+            buffer.AsFloatCpu[0] = res;
+        }
+
+
+        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        protected override void ComputeAccuracyCategoricalCrossentropyWithHierarchyBuffer(Tensor yExpected, Tensor yPredicted)
+        {
+            var buffer = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { yExpected, yPredicted }));
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(!yExpected.UseGPU);
+            Debug.Assert(buffer.Shape.Length == 1);
+            Debug.Assert(buffer.Shape[0] == yPredicted.Shape[0]);
+            int batchSize = yExpected.Shape[0];
+
+            var bufferPointer = (float*)buffer.Pointer;
+            var expected = (float*)yExpected.Pointer;
+            var predicted = (float*)yPredicted.Pointer;
+            int nbCols = yExpected.Shape[1];
+            Parallel.For(0, batchSize, i =>
+            {
+                int nexIndexToCheck = 0;
+                bufferPointer[i] = IsAccuratePredictionForCategoricalCrossentropyWithHierarchy(expected + i * nbCols, predicted + i * nbCols, nbCols, &nexIndexToCheck, int.MaxValue, new List<int>()) ? 1f : 0f;
+            });
+        }
+
+        protected override void MseOfLogLossBuffer(Tensor yExpected, Tensor yPredicted, float epsilon)
+        {
+            var buffer = this;
+            int batchSize = yExpected.Shape[0];
+            Debug.Assert(buffer.SameShape(new[] { batchSize }));
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Parallel.For(0, batchSize, batchId => { MseOfLogLossHelper(batchId, buffer.AsFloatCpuSpan, yExpected.RowSlice(batchId, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(batchId, 1).AsReadonlyFloatCpuSpan, epsilon); });
+        }
+
+        private static int MaxIndex(ReadOnlySpan<float> a, int startIndex, int count)
+        {
+            int maxIndex = startIndex;
+            for (int j = startIndex + 1; j < startIndex + count; ++j)
+            {
+                if (a[j] > a[maxIndex])
+                {
+                    maxIndex = j;
+                }
+            }
+            return maxIndex;
+        }
+        public override (float f1, float precision, float recall) F1PrecisionRecallMicro(Tensor yExpected, Tensor yPredicted)
+        {
+     
