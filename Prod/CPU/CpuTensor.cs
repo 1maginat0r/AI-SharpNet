@@ -2155,4 +2155,62 @@ namespace SharpNet.CPU
         }
         public override (float f1, float precision, float recall) F1PrecisionRecallMicro(Tensor yExpected, Tensor yPredicted)
         {
-     
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            var y_true_span = yExpected.AsReadonlyFloatCpuSpan;
+            var y_pred_span = yPredicted.AsReadonlyFloatCpuSpan;
+            int true_count = 0;
+
+            var rows = yExpected.Shape[0];
+            var num_class = yExpected.Shape[1];
+            if (num_class >= 2)
+            {
+                for (int row = 0; row<rows; ++row)
+                {
+                    int idxStart = row * num_class;
+                    var idxTrue = MaxIndex(y_true_span, idxStart, num_class);
+                    var idxPred = MaxIndex(y_pred_span, idxStart, num_class);
+                    if (idxTrue == idxPred)
+                    {
+                        ++true_count;
+                    }
+                }
+            }
+            else
+            {
+                for (int row = 0; row <rows; ++row)
+                {
+                    var idxTrue = Utils.NearestInt(y_true_span[row]);
+                    var idxPred = Utils.NearestInt(y_pred_span[row]);
+                    if (idxTrue == idxPred)
+                    {
+                        ++true_count;
+                    }
+                }
+            }
+
+            var precisionMicro = true_count/(float)rows;
+            var recallMicro = precisionMicro;
+            var f1Micro = (2 * precisionMicro * recallMicro) / (precisionMicro + recallMicro);
+            return (f1Micro, precisionMicro, recallMicro);
+        }
+
+        private static void MseOfLogLossHelper(int batchId, Span<float> mseLoss, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted, float epsilon)
+        {
+            Debug.Assert(expected.Length == predicted.Length);
+            var loss = 0.0f;
+            for (int i = 0; i < expected.Length; ++i)
+            {
+                var adjustedPredicted = Math.Max(epsilon, predicted[i]);
+                var error = Math.Log(adjustedPredicted) - Math.Log(expected[i]);
+                loss += (float)(error * error);
+            }
+            mseLoss[batchId] = loss / expected.Length;
+        }
+
+        public override void CosineSimilarityLossBuffer(Tensor yExpected, Tensor yPredicted, int timeSeriesLength)
+        {
+            var cosineSimilarityLoss = this;
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(cosineSimilarityLoss.Count == timeSeriesLength);
+            Debug.Assert(yPredicted.Count%timeSeriesLength == 0);
+            Parallel.F
