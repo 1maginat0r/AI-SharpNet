@@ -2213,4 +2213,50 @@ namespace SharpNet.CPU
             Debug.Assert(yExpected.SameShape(yPredicted));
             Debug.Assert(cosineSimilarityLoss.Count == timeSeriesLength);
             Debug.Assert(yPredicted.Count%timeSeriesLength == 0);
-            Parallel.F
+            Parallel.For(0, timeSeriesLength, t => { CosineSimilarityLoss(t, cosineSimilarityLoss.AsFloatCpuSpan, yExpected.AsReadonlyFloatCpuSpan, yPredicted.AsReadonlyFloatCpuSpan, timeSeriesLength); });
+        }
+        private static void CosineSimilarityLoss(int day, Span<float> cosineSimilarityLoss, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted, int timeSeriesLength)
+        {
+            Debug.Assert(expected.Length == predicted.Length);
+            Debug.Assert(cosineSimilarityLoss.Length == timeSeriesLength);
+            var top = 0.0f;
+            var expectedSquares = 0.0f;
+            var predictedSquares = 0.0f;
+            for (int t = day; t < expected.Length; t+= timeSeriesLength)
+            {
+                var pred = predicted[t];
+                var exp = expected[t];
+                top += pred * exp;
+                expectedSquares += exp * exp;
+                predictedSquares += pred * pred;
+            }
+            var l2_norm_expected = Math.Sqrt(expectedSquares);
+            var l2_norm_predicted = Math.Sqrt(predictedSquares);
+            cosineSimilarityLoss[day] = (float)(top / (l2_norm_expected * l2_norm_predicted));
+        }
+
+        public override void HuberLossBuffer(Tensor yExpected, Tensor yPredicted, float huberDelta)
+        {
+            var huberLoss = this;
+            int batchSize = yExpected.Shape[0];
+            Debug.Assert(huberLoss.SameShape(new[] { batchSize }));
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Parallel.For(0, batchSize, batchId => { HuberLossHelper(batchId, huberLoss.AsFloatCpuSpan, yExpected.RowSlice(batchId, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(batchId, 1).AsReadonlyFloatCpuSpan, huberDelta); });
+        }
+        private static void HuberLossHelper(int batchId, Span<float> huberLoss, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted, float huberDelta)
+        {
+            Debug.Assert(expected.Length == predicted.Length);
+            var loss = 0.0f;
+            for (int i = 0; i < expected.Length; ++i)
+            {
+                var error = predicted[i] - expected[i];
+                if (Math.Abs(error) <= huberDelta)
+                {
+                    loss += 0.5f * error * error;
+                }
+                else
+                {
+                    loss += huberDelta * Math.Abs(error) - 0.5f * huberDelta * huberDelta;
+                }
+            }
+            huberLoss[batchId] = loss;
