@@ -2260,3 +2260,48 @@ namespace SharpNet.CPU
                 }
             }
             huberLoss[batchId] = loss;
+        }
+        #endregion
+
+
+        #region Compute of Gradients (for backward propagation)
+        public override void CosineSimilarityGradient(Tensor yExpected, Tensor yPredicted, int timeSeriesLength)
+        {
+            var cosineSimilarityGradient = this;
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(cosineSimilarityGradient.Count == yExpected.Count);
+            Parallel.For(0, timeSeriesLength, t => { CosineSimilarityGradient_Helper(t, cosineSimilarityGradient.AsFloatCpuSpan, yExpected.AsReadonlyFloatCpuSpan, yPredicted.AsReadonlyFloatCpuSpan, timeSeriesLength); });
+        }
+        private static void CosineSimilarityGradient_Helper(int day, Span<float> cosineSimilarityGradient, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted, int timeSeriesLength)
+        {
+            Debug.Assert(expected.Length == predicted.Length);
+            Debug.Assert(cosineSimilarityGradient.Length == expected.Length);
+            var top = 0.0f;
+            var expectedSquares = 0.0f;
+            var predictedSquares = 0.0f;
+            for (int t = day; t < expected.Length; t += timeSeriesLength)
+            {
+                var pred = predicted[t];
+                var exp = expected[t];
+                top += pred * exp;
+                expectedSquares += exp * exp;
+                predictedSquares += pred * pred;
+            }
+            var l2_norm_expected = Math.Sqrt(expectedSquares);
+            var l2_norm_predicted = Math.Sqrt(predictedSquares);
+            var multiplier1 = 1.0f/(l2_norm_expected * l2_norm_predicted);
+            var multiplier2 = (-top)/(l2_norm_predicted* l2_norm_predicted * l2_norm_predicted * l2_norm_expected);
+            for (int t = day; t < expected.Length; t += timeSeriesLength)
+            {
+                cosineSimilarityGradient[t] = -(float) (multiplier1*expected[t] + multiplier2*predicted[t]);
+            }
+        }
+
+        public override void HuberGradient(Tensor yExpected, Tensor yPredicted, float huberDelta)
+        {
+            var huberGradient = this;
+            Debug.Assert(huberGradient.SameShape(yExpected));
+            Debug.Assert(huberGradient.SameShape(yPredicted));
+            Parallel.For(0, huberGradient.Shape[0], m => { HuberGradient_Helper(huberGradient.RowSlice(m, 1).AsFloatCpuSpan, yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan, huberDelta); });
+        }
+        private static void HuberGradie
