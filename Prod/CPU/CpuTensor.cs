@@ -2304,4 +2304,49 @@ namespace SharpNet.CPU
             Debug.Assert(huberGradient.SameShape(yPredicted));
             Parallel.For(0, huberGradient.Shape[0], m => { HuberGradient_Helper(huberGradient.RowSlice(m, 1).AsFloatCpuSpan, yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan, huberDelta); });
         }
-        private static void HuberGradie
+        private static void HuberGradient_Helper(Span<float> gradient, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted, float huberDelta)
+        {
+            Debug.Assert(gradient.Length == expected.Length);
+            Debug.Assert(gradient.Length == predicted.Length);
+            for (int i = 0; i < gradient.Length; ++i)
+            {
+                var error = predicted[i] - expected[i];
+                gradient[i] = Math.Max(Math.Min(error, huberDelta), -huberDelta);
+                gradient[i] /= gradient.Length;
+            }
+        }
+
+
+        public override void SparseCategoricalCrossentropyGradient(Tensor yExpectedSparse, Tensor yPredicted)
+        {
+            (yExpectedSparse, yPredicted, var sparseCategoricalCrossentropyGradient) = ReformatTo2DTensorsSparse(yExpectedSparse, yPredicted, this);
+            //yExpected shape:  (batchSize*timeSteps, 1)
+            //yPredicted shape: (batchSize*timeSteps, numClass)
+            //sparseCategoricalCrossentropyGradient shape: (batchSize*timeSteps, numClass)
+            int numClass = yPredicted.Shape[^1];
+            yPredicted.CopyTo(sparseCategoricalCrossentropyGradient);
+            var yExpectedSpan = yExpectedSparse.AsReadonlyFloatCpuSpan;
+            var yGradient = sparseCategoricalCrossentropyGradient.AsFloatCpuSpan;
+            for (int row = 0; row < yExpectedSpan.Length; ++row)
+            {
+                var yClass = Utils.NearestInt(yExpectedSpan[row]);
+                Debug.Assert(yClass >= 0);
+                Debug.Assert(yClass < numClass);
+                yGradient[row * numClass + yClass] -= 1.0f;
+            }
+        }
+        public override void MseGradient(Tensor yExpected, Tensor yPredicted)
+        {
+            var mseGradient = this;
+            Debug.Assert(mseGradient.SameShape(yExpected));
+            Debug.Assert(mseGradient.SameShape(yPredicted));
+            Parallel.For(0, mseGradient.Shape[0], m => { MseGradient_Helper(mseGradient.RowSlice(m, 1).AsFloatCpuSpan, yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan); });
+        }
+
+        private static void MseGradient_Helper(Span<float> gradient, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted)
+        {
+            Debug.Assert(gradient.Length == expected.Length);
+            Debug.Assert(gradient.Length == predicted.Length);
+            for (int i = 0; i < gradient.Length; ++i)
+            {
+                var er
