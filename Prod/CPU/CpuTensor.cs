@@ -2393,4 +2393,48 @@ namespace SharpNet.CPU
 
         protected override void BCEWithFocalLossGradient(Tensor yExpected, Tensor yPredicted, float percentageInTrueClass, float gamma)
         {
-            var bceWith
+            var bceWithFocalLossGradient = this;
+            Debug.Assert(yExpected.Shape.Length == 2);
+            Debug.Assert(yExpected.SameShape(yPredicted));
+            Debug.Assert(yExpected.SameShape(bceWithFocalLossGradient));
+            var y_true = yExpected.AsFloatCpuSpan;
+            var y_pred = yPredicted.AsFloatCpuSpan;
+            var gradients = bceWithFocalLossGradient.AsFloatCpuSpan;
+            var rows = yExpected.Shape[0];
+            var numClass = yExpected.Shape[1];
+            int idx = 0;
+
+            var imbalancedCoeffForTrueClass = 1 / (2*percentageInTrueClass);
+            var imbalancedCoeffForFalseClass = 1 / (2*(1-percentageInTrueClass));
+
+            for (int row = 0; row < rows; ++row)
+            {
+                for (int col = 0; col < numClass; ++col)
+                {
+                    //the gradient value for standard binary cross entropy (without focal loss)
+                    var nonScaledGradient = y_pred[idx] - y_true[idx];
+                    var focalLossCoeff = 1.0f;
+                    if (gamma > 0)
+                    {
+                        //we need to adjust the gradient value for focal loss
+                        float maxValueForNonScaledGradient = Math.Max(y_true[idx], 1 - y_true[idx]);
+                        focalLossCoeff = (gamma + 1) * MathF.Pow(MathF.Abs(nonScaledGradient) / maxValueForNonScaledGradient, gamma);
+                    }
+
+                    // we take into account the imbalance between the true and false class
+                    // if one class is over represented, we reduce the gradient value for this class
+                    float imbalancedCoeffForCurrentClass = imbalancedCoeffForFalseClass +  y_true[idx] * (imbalancedCoeffForTrueClass - imbalancedCoeffForFalseClass);
+
+                    gradients[idx++] = (focalLossCoeff * imbalancedCoeffForCurrentClass * nonScaledGradient) /numClass;
+                }
+            }
+        }
+
+        public override void CategoricalCrossentropyWithHierarchyGradient(Tensor yExpected, Tensor yPredicted)
+        {
+            var categoricalCrossentropyWithHierarchyGradient = this;
+            Debug.Assert(categoricalCrossentropyWithHierarchyGradient.SameShape(yExpected));
+            Debug.Assert(categoricalCrossentropyWithHierarchyGradient.SameShape(yPredicted));
+            Debug.Assert(categoricalCrossentropyWithHierarchyGradient.Dimension == 2);
+            categoricalCrossentropyWithHierarchyGradient.ZeroMemory();
+            Parallel.For(0, categoric
