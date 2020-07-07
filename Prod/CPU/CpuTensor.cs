@@ -2349,4 +2349,48 @@ namespace SharpNet.CPU
             Debug.Assert(gradient.Length == predicted.Length);
             for (int i = 0; i < gradient.Length; ++i)
             {
-                var er
+                var error = predicted[i] - expected[i];
+                gradient[i] = (2*error) / gradient.Length;
+            }
+        }
+
+        public override void MaeGradient(Tensor yExpected, Tensor yPredicted)
+        {
+            var maeGradient = this;
+            Debug.Assert(maeGradient.SameShape(yExpected));
+            Debug.Assert(maeGradient.SameShape(yPredicted));
+            Parallel.For(0, maeGradient.Shape[0], m => { MaeGradient_Helper(maeGradient.RowSlice(m, 1).AsFloatCpuSpan, yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan); });
+        }
+        private static void MaeGradient_Helper(Span<float> gradient, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted)
+        {
+            Debug.Assert(gradient.Length == expected.Length);
+            Debug.Assert(gradient.Length == predicted.Length);
+            for (int i = 0; i < gradient.Length; ++i)
+            {
+                var error = predicted[i] - expected[i];
+                gradient[i] = Math.Sign(error) / (float)gradient.Length;
+            }
+        }
+
+        public override void MseOfLogGradient(Tensor yExpected, Tensor yPredicted, float epsilon)
+        {
+            var mseOfLogGradient = this;
+            Debug.Assert(mseOfLogGradient.SameShape(yExpected));
+            Debug.Assert(mseOfLogGradient.SameShape(yPredicted));
+            Parallel.For(0, mseOfLogGradient.Shape[0], m => { MseOfLogGradient_Helper(mseOfLogGradient.RowSlice(m, 1).AsFloatCpuSpan, yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan, epsilon); });
+        }
+        private static void MseOfLogGradient_Helper(Span<float> gradient, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted, float epsilon)
+        {
+            Debug.Assert(gradient.Length == expected.Length);
+            Debug.Assert(gradient.Length == predicted.Length);
+            for (int i = 0; i < gradient.Length; ++i)
+            {
+                var adjustedPredicted = Math.Max(epsilon, predicted[i]);
+                var error = Math.Log(adjustedPredicted) - Math.Log(expected[i]);
+                gradient[i] = (float)(2 * error / (adjustedPredicted * gradient.Length));
+            }
+        }
+
+        protected override void BCEWithFocalLossGradient(Tensor yExpected, Tensor yPredicted, float percentageInTrueClass, float gamma)
+        {
+            var bceWith
