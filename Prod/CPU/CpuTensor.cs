@@ -2437,4 +2437,61 @@ namespace SharpNet.CPU
             Debug.Assert(categoricalCrossentropyWithHierarchyGradient.SameShape(yPredicted));
             Debug.Assert(categoricalCrossentropyWithHierarchyGradient.Dimension == 2);
             categoricalCrossentropyWithHierarchyGradient.ZeroMemory();
-            Parallel.For(0, categoric
+            Parallel.For(0, categoricalCrossentropyWithHierarchyGradient.Shape[0], m => { CategoricalCrossentropyWithHierarchyGradient_Helper(categoricalCrossentropyWithHierarchyGradient.RowSlice(m, 1).AsFloatCpuSpan, yExpected.RowSlice(m, 1).AsReadonlyFloatCpuSpan, yPredicted.RowSlice(m, 1).AsReadonlyFloatCpuSpan); });
+        }
+
+        private static void CategoricalCrossentropyWithHierarchyGradient_Helper(Span<float> loss, ReadOnlySpan<float> expected, ReadOnlySpan<float> predicted)
+        {
+            Debug.Assert(loss.Length == expected.Length);
+            Debug.Assert(loss.Length == predicted.Length);
+            for (int i = 0; i < loss.Length; ++i)
+            {
+                var expectedValue = expected[i];
+                if (Math.Abs(expectedValue) < 9.5f)
+                {
+                    //expectedValue contains a proba between 0 and 1
+                    Debug.Assert(expectedValue >= 0);
+                    Debug.Assert(expectedValue <= 1.0);
+                    Debug.Assert(predicted[i] >= 0.0);
+                    Debug.Assert(predicted[i] <= 1.0);
+                    loss[i] = predicted[i] - expectedValue;
+                }
+                else
+                {
+                    //expectedValue contains a description : there is no associated loss
+                    if (expectedValue < 0)
+                    {
+                        var count = (int)(Math.Abs(expectedValue) + 0.5) / 10;
+                        //we need to skip 'count' indexes
+                        i += count - 1; //-1 because the for(;;) loop will also increment 'i'
+                    }
+                }
+            }
+        }
+        #endregion
+
+
+        public override void CopyTo(Tensor b)
+        {
+            if (Count != b.Count)
+            {
+                throw new ArgumentException("can't copy "+this+" to "+b);
+            }
+            if (b.UseGPU)
+            {
+                //copy from CPU ('this' tensor) to GPU ('b' tensor)
+                if (HasPinnedMemory)
+                {
+                    //the tensor memory is already pinned
+                    b.AsGPU<T>().InitializeFromHostPinnedMemory(Pointer);
+                }
+                else
+                {
+                    b.AsGPU<T>().InitializeFromHostMemory(Content);
+                }
+            }
+            else
+            {
+                //copy from CPU ('this' tensor) to CPU ('b' tensor)
+                Content.Slice(0, Count).CopyTo( ((CpuTensor<T>)b).Content.Slice(0, Count));
+           
