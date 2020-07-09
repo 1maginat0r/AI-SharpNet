@@ -2494,4 +2494,63 @@ namespace SharpNet.CPU
             {
                 //copy from CPU ('this' tensor) to CPU ('b' tensor)
                 Content.Slice(0, Count).CopyTo( ((CpuTensor<T>)b).Content.Slice(0, Count));
-           
+            }
+        }
+
+
+        ///// <summary>
+        ///// return a new Tensor keeping only columns at index 'columnIndexesToKeep'
+        ///// </summary>
+        ///// <param name="columnIndexesToRemove">the column indexes to remove</param>
+        ///// <returns></returns>
+        //public CpuTensor<T> DropColumns(IEnumerable<int> columnIndexesToRemove)
+        //{
+        //    if (Shape.Length != 2)
+        //    {
+        //        throw new Exception($"{nameof(DropColumns)} only works with matrix");
+        //    }
+        //    if (columnIndexesToRemove == null || !columnIndexesToRemove.Any())
+        //    {
+        //        return (CpuTensor<T>)Clone();
+        //    }
+        //    var columnIndexesToKeep = Enumerable.Range(0, Shape[1]).ToList();
+        //    foreach (var col in columnIndexesToRemove)
+        //    {
+        //        columnIndexesToKeep.Remove(col);
+        //    }
+        //    return KeepColumns(columnIndexesToKeep);
+        //}
+
+        /// <summary>
+        /// Return a new Tensor keeping only columns at index 'columnIndexesToKeep'
+        /// Those columns will be in the same order as the one provided in 'columnIndexesToKeep'
+        /// </summary>
+        /// <param name="columnIndexesToKeep"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public CpuTensor<T> KeepColumns(List<int> columnIndexesToKeep)
+        {
+            if (Shape.Length != 2)
+            {
+                throw new Exception($"{nameof(KeepColumns)} only works with matrix");
+            }
+            var srcContent = SpanContent;
+            var srcCols = Shape[1];
+            var targetShape = new[] { Shape[0], columnIndexesToKeep.Count };
+            var targetContent = new T[targetShape[0] * targetShape[1]];
+            int newIdx = 0;
+            for (int row = 0; row < Shape[0]; ++row)
+            {
+                foreach (var srcCol in columnIndexesToKeep)
+                {
+                    targetContent[newIdx++] = srcContent[srcCol+row*srcCols];
+                }
+            }
+            return new CpuTensor<T>(targetShape, targetContent);
+        }
+
+        public static CpuTensor<float> CreateOneHotTensor(Func<int, int> elementIdToCategoryIndex, int elementCount, int numClass)
+        {
+            var result = new CpuTensor<float>(new[] { elementCount, numClass });
+            var yContent = result.SpanContent;
+            for (int elementId = 0; ele
