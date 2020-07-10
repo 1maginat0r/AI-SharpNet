@@ -2612,4 +2612,66 @@ namespace SharpNet.CPU
             return result;
         }
 
-        public static CpuTensor<T> MergeVertically(CpuTe
+        public static CpuTensor<T> MergeVertically(CpuTensor<T> top, CpuTensor<T> bottom)
+        {
+            if (top == null)
+            {
+                return bottom;
+            }
+            if (bottom == null)
+            {
+                return top;
+            }
+            return InsertAtRowIndex(top, bottom, top.Shape[0]);
+        }
+
+
+        public static CpuTensor<T> InsertAtColumnIndex(CpuTensor<T> source, CpuTensor<T> toAddAtColumnIndex, int columnIndex)
+        {
+            Debug.Assert(source.Shape.Length == 2);
+            Debug.Assert(toAddAtColumnIndex.Shape.Length == 2);
+            //same number of rows
+            Debug.Assert(source.Shape[0] == toAddAtColumnIndex.Shape[0]);
+            Debug.Assert(columnIndex <= source.Shape[1]);
+            var newShape = new[] { source.Shape[0], source.Shape[1] + toAddAtColumnIndex.Shape[1] };
+
+            var sourceSpan = source.SpanContent;
+            var toAddSpan = toAddAtColumnIndex.SpanContent;
+
+            var newData = new T[newShape[0] * newShape[1]];
+            int nextIndexInSourceSpan = 0;
+            int nextIndexInToAddAtColumnIndex = 0;
+            int nextIndexInNewData = 0;
+            for (int row = 0; row < newShape[0]; ++row)
+            {
+                for (int col = 0; col < columnIndex; ++col)
+                {
+                    newData[nextIndexInNewData++] = sourceSpan[nextIndexInSourceSpan++];
+                }
+                for (int col = 0; col < toAddAtColumnIndex.Shape[1]; ++col)
+                {
+                    newData[nextIndexInNewData++] = toAddSpan[nextIndexInToAddAtColumnIndex++];
+                }
+                for (int col = columnIndex; col < source.Shape[1]; ++col)
+                {
+                    newData[nextIndexInNewData++] = sourceSpan[nextIndexInSourceSpan++];
+                }
+            }
+            return new CpuTensor<T>(newShape, newData);
+        }
+
+
+        private void InsertOtherAtColumnIndex(CpuTensor<T> other, int columnIndex)
+        {
+            Debug.Assert(Shape.Length == 2);
+            Debug.Assert(other.Shape.Length == 2);
+            //same number of rows
+            Debug.Assert(Shape[0] == other.Shape[0]);
+            Debug.Assert(columnIndex <= Shape[1]);
+            var otherSpan = other.ReadonlyContent;
+            var content = SpanContent;
+            int nextIndexInToAddAtColumnIndex = 0;
+            for (int row = 0; row < Shape[0]; ++row)
+            {
+                int nextIndexInNewData = columnIndex+row * Shape[1];
+                for (int col =
