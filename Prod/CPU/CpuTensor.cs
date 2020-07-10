@@ -2553,4 +2553,63 @@ namespace SharpNet.CPU
         {
             var result = new CpuTensor<float>(new[] { elementCount, numClass });
             var yContent = result.SpanContent;
-            for (int elementId = 0; ele
+            for (int elementId = 0; elementId < elementCount; ++elementId)
+            {
+                var categoryIndex = elementIdToCategoryIndex(elementId);
+                if (categoryIndex >= 0)
+                {
+                    yContent[elementId * numClass + categoryIndex] = 1f;
+                }
+            }
+            return result;
+        }
+
+
+
+        /// <summary>
+        /// transform a tensor with class indexes to a tensor with a probability distribution of each class
+        /// </summary>
+        /// <param name="argMax">for each row, the index of the class associated with the row</param>
+        /// <param name="numClasses">total number of distinct classes</param>
+        /// <returns>a new tensor of shape (rows, numClasses) with for each row a 1 at the idx of the associated class and 0 elsewhere </returns>
+        public static CpuTensor<float> FromClassIndexToProba(CpuTensor<float> argMax, int numClasses)
+        {
+            var argMaxContent = argMax.ReadonlyContent;
+            int rows = argMax.Shape[0];
+            var content = new float[rows * numClasses];
+            for (int row = 0; row < rows; ++row)
+            {
+                int idx = Utils.NearestInt(argMaxContent[row]);
+                if (idx >= numClasses)
+                {
+                    throw new Exception($"invalid index {idx} at row {row}, must be less than {numClasses}");
+                }
+                content[row * numClasses + idx] = 1; //100% for being class 'idx', 0% for all other classes
+            }
+            return new CpuTensor<float>(new[] { rows, numClasses }, content);
+        }
+        
+        public static CpuTensor<T> MergeHorizontally(params CpuTensor<T>[] tensors)
+        {
+            tensors = tensors.Where(t => t != null).ToArray();
+            if (tensors.Length == 0)
+            {
+                return null;
+            }
+            if (tensors.Length == 1)
+            {
+                return tensors[0];
+            }
+
+            var newColumns = tensors.Select(t => t.Shape[1]).Sum();
+            var result = new CpuTensor<T>(new[] { tensors[0].Shape[0], newColumns });
+            int nextColumnToInsert = 0;
+            foreach (var t in tensors)
+            {
+                result.InsertOtherAtColumnIndex(t, nextColumnToInsert);
+                nextColumnToInsert += t.Shape[1];
+            }
+            return result;
+        }
+
+        public static CpuTensor<T> MergeVertically(CpuTe
