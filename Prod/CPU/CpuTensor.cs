@@ -2674,4 +2674,66 @@ namespace SharpNet.CPU
             for (int row = 0; row < Shape[0]; ++row)
             {
                 int nextIndexInNewData = columnIndex+row * Shape[1];
-                for (int col =
+                for (int col = 0; col < other.Shape[1]; ++col)
+                {
+                    content[nextIndexInNewData++] = otherSpan[nextIndexInToAddAtColumnIndex++];
+                }
+            }
+        }
+
+
+
+        public static CpuTensor<T> InsertAtRowIndex(CpuTensor<T> source, CpuTensor<T> toAddAtRowIndex, int rowIndex)
+        {
+            Debug.Assert(source.Shape.Length == 2);
+            Debug.Assert(toAddAtRowIndex.Shape.Length == 2);
+            //same number of rows
+            var columns = source.Shape[1];
+            Debug.Assert(columns == toAddAtRowIndex.Shape[1]);
+            Debug.Assert(rowIndex <= source.Shape[0]);
+            var newShape = new[] { source.Shape[0] + toAddAtRowIndex.Shape[0], columns };
+
+            var newTensor = new CpuTensor<T>(newShape);
+            source.CopyTo(0, newTensor, 0, rowIndex* columns);
+            toAddAtRowIndex.CopyTo(0, newTensor, rowIndex * columns, toAddAtRowIndex.Count);
+            if (rowIndex < source.Shape[0])
+            {
+                source.CopyTo(rowIndex * columns, newTensor, rowIndex * columns+ toAddAtRowIndex.Count, source.Count-rowIndex * columns);
+            }
+            return newTensor;
+        }
+        
+        public static CpuTensor<float> NewCpuTensor(IList<float[]> rows)
+        {
+            var x = new CpuTensor<float>(new[] { rows.Count, rows[0].Length });
+            var xSpan = x.AsFloatCpuSpan;
+            int xSpanIndex = 0;
+            foreach (var row in rows)
+            {
+                Debug.Assert(row.Length == x.Shape[1]);
+                foreach (var t in row)
+                {
+                    xSpan[xSpanIndex++] = t;
+                }
+            }
+            Debug.Assert(xSpanIndex == x.Count);
+            return x;
+        }
+
+        /// <summary>
+        /// copy the columns at indexes 'columnsToLoadFromSource' from 'source' tensor to 'this' tensor
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="columnsToLoadFromSource"></param>
+
+        public void LoadColumnsFromSource(CpuTensor<T> source, IList<int> columnsToLoadFromSource)
+        {
+            Debug.Assert(SameShape(source));
+            Debug.Assert(Shape.Length == 2);
+            var sourceSpan = source.SpanContent;
+            var thisSpan = SpanContent;
+            for (int row = 0; row < Shape[0]; ++row)
+            {
+                int firstIndex = row * Shape[1];
+                foreach (var columnIndex in columnsToLoadFromSource)
+  
