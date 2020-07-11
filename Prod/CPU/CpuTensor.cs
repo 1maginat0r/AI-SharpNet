@@ -2736,4 +2736,67 @@ namespace SharpNet.CPU
             {
                 int firstIndex = row * Shape[1];
                 foreach (var columnIndex in columnsToLoadFromSource)
-  
+                {
+                    thisSpan[firstIndex+ columnIndex] = sourceSpan[firstIndex + columnIndex];
+                }
+            }
+        }
+
+        public override void CopyTo(int startElement, Tensor other, int otherStartElement, int elementCount)
+        {
+            var src = Content.Slice(startElement, elementCount);
+            var dest = ((CpuTensor<T>)other).Content.Slice(otherStartElement, elementCount);
+            src.CopyTo(dest);
+        }
+       
+        public override Tensor Slice(int startIndex, int[] sliceShape)
+        {
+            Debug.Assert(startIndex >= 0);
+            return new CpuTensor<T>((int[])sliceShape.Clone(), this, startIndex);
+        }
+
+
+        public Span<T> RowSpanSlice(int startRowIndex, int nbRows)
+        {
+            Debug.Assert(Shape.Length >= 2);
+            Debug.Assert(startRowIndex >= 0);
+            Debug.Assert(startRowIndex < Shape[0]);
+            Debug.Assert(startRowIndex + nbRows - 1 < Shape[0]);
+            return SpanSlice(startRowIndex* MultDim0, MultDim0);
+        }
+
+        private Span<T> SpanSlice(int start, int length)
+        {
+            Debug.Assert(start >= 0);
+            return Content.Slice(start, length).Span;
+        }
+
+        public T[] ColumnContent(int columnIndex)
+        {
+            Debug.Assert(Shape.Length == 2);
+            var res = new T[Shape[0]];
+            var content = ReadonlyContent;
+            for (int row = 0; row < res.Length; row++)
+            {
+                res[row] = content[columnIndex + row * Shape[1]];
+            }
+            return res;
+        }
+        
+        public override void YOLOV3Forward(Tensor x, int inputImageHeight, int inputImageWidth, int[] anchors)
+        {
+            Debug.Assert(anchors.Length %2 == 0);
+            int nbAnchors = anchors.Length / 2;
+            var y = AsFloatCpu;
+            Debug.Assert(inputImageHeight % x.Shape[2] == 0);
+            Debug.Assert(inputImageWidth % x.Shape[3] == 0);
+            Debug.Assert(y.Shape[0] == x.Shape[0]);
+            Debug.Assert(x.Shape[1] % nbAnchors == 0);
+            Debug.Assert(nbAnchors * y.Shape[2] == x.Shape[1]);
+            Debug.Assert(y.Shape[1] == nbAnchors * x.Shape[2] * x.Shape[3]);
+
+            var xContent = x.AsFloatCpuSpan;
+            var yContent = y.SpanContent;
+
+            //2 for box centers + 2 for box size + 1 for box confidence + N for categories (N == 80 for COCO)
+           
