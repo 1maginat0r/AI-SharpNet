@@ -2799,4 +2799,60 @@ namespace SharpNet.CPU
             var yContent = y.SpanContent;
 
             //2 for box centers + 2 for box size + 1 for box confidence + N for categories (N == 80 for COCO)
-           
+            int predictionLength = x.Shape[1] / nbAnchors;
+            int categories = predictionLength - 5;
+            int rowStride = inputImageHeight / x.Shape[2];
+            int colStride = inputImageWidth / x.Shape[3];
+
+            var yNextIndex = 0;
+            for (int n = 0; n < x.Shape[0]; ++n)
+            for (int h = 0; h < x.Shape[2]; ++h)
+            for (int w = 0; w < x.Shape[3]; ++w)
+            {
+                for (int boxId = 0; boxId < anchors.Length/2; ++boxId)
+                {
+                    //box center
+                    var xNextIndex = x.Idx(n, boxId* predictionLength, h, w);
+                    yContent[yNextIndex++] = (w + Utils.Sigmoid(xContent[xNextIndex])) * colStride;
+                    xNextIndex += x.MultDim1;
+                    yContent[yNextIndex++] = (h + Utils.Sigmoid(xContent[xNextIndex])) * rowStride;
+                    xNextIndex += x.MultDim1;
+
+                    //box size
+                    var anchorWidth = anchors[2 * boxId];
+                    yContent[yNextIndex++] = (float) (anchorWidth * Math.Exp(xContent[xNextIndex]));
+                    xNextIndex += x.MultDim1;
+                    var anchorHeight = anchors[2 * boxId+1];
+                    yContent[yNextIndex++] = (float)(anchorHeight * Math.Exp(xContent[xNextIndex]));
+                    xNextIndex += x.MultDim1;
+
+                    //box confidence
+                    yContent[yNextIndex++] = Utils.Sigmoid(xContent[xNextIndex]);
+                    xNextIndex += x.MultDim1;
+
+                    //categories
+                    for (int i = 0; i < categories; ++i)
+                    {
+                        yContent[yNextIndex++] = Utils.Sigmoid(xContent[xNextIndex]);
+                        xNextIndex += x.MultDim1;
+                    }
+                }
+            }
+        }
+
+        public override void UpdateWithPositionalEncoding_AttnIsAllYouNeed(int n)
+        {
+            Debug.Assert(Shape.Length == 3);
+            int batchSize = Shape[0];
+            int timeSteps = Shape[1];
+            int embeddingDim = Shape[2];
+            var spanContent = AsFloatCpuSpan;
+            int idx = 0;
+            for (int batch = 0; batch < batchSize; ++batch)
+            {
+                for (int k = 0; k < timeSteps; ++k)
+                {
+                    for (int col = 0; col < embeddingDim; ++col)
+                    {
+                        int i = col / 2;
+          
