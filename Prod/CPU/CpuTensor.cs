@@ -2855,4 +2855,59 @@ namespace SharpNet.CPU
                     for (int col = 0; col < embeddingDim; ++col)
                     {
                         int i = col / 2;
-          
+                        float value = col % 2 == 0 
+                            ? MathF.Sin(k / MathF.Pow(n, (2f * i) / embeddingDim)) 
+                            : MathF.Cos(k / MathF.Pow(n, (2f * i) / embeddingDim));
+                        spanContent[idx++] += value;
+                    }
+                }
+            }
+        }
+
+        public override void ZeroMemory()
+        {
+            SpanContent.Clear();
+        }
+        public override void Dot(Tensor a, bool transposeA, Tensor b, bool transposeB, float alpha, float beta)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> { this, a, b }));
+            Debug.Assert(a.Dimension >= 2);
+            Debug.Assert(b.Dimension >= 2);
+            Debug.Assert(Dimension >= 2);
+
+            BlasServices.DotMkl(a.AsFloatPointer, a.Shape[0], a.MultDim0, transposeA, b.AsFloatPointer, b.Shape[0], b.MultDim0, transposeB, AsFloatPointer, alpha, beta);
+            //Utils.DotOpenblas(a.Content, a.Height, a.Width, b.Content, b.Height, b.Width, y.Content);
+            //var tmpTranspose = new double[b.Count];
+            //Utils.DotCSharp(a.Content, a.Height, a.Width, b.Content, b.Height, b.Width, tmpTranspose, y.Content);
+        }
+        
+        public override void BatchMatrixMultiplication(Tensor a_3D, bool transposeA, Tensor b_3D, bool transposeB, float alpha, float beta)
+        {
+            var c_3D = this;
+            Debug.Assert(a_3D.Shape.Length == 3);
+            Debug.Assert(b_3D.Shape.Length == 3);
+            Debug.Assert(c_3D.Shape.Length == 3);
+            Debug.Assert(a_3D.Shape[0] == b_3D.Shape[0]);
+            Debug.Assert(a_3D.Shape[0] == c_3D.Shape[0]);
+            int nbMatrices = a_3D.Shape[0];
+
+            var aShape = a_3D.Shape.Skip(1).ToArray();
+            var bShape = b_3D.Shape.Skip(1).ToArray();
+            var cShape = c_3D.Shape.Skip(1).ToArray();
+
+            for (int i = 0; i < nbMatrices; ++i)
+            {
+                var a = a_3D.GetSubTensor(i, aShape);
+                var b = b_3D.GetSubTensor(i, bShape);
+                var c = c_3D.GetSubTensor(i, cShape);
+                c.Dot(a, transposeA, b, transposeB, alpha, beta);
+            }
+        }
+
+        public override void SetToZeroAllElementsBelowMainDiagonal()
+        {
+            var spanContent = AsFloatCpuSpan;
+            for (int row = 0; row < Shape[0]; ++row)
+                for (int col = 0; col < Math.Min(Shape[1], row); ++col)
+                {
+                    spanCon
