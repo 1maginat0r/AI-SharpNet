@@ -2910,4 +2910,70 @@ namespace SharpNet.CPU
             for (int row = 0; row < Shape[0]; ++row)
                 for (int col = 0; col < Math.Min(Shape[1], row); ++col)
                 {
-                    spanCon
+                    spanContent[row*Shape[1]+col] = 0;
+                }
+        }
+
+        public override void SetAllElementsAboveMainDiagonal(float valueForElementsAboveMainDiagonal)
+        {
+            Debug.Assert(Shape.Length == 2 || Shape.Length == 3);
+            (int matrices_count,int rows_by_matrix,int cols_by_matrix) = Shape.Length == 3
+                ? (Shape[0], Shape[1], Shape[2])
+                : (1, Shape[0], Shape[1]);
+            for (int matrixId = 0; matrixId < matrices_count; ++matrixId)
+            {
+                var spanContent = Shape.Length == 3 ?ElementSlice(matrixId).AsFloatCpuSpan : AsFloatCpuSpan;
+                for (int row = 0; row < rows_by_matrix; ++row)
+                    for (int col = row + 1; col < cols_by_matrix; ++col)
+                    {
+                        spanContent[row * cols_by_matrix + col] = valueForElementsAboveMainDiagonal;
+                    }
+            }
+        }
+
+        public override void SetIdentityMatrix()
+        {
+            Debug.Assert(Shape.Length == 2);
+            Debug.Assert(Shape[0] == Shape[1]);
+            ZeroMemory();
+            var spanContent = AsFloatCpuSpan;
+            for (int row = 0; row < Shape[0]; ++row)
+            {
+                spanContent[row * Shape[1] + row] = 1f;
+            }
+        }
+
+        public override void Orthogonal(Random rand)
+        {
+            NormalDistribution(rand, 0, 1);
+            Q_Factorization();
+        }
+        public override int QRFactorization_FloatBufferLength()
+        {
+            return 1;
+        }
+        public override void QRFactorization(Tensor Q, Tensor R, Tensor buffer)
+        {
+            Q_Factorization(Q);
+            R.Dot(Q, true, this, false, 1.0f, 0.0f);
+        }
+        /// <summary>
+        /// Make input 'this' an orthogonal matrix using Gram–Schmidt process
+        /// this: A matrix with shape: (rows, cols)
+        /// See: https://en.wikipedia.org/wiki/QR_decomposition
+        /// </summary>
+        /// <param name="Q">An orthogonal Matrix of shape (rows, col)</param>
+        public void Q_Factorization(Tensor Q = null)
+        {
+            //Debug.Assert(matrix.Length == rows * cols);
+
+            //var aSpan = AsFloatCpuSpan;
+            int rows = Shape[0];
+            int cols = MultDim0;
+
+            int rowsTransposed = cols;
+            int colsTransposed = rows;
+            var aTransposed = new CpuTensor<float>(new[] { rowsTransposed, colsTransposed });
+
+            Transpose(aTransposed);
+            var aTransposedSpan = aTransp
