@@ -2976,4 +2976,56 @@ namespace SharpNet.CPU
             var aTransposed = new CpuTensor<float>(new[] { rowsTransposed, colsTransposed });
 
             Transpose(aTransposed);
-            var aTransposedSpan = aTransp
+            var aTransposedSpan = aTransposed.AsFloatCpuSpan;
+
+            //We compute the U matrix as described in: https://en.wikipedia.org/wiki/QR_decomposition 
+            var U = new Span<float>(new float[aTransposedSpan.Length]);
+            aTransposedSpan.CopyTo(U);
+            for (int row = 1; row < rowsTransposed; ++row)
+            {
+                //we compute row 'row' of 'U' matrix
+                var aRow = aTransposedSpan.Slice(colsTransposed * row, colsTransposed);
+                var uRow = U.Slice(colsTransposed * row, colsTransposed);
+                for (int subRow = 0; subRow < row; ++subRow)
+                {
+                    var uSubRow = U.Slice(colsTransposed * subRow, colsTransposed);
+                    float multiplier = InnerProduct(uSubRow, aRow) / InnerProduct(uSubRow, uSubRow);
+                    for (int col = 0; col < uSubRow.Length; ++col)
+                    {
+                        uRow[col] -= multiplier * uSubRow[col];
+                    }
+                }
+            }
+
+            //We compute the Q (= rectangularMatrix) matrix:
+            //  it is an orthogonal matrix that we can compute from the U matrix
+            //  (by normalizing each row of the U matrix)
+            U.CopyTo(aTransposedSpan);
+            for (int row = 0; row < rowsTransposed; ++row)
+            {
+                var aTransposedRow = aTransposedSpan.Slice(colsTransposed * row, colsTransposed);
+                float normalizer = (float)Math.Sqrt(InnerProduct(aTransposedRow, aTransposedRow));
+                for (int col = 0; col < aTransposedRow.Length; ++col)
+                {
+                    aTransposedRow[col] /= normalizer;
+                }
+            }
+
+            aTransposed.Transpose(Q??this);
+        }
+
+        public override void Transpose(Tensor transposed)
+        {
+            Debug.Assert(Dimension == 2);
+            if (transposed.CapacityInBytes < ReallyNeededMemoryInBytesForShape(Shape))
+            {
+                throw new ArgumentException("Can't transpose to tensor: not enough capacity");
+            }
+            transposed.ReshapeInPlace(new[] { Shape[1], Shape[0] });
+            Debug.Assert(transposed.Dimension == Dimension);
+            Debug.Assert(transposed.Shape[0] == Shape[1]);
+            Debug.Assert(transposed.Shape[1] == Shape[0]);
+
+            var inputSpan = AsReadonlyFloatCpuSpan;
+            var outputSpan = transposed.AsFloatCpuSpan;
+            for (i
