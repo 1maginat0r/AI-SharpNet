@@ -3028,4 +3028,67 @@ namespace SharpNet.CPU
 
             var inputSpan = AsReadonlyFloatCpuSpan;
             var outputSpan = transposed.AsFloatCpuSpan;
-            for (i
+            for (int row = 0; row < Shape[0]; ++row)
+            for (int col = 0; col < Shape[1]; ++col)
+            {
+                var srcIndex = row * Shape[1] + col;
+                var srcValue = inputSpan[srcIndex];
+                var targetIndex = col * Shape[0] + row;
+                outputSpan[targetIndex] = srcValue;
+            }
+        }
+
+        private static float InnerProduct(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
+        {
+            Debug.Assert(a.Length == b.Length);
+            float result = 0;
+            for (int i = 0; i < a.Length; ++i)
+            {
+                result += a[i] * b[i];
+            }
+
+            return result;
+        }
+        #endregion
+
+        #region Dispose pattern
+        public override void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+            _hostPinnedMemory?.Dispose();
+            _hostPinnedMemory = null;
+            Content = null;
+        }
+        #endregion
+
+        /// <summary>
+        /// Compute the mean and volatility of each channel of the tensor
+        /// </summary>
+        /// <param name="toFloat">Function to convert 'T' type to double</param>
+        /// <returns>A list of Tuple (one Tuple per channel)
+        /// In each channel Tuple: Tuple.Item1: mean of the channel / Tuple.Item2: vol of the channel</returns>
+        // ReSharper disable once UnusedMember.Global
+        public List<Tuple<float, float>> ComputeMeanAndVolatilityOfEachChannel(Func<T, float> toFloat)
+        {
+            return Enumerable.Range(0, Shape[1]).Select(c => ComputeMeanAndVolatilityOfChannel(c, toFloat)).ToList();
+        }
+
+        /// <summary>
+        /// Computes the mean and volatility of the selected channel in the 'this' tensor
+        /// </summary>
+        /// <param name="c">The channel to compute in the tensor</param>
+        /// <param name="toFloat">Function to convert 'T' type to double</param>
+        /// <returns>Tuple.Item1: mean of the channel / Tuple.Item2: vol of the channel</returns>
+        private Tuple<float, float> ComputeMeanAndVolatilityOfChannel(int c, Func<T, float> toFloat)
+        {
+            double sum = 0f;
+            double sumSquare = 0.0;
+            int count = 0;
+            var content = ReadonlyContent;
+            for (int m = 0; m < Shape[0]; ++m)
+            {
+                int startIdx = Id
