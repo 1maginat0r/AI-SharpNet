@@ -3091,4 +3091,69 @@ namespace SharpNet.CPU
             var content = ReadonlyContent;
             for (int m = 0; m < Shape[0]; ++m)
             {
-                int startIdx = Id
+                int startIdx = Idx(m, c, 0, 0);
+                for (int idx = startIdx; idx < (startIdx + MultDim1); ++idx)
+                {
+                    var val = toFloat(content[idx]);
+                    sum += val;
+                    sumSquare += val * val;
+                    ++count;
+                }
+            }
+            if (count == 0)
+            {
+                return Tuple.Create(0f, 0f);
+            }
+            var mean = (sum / count);
+            var variance = (sumSquare / count) - mean * mean;
+            var volatility = Math.Sqrt(Math.Max(0, variance));
+            return Tuple.Create((float)mean, (float)volatility);
+        }
+        private void MergeInPlaceByRow(CpuTensor<float> a, CpuTensor<float> b, Func<float, float, float> func, float rowDivider)
+        {
+            var buffer = this;
+            Debug.Assert(a.Dimension == b.Dimension);
+            Debug.Assert(a.Count == b.Count);
+            Debug.Assert(buffer.Count == a.Shape[0]);
+            var content = (float*)buffer.Pointer;
+            var aSpan = a.ReadonlyContent;
+            var bSpan = b.ReadonlyContent;
+
+            int idx = 0;
+            for (int row = 0; row < buffer.Count; ++row)
+            {
+                var rowResult = 0f;
+                for (int col = 0; col <a.MultDim0; ++col)
+                {
+                    rowResult += func(aSpan[idx], bSpan[idx]);
+                    ++idx;
+                }
+                content[row] = rowResult/ rowDivider;
+            }
+        }
+        private void Update(Tensor a, Tensor b, Func<T, T, T, T> funcInput)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> {this, a, b}));
+            Debug.Assert(SameShape(a, b));
+            var aSpan = a.AsCpu<T>().ReadonlyContent;
+            var bSpan = b.AsCpu<T>().ReadonlyContent;
+            var thisSpan = SpanContent;
+            for (int i = 0; i < Count; ++i)
+            {
+                thisSpan[i] = funcInput(thisSpan[i], aSpan[i], bSpan[i]);
+            }
+        }
+        private void Update(Tensor b, Func<T, T, T> funcInput)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> {this, b}));
+            Debug.Assert(SameShape(b));
+            var bSpan = b.AsCpu<T>().ReadonlyContent;
+            var thisSpan = SpanContent;
+            for (int i = 0; i < Count; ++i)
+            {
+                thisSpan[i] = funcInput(thisSpan[i], bSpan[i]);
+            }
+        }
+
+
+        //
