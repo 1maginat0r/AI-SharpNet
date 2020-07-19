@@ -3156,4 +3156,71 @@ namespace SharpNet.CPU
         }
 
 
-        //
+        /// <summary>
+        /// update the entire tensor in place
+        /// </summary>
+        /// <param name="update"></param>
+        public void UpdateInPlace(Func<T, T> update)
+        {
+            var content = SpanContent;
+            for (int i = 0; i < Count; ++i)
+            {
+                content[i] = update(content[i]);
+            }
+        }
+
+
+        /// <summary>
+        /// for each column index in 'columnIndexToUpdate' ,
+        /// update the column values by applying 'update' function
+        /// </summary>
+        /// <param name="update"></param>
+        /// <param name="columnIndexToUpdate"></param>
+        public void UpdateInPlace(Func<T, T> update, params int[] columnIndexToUpdate)
+        {
+            if (columnIndexToUpdate.Length == 0)
+            {
+                return; //nothing to do
+            }
+            Debug.Assert(Shape.Length == 2);
+            var rows = Shape[0];
+            var cols = Shape[1];
+            var content = SpanContent;
+            for(int row=0;row<rows;++row)
+            {
+                foreach (var col in columnIndexToUpdate)
+                {
+                    var idx = row * cols + col;
+                    content[idx] = update(content[idx]);
+                }
+            }
+        }
+
+        public void BuildEntirelyFromInput(Tensor a, Tensor b, Func<T, T, T> funcInput)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> {this, a, b}));
+            Debug.Assert(SameShape(a, b));
+            var aSpan = a.AsCpu<T>().ReadonlyContent;
+            var bSpan = b.AsCpu<T>().ReadonlyContent;
+            var thisSpan = SpanContent;
+            for (int i = 0; i < a.Count; ++i)
+            {
+                thisSpan[i] = funcInput(aSpan[i], bSpan[i]);
+            }
+        }
+        public void BuildEntirelyFromInput(Tensor a, Tensor b, Tensor c, Func<T, T, T, T> funcInput)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> { this, a, b, c }));
+            Debug.Assert(SameShape(a, b));
+            var aSpan = a.AsCpu<T>().ReadonlyContent;
+            var bSpan = b.AsCpu<T>().ReadonlyContent;
+            var cSpan = c.AsCpu<T>().ReadonlyContent;
+            var thisSpan = SpanContent;
+            for (int i = 0; i < a.Count; ++i)
+            {
+                thisSpan[i] = funcInput(aSpan[i], bSpan[i], cSpan[i]);
+            }
+        }
+        private void ComputeSumByColumn(Tensor sumByColumn)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> 
