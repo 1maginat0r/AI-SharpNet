@@ -3279,4 +3279,71 @@ namespace SharpNet.CPU
 
 
 
-       
+        // ReSharper disable once UnusedMember.Global
+        public void Save(string filePath, Func<int, bool> shouldSaveRow, bool addColumnWithRowIndex, string header = null)
+        {
+            var sb = new StringBuilder();
+            if (!string.IsNullOrEmpty(header))
+            {
+                sb.Append(header + Environment.NewLine);
+            }
+
+            int rowIndex = 0;
+            for (int row = 0; row < Shape[0]; ++row)
+            {
+                if (!shouldSaveRow(row))
+                {
+                    continue;
+                }
+
+                if (addColumnWithRowIndex)
+                {
+                    sb.Append(rowIndex + ";");
+                }
+                var tmp = ElementSlice(row).AsFloatCpuSpan.ToArray();
+                sb.Append(string.Join(";", tmp.Select(x => x.ToString(CultureInfo.InvariantCulture))));
+                sb.Append(Environment.NewLine);
+                ++rowIndex;
+            }
+            File.WriteAllText(filePath, sb.ToString());
+        }
+
+        public CpuTensor<float> ArgMax()
+        {
+            var bufferShape = (int[])Shape.Clone();
+            bufferShape[^1] = 1;
+            var buffer = new CpuTensor<float>(bufferShape);
+            ArgMax(buffer);
+            return buffer;
+        }
+
+        public override void ArgMax(Tensor buffer)
+        {
+            var input = this;
+            if (input.Shape.Length >= 3)
+            {
+                var input2D = input.Reshape(-1, input.Shape[^1]);
+                var buffer2D = buffer.Reshape(-1, 1);
+                input2D.ArgMax(buffer2D);
+                return;
+            }
+            // input shape: (rows, numClass)
+            // buffer shape: (rows, 1)
+            Debug.Assert(input.Shape.Length == 2);
+            Debug.Assert(buffer.Shape.Length == 2);
+            Debug.Assert(buffer.Shape[1] == 1);
+            Debug.Assert(input.Shape[0] == buffer.Shape[0]);
+            int rows = input.Shape[0];
+            int numClass = input.Shape[1];
+            var inputContent = input.AsReadonlyFloatCpuSpan;
+            var bufferContent = buffer.AsFloatCpuSpan;
+
+            for (int row = 0; row < rows; row++)
+            {
+                int startIdx = row * numClass;
+                int colArgMax = 0;
+                for (int col = 1; col < numClass; col++)
+                {
+                    if (inputContent[startIdx + col] > inputContent[startIdx + colArgMax])
+                    {
+                        colArgMax = col
