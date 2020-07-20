@@ -3223,4 +3223,60 @@ namespace SharpNet.CPU
         }
         private void ComputeSumByColumn(Tensor sumByColumn)
         {
-            Debug.Assert(AreCompatible(new List<Tensor> 
+            Debug.Assert(AreCompatible(new List<Tensor> { this, sumByColumn }));
+            Debug.Assert(Dimension >= 2);
+            var batchSize = Shape[0];
+            bool is1C11Shape = sumByColumn.Count == sumByColumn.Shape[1];
+
+            sumByColumn.ZeroMemory();
+            var content = AsFloatCpuSpan;
+            var columnSumContent = sumByColumn.AsFloatCpuSpan;
+            for (int n = 0; n < batchSize; ++n)
+            {
+                int start = MultDim0 * n;
+                for (int i = 0; i < MultDim0; ++i)
+                {
+                    int sumByColumnIndex = is1C11Shape ? (i / MultDim1) : i;
+                    columnSumContent[sumByColumnIndex] += content[start + i];
+                }
+            }
+        }
+        public void Compute_Column_Mean_Variance(Tensor mean, Tensor variance)
+        {
+            Debug.Assert(AreCompatible(new List<Tensor> { this, mean, variance }));
+            var batchSize = Shape[0];
+            Debug.Assert(mean.SameShape(variance));
+            //true if we have a (1,C,1,1) shape for scale and bias
+            //false is we have a (1,C,H,W) shape for scale and bias
+            bool is1C11Shape = mean.Count == mean.Shape[1];
+
+            mean.ZeroMemory();
+            variance.ZeroMemory();
+            var content = AsFloatCpuSpan;
+            //we'll store in meanContent Sum(X) and in varianceContent Sum(X^2)
+            var meanContent = mean.AsFloatCpuSpan;
+            var varianceContent = variance.AsFloatCpuSpan;
+            for (int n = 0; n < batchSize; ++n)
+            {
+                int start = MultDim0 * n;
+                for (int i = 0; i < MultDim0; ++i)
+                {
+                    var d = content[start + i];
+                    int scaleIndex = is1C11Shape ? (i / MultDim1) : i;
+                    meanContent[scaleIndex] += d;
+                    varianceContent[scaleIndex] += d * d;
+                }
+            }
+            var meanDivider = Count / mean.Count;  // = batchSize if (1,C,H,W) , and = batchSize*H*W if (1,C,1,1)
+            for (int i = 0; i < variance.Count; ++i)
+            {
+                meanContent[i] /= meanDivider;
+                //Variance(X) = E(X^2) - E(X) ^2
+                //varianceContent[i] = varianceContent[i]/meanDivider - meanContent[i] * meanContent[i];
+                varianceContent[i] = (meanDivider <= 1) ? 1f : (varianceContent[i] - meanDivider * meanContent[i] * meanContent[i]) / (meanDivider - 1);
+            }
+        }
+
+
+
+       
