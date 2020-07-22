@@ -3346,4 +3346,66 @@ namespace SharpNet.CPU
                 {
                     if (inputContent[startIdx + col] > inputContent[startIdx + colArgMax])
                     {
-                        colArgMax = col
+                        colArgMax = col;
+                    }
+                }
+                bufferContent[row] = colArgMax;
+            }
+        }
+
+        public void CopyToSingleRow(int srcRow, int targetRow, IList<int> srcToTargetIndexes, CpuTensor<T> targetTensor)
+        {
+            var srcTensor = this;
+            var srcContent = srcTensor.RowSpanSlice(srcRow, 1);
+            var targetContent = targetTensor.RowSpanSlice(targetRow, 1);
+            for (var srcIndex = 0; srcIndex < srcToTargetIndexes.Count; srcIndex++)
+            {
+                var targetIndex = srcToTargetIndexes[srcIndex];
+                if (targetIndex >= 0)
+                {
+                    targetContent[targetIndex] = srcContent[srcIndex];
+                }
+            }
+        }
+        public CpuTensor<T> ApplyRowOrder(int[] targetRowToSrcRow)
+        {
+            Debug.Assert(Shape.Length == 2);
+            int cols = Shape[1];
+            var targetTensor = new CpuTensor<T>(new []{targetRowToSrcRow.Length, cols});
+
+            var srcContent = ReadonlyContent;
+            var targetContent = targetTensor.SpanContent;
+
+            for (int targetRow = 0; targetRow < targetRowToSrcRow.Length; ++targetRow)
+            {
+                var srcRow = targetRowToSrcRow[targetRow];
+                for (int col = 0; col < cols; ++col)
+                {
+                    targetContent[col+ targetRow * cols] = srcContent[col + srcRow* cols];
+                }
+                //RowSlice(srcRow, 1).CopyTo(newTensor.RowSlice(newRow, 1));
+            }
+            return targetTensor;
+        }
+
+
+        public static CpuTensor<float> LoadFromBinFile(string bin_file, int[] shape)
+        {
+            long elementCountInfile = Utils.FileLength(bin_file) / sizeof(float);
+            shape = FillMinusOneIfAny(new[] { (int)elementCountInfile }, shape);
+            long elementCount = Utils.LongProduct(shape);
+            if (elementCountInfile != elementCount)
+            {
+                throw new ArgumentException("");
+            }
+            float[] buffer = new float[elementCount];
+            using var fs = new FileStream(bin_file, FileMode.Open, FileAccess.Read);
+            using var r = new BinaryReader(fs);
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = r.ReadSingle();
+            }
+            return new CpuTensor<float>(shape, buffer);
+        }
+
+        public static List<CpuTensor<float>> LoadTensorListFromBinFileAndStandardizeIt(string bin_file, int[] shape, float mean = 0f, float st
