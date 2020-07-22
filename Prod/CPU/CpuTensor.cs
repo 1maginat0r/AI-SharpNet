@@ -3408,4 +3408,43 @@ namespace SharpNet.CPU
             return new CpuTensor<float>(shape, buffer);
         }
 
-        public static List<CpuTensor<float>> LoadTensorListFromBinFileAndStandardizeIt(string bin_file, int[] shape, float mean = 0f, float st
+        public static List<CpuTensor<float>> LoadTensorListFromBinFileAndStandardizeIt(string bin_file, int[] shape, float mean = 0f, float stdDev = 1f)
+        {
+            ISample.Log.Info($"Loading {shape[0]} tensors from {bin_file} with shape {ShapeToString(shape)}");
+
+            long elementCountInfile = Utils.FileLength(bin_file) / sizeof(float);
+            shape = FillMinusOneIfAny(new[] { (int)elementCountInfile }, shape);
+            long elementCount = Utils.LongProduct(shape);
+            if (elementCountInfile != elementCount)
+            {
+                throw new ArgumentException("");
+            }
+            var numberOfTensors = shape[0];
+            var singleTensorShape = shape.Skip(1).ToArray();
+            var singleTensorCount = Utils.Product(singleTensorShape);
+            using var fs = new FileStream(bin_file, FileMode.Open, FileAccess.Read);
+            using var r = new BinaryReader(fs);
+            var res = new List<CpuTensor<float>>();
+
+            var xAccBeforeStandardization = new DoubleAccumulator();
+            var xAccAfterStandardization = new DoubleAccumulator();
+            for (int t = 0; t < numberOfTensors; ++t)
+            {
+                var tensorBuffer = new float[singleTensorCount];
+                for (int i = 0; i < singleTensorCount; i++)
+                {
+                    var f = r.ReadSingle();
+                    xAccBeforeStandardization.Add(f);
+                    var fNormalized = (f-mean)/stdDev;
+                    xAccAfterStandardization.Add(fNormalized);
+                    tensorBuffer[i] = fNormalized;
+                }
+                res.Add(new CpuTensor<float>(singleTensorShape, tensorBuffer));
+            }
+            ISample.Log.Info($"Stats before standardization: {xAccBeforeStandardization}");
+            ISample.Log.Info($"Stats after standardization: {xAccAfterStandardization}");
+            return res;
+        }
+
+    }
+}
