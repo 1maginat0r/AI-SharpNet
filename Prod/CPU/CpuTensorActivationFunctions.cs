@@ -73,4 +73,61 @@ namespace SharpNet.CPU
                     indexesProba[subCategoriesFound] = *pNexIndexToCheck;
                     probaFound = true;
                     * pNexIndexToCheck += 1;
-                    if (*pNexIndexToCheck < endI
+                    if (*pNexIndexToCheck < endIndexExcluded && IsCountAssociateWithAboveProba(activationParameter[*pNexIndexToCheck]))
+                    {
+                        SoftmaxWithHierarchy(activationParameter, y, endIndexExcluded, pNexIndexToCheck);
+                    }
+                }
+                else
+                {
+                   SoftmaxWithHierarchy(activationParameter, y, endIndexExcluded,  pNexIndexToCheck);
+                }
+            }
+
+            if (probaFound)
+            {
+                float sumExp = 0.0f;
+                for (int i = 0; i < subCategoriesCount; ++i)
+                {
+                    int idx = indexesProba[i];
+                    float tmp = expf(y[idx] - maxProba);
+                    sumExp += tmp;
+                    y[idx] = tmp;
+                }
+                for (int i = 0; i < subCategoriesCount; ++i)
+                {
+                    y[indexesProba[i]] /= sumExp;
+                }
+            }
+        }
+
+        public static void SoftmaxGradientLastDimension(Tensor y, Tensor dy, Tensor dx)
+        {
+            SoftmaxGradient(y.Reshape(-1, y.Shape[^1]), dy.Reshape(-1, dy.Shape[^1]), dx.Reshape(-1, dx.Shape[^1]));
+        }
+
+        public static void SoftmaxGradient(Tensor y, Tensor dy, Tensor dx)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { y, dy, dx }));
+            var yContent = y.AsFloatCpuSpan;
+            var dyContent = dy.AsFloatCpuSpan;
+            var dxContent = dx.AsFloatCpuSpan;
+            for (int i = 0; i < dx.Count; ++i)
+            {
+                var yi = yContent[i];
+                var dyi = dyContent[i];
+                dxContent[i] = (MathF.Abs(dyi - 1.0f) < 1e-6) ? (yi * (1 - yi)) : (-yi * dyi);
+            }
+        }
+        public static void SoftmaxGradientWitHierarchy(Tensor y, Tensor dy, Tensor dx, Tensor activationParameter)
+        {
+            var activationParameterPointer = (float*)activationParameter.Pointer;
+            var yPointer = (float*)y.Pointer;
+            var dyPointer = (float*)dy.Pointer;
+            var dxPointer = (float*)dx.Pointer;
+            int colSize = dx.MultDim0;
+            Parallel.For(0, dx.Shape[0], m => SoftmaxGradientWitHierarchy(activationParameterPointer, yPointer+m*colSize, dyPointer + m * colSize, dxPointer + m * colSize, colSize));
+        }
+        private static void SoftmaxGradientWitHierarchy(float* activationParameter, float* y, float* dy, float* dx, int endIndexExcluded)
+        {
+            fo
