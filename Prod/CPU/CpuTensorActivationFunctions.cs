@@ -130,4 +130,71 @@ namespace SharpNet.CPU
         }
         private static void SoftmaxGradientWitHierarchy(float* activationParameter, float* y, float* dy, float* dx, int endIndexExcluded)
         {
-            fo
+            for (int i = 0; i < endIndexExcluded; ++i)
+            {
+                float expectedProba = activationParameter[i];
+                if (IsProba(expectedProba))
+                {
+                    float dyi = dy[i];
+                    float yi = y[i];
+                    dx[i] = (fabsf(dyi - 1.0f) < 1e-6) ? (yi * (1 - yi)) : (-yi * dyi);
+                }
+                else
+                {
+                    dx[i] = expectedProba;
+                }
+            }
+        }
+
+        #endregion
+
+        #region Swish
+        public static void Swish<T>(CpuTensor<T> X, Tensor Y)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { X, Y }));
+            X.AsFloatCpu.Map(x => (float)(x / (1 + Math.Exp(-x))), Y.AsFloatCpu);
+        }
+        
+        public static void SwishGradient(Tensor Y, Tensor dY, Tensor X, Tensor dX)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { Y, dY, dX }));
+            dX.AsFloatCpu.BuildEntirelyFromInput(Y, dY, X, (y, dy, x) =>
+            {
+                // y = x * sigmoid(x)
+                float sigmoid_x = (MathF.Abs(x) < 0.0001f) ? 0.5f : y / x;
+                return dy * (sigmoid_x + x * sigmoid_x * (1 - sigmoid_x));
+            });
+        }
+        #endregion
+
+        #region Ln
+        public static void Ln<T>(CpuTensor<T> X, Tensor Y)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { X, Y }));
+            X.AsFloatCpu.Map(x => x <= 0 ? -100.0f : MathF.Log(x), Y.AsFloatCpu);
+        }
+        public static void LnGradient(Tensor dY, Tensor X, Tensor dX)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> {dY, X, dX}));
+            dX.AsFloatCpu.BuildEntirelyFromInput(X, dY, (x, dy) => dy / x);
+        }
+        #endregion
+
+        #region Tanh
+        public static void Tanh<T>(CpuTensor<T> X, Tensor Y)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> {X, Y}));
+            //X.AsFloatCpu.Map(x => (float) (1.7159 * Math.Tanh(0.66666667 * x)), Y.AsFloatCpu);
+            X.AsFloatCpu.Map(MathF.Tanh, Y.AsFloatCpu);
+        }
+        public static void TanhGradient(Tensor Y, Tensor dY, Tensor dX)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { Y, dY, dX }));
+            dX.AsFloatCpu.BuildEntirelyFromInput(Y, dY, (y, dy) => dy * (1 - y*y));
+        }
+        #endregion
+
+        #region Relu
+        public static void Relu<T>(CpuTensor<T> X, Tensor Y)
+        {
+   
