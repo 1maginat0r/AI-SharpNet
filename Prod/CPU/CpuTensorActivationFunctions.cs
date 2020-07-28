@@ -197,4 +197,57 @@ namespace SharpNet.CPU
         #region Relu
         public static void Relu<T>(CpuTensor<T> X, Tensor Y)
         {
-   
+            X.AsFloatCpu.Map(x => Math.Max(0, x), Y.AsFloatCpu);
+        }
+        public static void ReluGradient(Tensor Y, Tensor dY, Tensor dX)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { dY, Y, dX }));
+            dX.AsFloatCpu.BuildEntirelyFromInput(dY, Y, (dy, y) => (y > 0f ? dy : 0f));
+        }
+        #endregion
+
+        #region Leaky Relu
+        public static void LeakyRelu<T>(CpuTensor<T> X, Tensor Y, double alpha)
+        {
+            X.AsFloatCpu.Map(x => (x>=0)?x:((float)alpha)*x, Y.AsFloatCpu);
+        }
+        public static void LeakyReluGradient(Tensor Y, Tensor dY, Tensor dX, double alpha)
+        {
+            Debug.Assert(alpha>=0);
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { dY, Y, dX }));
+            dX.AsFloatCpu.BuildEntirelyFromInput(dY, Y, (dy, y) => (y >= 0f ? dy : ((float)alpha)*dy));
+        }
+        #endregion
+
+        #region Elu
+        public static void Elu<T>(CpuTensor<T> X, Tensor Y, double alpha)
+        {
+            X.AsFloatCpu.Map(x => (x >= 0) ? x : (float)(alpha * (Math.Exp(x) - 1)), Y.AsFloatCpu);
+        }
+        public static void EluGradient(Tensor Y, Tensor dY, Tensor X, Tensor dX, float alpha)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { dY, X, dX }));
+            dX.AsFloatCpu.BuildEntirelyFromInput(Y, dY, X, (y, dy, x) => (x >= 0.0 ? dy : dy * (y + alpha)));
+        }
+        #endregion
+
+        #region Sigmoid
+        public static void Sigmoid<T>(CpuTensor<T> X, Tensor Y)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> {X, Y}));
+            X.AsFloatCpu.Map(Utils.Sigmoid, Y.AsFloatCpu);
+        }
+        public static void SigmoidGradient(Tensor Y, Tensor dY, Tensor dX)
+        {
+            Debug.Assert(Tensor.AreCompatible(new List<Tensor> { Y, dY, dX }));
+            dX.AsFloatCpu.BuildEntirelyFromInput(Y, dY, (y, dy) => dy * y * (1f - y));
+        }
+        #endregion
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsCountAssociateWithAboveProba(float f) { return f > 5.0f && ((int)(f + 0.1f)) % 10 == 1; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsProba(float f) { return fabsf(f) < 5.0f; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ExtractCount(float f) { 
