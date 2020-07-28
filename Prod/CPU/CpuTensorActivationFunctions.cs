@@ -250,4 +250,17 @@ namespace SharpNet.CPU
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsProba(float f) { return fabsf(f) < 5.0f; }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int ExtractCount(float f) { 
+        private static int ExtractCount(float f) { return (int)(f + 0.5f) / 10; }
+        #region CUDA methods
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // ReSharper disable once InconsistentNaming
+        private static float fabsf(float f) { return MathF.Abs(f); }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // ReSharper disable once InconsistentNaming
+        private static float expf(float f) { return MathF.Exp(f); }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        // ReSharper disable once InconsistentNaming
+        private static float fmaxf(float a, float b) { return Math.Max(a, b); }
+        #endregion
+    }
+}
