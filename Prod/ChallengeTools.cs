@@ -150,4 +150,42 @@ public static class ChallengeTools
 
             ////low priority
             //{ "extra_trees", new[] { true , false } }, //low priority 
-            ////{ "colsample_bynode",AbstractHyperparameterSearchSpace.Range(0.5f, 1.0f)}, //very l
+            ////{ "colsample_bynode",AbstractHyperparameterSearchSpace.Range(0.5f, 1.0f)}, //very low priority
+            //{ "path_smooth", AbstractHyperparameterSearchSpace.Range(0f, 1f) }, //low priority
+            //{ "min_sum_hessian_in_leaf", AbstractHyperparameterSearchSpace.Range(1e-3f, 1.0f) },
+        };
+
+        var hpoWorkingDirectory = Path.Combine(workingDirectory, "hpo");
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(new LightGBMSample(), datasetSample), hpoWorkingDirectory); IScore bestScoreSoFar = null;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, hpoWorkingDirectory, true, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+
+
+    public static void RetrainWithContentUpdate(string workingDirectory, string modelName, Action<IDictionary<string, string>> contentUpdater, bool useAllAvailableCores = true)
+    {
+        var sw = Stopwatch.StartNew();
+        ISample.Log.Info($"Retraining model '{modelName}' with update on parameters ");
+        using var modelAndDataset = ModelAndDatasetPredictions.Load(workingDirectory, modelName, useAllAvailableCores, contentUpdater);
+        Model.Log.Info($"Training Model '{modelAndDataset.Model.ModelName}' (= Model '{modelName}' with contentUpdater");
+        modelAndDataset.Fit(true, true, true);
+        ISample.Log.Info($"Model {modelName} retrained in {sw.Elapsed.TotalSeconds}");
+    }
+    /// <summary>
+    /// retrain some models 
+    /// </summary>
+    /// <param name="workingDirectory"></param>
+    /// <param name="modelName"></param>
+    /// <param name="n_splits"></param>
+    /// <param name="percentageInTraining"></param>
+    /// <param name="retrainOnFullDataset"></param>
+    /// <param name="useAllAvailableCores"></param>
+    /// <param name="computeAndSavePredictions"></param>
+    /// <param name="computeValidationRankingScore"></param>
+    /// <param name="saveTrainedModel"></param>
+    /// <returns>the name of the retrained model</returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static string Retrain(string workingDirectory, string modelName, int? n_splits = 3, double?percentageInTraining = null, bool retrainOnFullDataset = true, bool useAllAvailableCores = true, bool computeAndSavePredictions = true, bool computeValidationRankingScore = true, bool saveTrainedModel = true)
+    {
+
+        string newModelName 
