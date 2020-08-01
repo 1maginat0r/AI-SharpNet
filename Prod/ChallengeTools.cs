@@ -188,4 +188,42 @@ public static class ChallengeTools
     public static string Retrain(string workingDirectory, string modelName, int? n_splits = 3, double?percentageInTraining = null, bool retrainOnFullDataset = true, bool useAllAvailableCores = true, bool computeAndSavePredictions = true, bool computeValidationRankingScore = true, bool saveTrainedModel = true)
     {
 
-        string newModelName 
+        string newModelName = "";
+
+        //Utils.ConfigureGlobalLog4netProperties(workingDirectory, $"{nameof(Retrain)}", false);
+        //Utils.ConfigureThreadLog4netProperties(workingDirectory, $"{nameof(Retrain)}", false);
+
+
+        if (n_splits.HasValue && percentageInTraining.HasValue)
+        {
+            throw new ArgumentException($"at most one of the 2 parameters {nameof(n_splits)} and {nameof(percentageInTraining)} can be specified");
+        }
+        if (n_splits.HasValue && n_splits.Value < 2)
+        {
+            throw new ArgumentException($"When specified, {nameof(n_splits)} must be at least 2");
+        }
+        if (percentageInTraining.HasValue && (percentageInTraining.Value > 1|| percentageInTraining.Value < 0) )
+        {
+            throw new ArgumentException($"When specified, {nameof(percentageInTraining)} must be between 0 and 1");
+        }
+
+        var sw = Stopwatch.StartNew();
+        ISample.Log.Info($"Retraining model '{modelName}' with {nameof(n_splits)}={n_splits}, {nameof(percentageInTraining)}={percentageInTraining} and {nameof(retrainOnFullDataset)}={retrainOnFullDataset}");
+
+        if (n_splits.HasValue)
+        {
+            var swKfold = Stopwatch.StartNew();
+            using var mKFold = ModelAndDatasetPredictions.LoadWithKFold(workingDirectory, modelName, n_splits.Value, useAllAvailableCores);
+            ISample.Log.Info($"Training Model '{mKFold.Model.ModelName}' (= Model '{modelName}' with KFold={n_splits})");
+            newModelName = mKFold.Model.ModelName;
+            mKFold.Fit(computeAndSavePredictions, computeValidationRankingScore, saveTrainedModel);
+            mKFold.Save(workingDirectory, modelName);
+            ISample.Log.Info($"Model '{mKFold.Model.ModelName}' trained in {swKfold.Elapsed.TotalSeconds}");
+        }
+        if (percentageInTraining.HasValue)
+        {
+            var swPercentageInTraining = Stopwatch.StartNew();
+            using var modelAndDataset = ModelAndDatasetPredictions.LoadWithNewPercentageInTrainingNoKFold(percentageInTraining.Value, workingDirectory, modelName, useAllAvailableCores);
+            Model.Log.Info($"Training Model '{modelAndDataset.Model.ModelName}' (= Model '{modelName}' with {Math.Round(100* percentageInTraining.Value,1)}% in training no KFold)");
+            newModelName = modelAndDataset.Model.ModelName;
+            modelAndDataset.Fit(computeAndSavePredict
