@@ -226,4 +226,21 @@ public static class ChallengeTools
             using var modelAndDataset = ModelAndDatasetPredictions.LoadWithNewPercentageInTrainingNoKFold(percentageInTraining.Value, workingDirectory, modelName, useAllAvailableCores);
             Model.Log.Info($"Training Model '{modelAndDataset.Model.ModelName}' (= Model '{modelName}' with {Math.Round(100* percentageInTraining.Value,1)}% in training no KFold)");
             newModelName = modelAndDataset.Model.ModelName;
-            modelAndDataset.Fit(computeAndSavePredict
+            modelAndDataset.Fit(computeAndSavePredictions, computeValidationRankingScore, saveTrainedModel);
+            ISample.Log.Info($"Model '{modelAndDataset.Model.ModelName}' trained in {swPercentageInTraining.Elapsed.TotalSeconds}");
+        }
+        if (retrainOnFullDataset)
+        {
+            var swRetrainOnFullDataset = Stopwatch.StartNew();
+            using var modelAndDatasetOnFullDataset = ModelAndDatasetPredictions.LoadWithNewPercentageInTrainingNoKFold(1.0, workingDirectory, modelName, useAllAvailableCores);
+            Model.Log.Info($"Training Model '{modelAndDatasetOnFullDataset.Model.ModelName}' (= Model '{modelName}' on full Dataset no KFold)");
+            newModelName = modelAndDatasetOnFullDataset.Model.ModelName;
+            modelAndDatasetOnFullDataset.Fit(computeAndSavePredictions, computeValidationRankingScore, saveTrainedModel);
+            ISample.Log.Info($"Model '{modelAndDatasetOnFullDataset.Model.ModelName}' trained in {swRetrainOnFullDataset.Elapsed.TotalSeconds}");
+        }
+        ISample.Log.Info($"Model {modelName} retrained in {sw.Elapsed.TotalSeconds}");
+        //KaggleDaysDatasetSample.Enrich(@"C:\Projects\Challenges\KaggleDays\catboost\a_KFOLD_modelformat_predict_test_.csv"); return;
+        //}
+        return newModelName;
+    }
+}
