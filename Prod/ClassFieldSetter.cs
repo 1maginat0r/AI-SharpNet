@@ -155,4 +155,74 @@ namespace SharpNet
             {
                 foreach (var e in s.Split(','))
                 {
-                    list.Add(ParseStringToScalar(e, containedTy
+                    list.Add(ParseStringToScalar(e, containedType));
+                }
+            }
+
+            if (outputIsList)
+            {
+                return list;
+            }
+            else
+            {
+                //output is an Array
+                var array = Array.CreateInstance(containedType, list.Count);
+                list.CopyTo(array, 0);
+                return array;
+            }
+        }
+        private static object ParseStringToScalar(string s, Type targetScalarType)
+        {
+            if (targetScalarType == typeof(bool))
+            {
+                return bool.Parse(s);
+            }
+            if (targetScalarType == typeof(int))
+            {
+                return int.Parse(s);
+            }
+            if (targetScalarType == typeof(float))
+            {
+                return float.Parse(s, CultureInfo.InvariantCulture);
+            }
+            if (targetScalarType == typeof(double))
+            {
+                return double.Parse(s, CultureInfo.InvariantCulture);
+            }
+            if (targetScalarType == typeof(string))
+            {
+                return s;
+            }
+            if (targetScalarType.IsEnum)
+            {
+                return Enum.Parse(targetScalarType, s);
+            }
+
+            throw new ArgumentException($"can t parse {s} to {targetScalarType}");
+
+        }
+        private static void SetDoubleField(object o, Type objectType, string fieldName, object value)
+        {
+            var f = GetFieldInfo(objectType, fieldName);
+            if (value is string)
+            {
+                value = double.Parse((string)value, CultureInfo.InvariantCulture);
+            }
+            else if (value is int)
+            {
+                value = (double)(int)value;
+            }
+            else if (value is float)
+            {
+                value = (double)(float)value;
+            }
+            f.SetValue(o, value);
+        }
+        private static void SetStringField(object o, Type objectType, string fieldName, object value)
+        {
+            var f = GetFieldInfo(objectType, fieldName);
+            f.SetValue(o, value);
+        }
+        #endregion
+    }
+}
