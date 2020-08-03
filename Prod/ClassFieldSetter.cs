@@ -94,4 +94,65 @@ namespace SharpNet
             else
             {
                 throw new Exception($"invalid field {fieldName} with value {fieldValue}");
-            
+            }
+        }
+        //private static object GetValue(object o, Type objectType, string fieldName)
+        //{
+        //    return GetFieldInfo(objectType, fieldName).GetValue(o);
+        //}
+        private static FieldInfo GetFieldInfo(Type t, string fieldName)
+        {
+            return GetFieldName2FieldInfo(t)[fieldName];
+        }
+        private static IDictionary<string,FieldInfo> GetFieldName2FieldInfo(Type t)
+        {
+            if (!type2name2FieldInfo.ContainsKey(t))
+            {
+                var name2FieldInfo = new Dictionary<string, FieldInfo>();
+                foreach (var e in t.GetFields(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    name2FieldInfo[e.Name] = e;
+                }
+                type2name2FieldInfo[t] = name2FieldInfo;
+            }
+            return type2name2FieldInfo[t];
+        }
+        private static void SetBoolField(object o, Type objectType, string fieldName, object value)
+        {
+            if (value is string)
+            {
+                value = bool.Parse((string)value);
+            }
+            GetFieldInfo(objectType, fieldName).SetValue(o, value);
+        }
+        private static void SetIntField(object o, Type objectType, string fieldName, object value)
+        {
+            if (value is string)
+            {
+                value = int.Parse((string)value);
+            }
+            GetFieldInfo(objectType, fieldName).SetValue(o, value);
+        }
+        private static void SetFloatField(object o, Type objectType, string fieldName, object value)
+        {
+            var f = GetFieldInfo(objectType, fieldName);
+            if (value is string)
+            {
+                value = float.Parse((string)value);
+            }
+            else if (value is int)
+            {
+                value = (float)(int)value;
+            }
+            f.SetValue(o, value);
+        }
+        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        private static object ParseStringToListOrArray(string s, Type containedType, bool outputIsList)
+        {
+            var targetListType = typeof(List<>).MakeGenericType(new[] { containedType });
+            var list = (IList)Activator.CreateInstance(targetListType);
+            if (!string.IsNullOrEmpty(s))
+            {
+                foreach (var e in s.Split(','))
+                {
+                    list.Add(ParseStringToScalar(e, containedTy
