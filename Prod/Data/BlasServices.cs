@@ -47,4 +47,7 @@ namespace SharpNet.Data
         public static extern void cblas_saxpy(int n, float alpha, [In] float* x, int incx, [In, Out] float* y, int incy);
         [DllImport("mkl_rt.dll", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, SetLastError = false)]
         public static extern void cblas_sscal(int n, float alpha, [In] float* x, int incx);
-        [DllImport("mkl_rt.dll", CallingConvention = CallingConvention.C
+        [DllImport("mkl_rt.dll", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, SetLastError = false)]
+        public static extern void cblas_scopy(int n, [In] float* x, int incx, [Out] float* y, int incy);
+    }
+}
