@@ -109,4 +109,55 @@ namespace SharpNet.Data
 
      
 
+        private static T[] Deserialize<T>(string[] splitted, int count, int startIndex, Func<string, T> convert)
+        {
+            var data = new T[count];
+            for (int i = 0; i < count; ++i)
+            {
+                data[i] = convert(splitted[startIndex+i]);
+            }
+            return data;
+        }
+
+        private static double ParseDouble(string str) {return double.Parse(str, CultureInfo.InvariantCulture);}
+        private static float ParseFloat(string str) {return float.Parse(str, CultureInfo.InvariantCulture);}
+        private static int ParseInt(string str) {return int.Parse(str, CultureInfo.InvariantCulture);}
+
+        public static IDictionary<string, object> Deserialize(string serialized)
+        {
+            var result = new Dictionary<string, object>();
+            var splitted = Split(serialized);
+            int startIndex = 0;
+            while (startIndex < splitted.Length)
+            {
+                var type = splitted[startIndex];
+                if (string.Equals(type, "double", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var data = ParseDouble(splitted[startIndex++]);
+                    result[desc] = data;
+                }
+                else if (string.Equals(type, "doubleVector", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var count = ParseInt(splitted[startIndex++]);
+                    result[desc] = Deserialize(splitted, count, startIndex, ParseDouble);
+                    startIndex += count;
+                }
+                else if (string.Equals(type, "single", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var data = ParseFloat(splitted[startIndex++]);
+                    result[desc] = data;
+                }
+                else if (string.Equals(type, "singleVector", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var count = ParseInt(splitted[startIndex++]);
+                    result[desc] = Deserialize(splitted, count, startIndex, ParseFloat);
+                    startIndex += count;
         
