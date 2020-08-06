@@ -160,4 +160,51 @@ namespace SharpNet.Data
                     var count = ParseInt(splitted[startIndex++]);
                     result[desc] = Deserialize(splitted, count, startIndex, ParseFloat);
                     startIndex += count;
-        
+                }
+                else if (string.Equals(type, "bool", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var data = bool.Parse(splitted[startIndex++]);
+                    result[desc] = data;
+                }
+                else if (string.Equals(type, "string", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var data = splitted[startIndex++];
+                    result[desc] = data;
+                }
+                else if (string.Equals(type, "int", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var data = ParseInt(splitted[startIndex++]);
+                    result[desc] = data;
+                }
+                else if (string.Equals(type, "intVector", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var count = ParseInt(splitted[startIndex++]);
+                    result[desc] = Deserialize(splitted, count, startIndex, ParseInt);
+                    startIndex += count;
+                }
+                else if (string.Equals(type, typeof(EpochData).Name + "Vector", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var count = ParseInt(splitted[startIndex++]);
+                    result[desc] = DeserializeArray(splitted, count, ref startIndex, x=>new EpochData(Deserialize(x)));
+                }
+                else if (string.Equals(type, "Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    ++startIndex;
+                    var desc = splitted[startIndex++];
+                    var data = splitted[startIndex++];
+                    result[desc] = data;
+                }
+                else if (string.Equals(type, "GPUTensor", StringComparison.OrdinalIgnoreCase) || string.Equals(type, "CpuTensor", StringComparison.OrdinalIgnoreCase))
+                {
+                    var data = TensorDeserialize(splitted, out string description, ref startIndex);
+                    result[description] = 
