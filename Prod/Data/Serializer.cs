@@ -207,4 +207,60 @@ namespace SharpNet.Data
                 else if (string.Equals(type, "GPUTensor", StringComparison.OrdinalIgnoreCase) || string.Equals(type, "CpuTensor", StringComparison.OrdinalIgnoreCase))
                 {
                     var data = TensorDeserialize(splitted, out string description, ref startIndex);
-                    result[description] = 
+                    result[description] = data;
+                }
+                else
+                {
+                    throw new NotImplementedException("don't know how to parse "+type);
+                }
+            }
+            return result;
+        }
+        private static string Serialize(string description, Tensor t)
+        {
+            return Serialize(t.UseGPU, description, typeof(float), t.Shape, ToString(t.ContentAsFloatArray()));
+        }
+
+        private static string ToString(ReadOnlySpan<float> data)
+        {
+            return string.Join(";", data.Select(x => x.ToString("G9", CultureInfo.InvariantCulture)));
+        }
+
+      
+
+        private static string ToString(double[] data)
+        {
+            return string.Join(";", data.Select(x => x.ToString(CultureInfo.InvariantCulture)));
+        }
+        private static string ToString(int[] data)
+        {
+            return string.Join(";", data.Select(x => x.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        private static string Serialize(bool isGpu, string description, Type type, int[] shape, string serializedContent)
+        {
+            var tensorName = isGpu ? "GPUTensor" : "CpuTensor";
+            return tensorName + ";" + description.Replace(";", "_") + ";" + type.Name + ";" + shape.Length + ";" + string.Join(";", shape) + ";" + serializedContent;
+        }
+        private static CpuTensor<float> TensorDeserialize(string[] splitted, out string description, ref int startIndex)
+        {
+            ++startIndex;
+            description = splitted[startIndex++];
+            var typeAsString = splitted[startIndex++];
+            var dimension = int.Parse(splitted[startIndex++]);
+            var shape = new int[dimension];
+            for (int i = 0; i < dimension; ++i)
+            {
+                shape[i] = int.Parse(splitted[startIndex++]);
+            }
+            int count = Utils.Product(shape);
+            if (string.Equals(typeAsString, "single", StringComparison.OrdinalIgnoreCase))
+            {
+                var data = Deserialize(splitted, count, startIndex, ParseFloat);
+                startIndex += count;
+                return new CpuTensor<float>(shape, data);
+            }
+            throw new NotImplementedException("do not know how to parse type " + typeAsString);
+        }
+    }
+}
