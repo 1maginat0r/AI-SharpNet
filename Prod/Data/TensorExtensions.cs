@@ -87,4 +87,80 @@ namespace SharpNet.Data
                 }
                 for (int col = 0; col < t.Shape[1]; ++col)
                 {
-                    if (col != 
+                    if (col != 0)
+                    {
+                        sb.Append(separator);
+                    }
+                    sb.Append(tSpan[index++].ToString(CultureInfo.InvariantCulture));
+                }
+                if (row != t.Shape[0] - 1)
+                {
+                    sb.Append(Environment.NewLine);
+                }
+            }
+            return sb.ToString();
+        }
+
+     
+        public static string ToNumpy(this Tensor t, int maxLength = 2000)
+        {
+            var sb = new StringBuilder();
+            int idx = 0;
+            var tContent = t.ContentAsFloatArray();
+
+            NumpyArrayHelper(t, tContent, 0, ref idx, sb);
+            var res = sb.ToString();
+            if (res.Length > maxLength)
+            {
+                res = res.Substring(0, maxLength / 2) + " .../... " + res.Substring(res.Length - maxLength / 2);
+            }
+
+            return res; 
+        }
+
+        public static Tensor FromNumpyArray(string s)
+        {
+            //we extract the shape of the numpy array
+            int currentDepth = -1;
+            var shape = new List<int>();
+            foreach (var c in s)
+            {
+                if (c == '[')
+                {
+                    ++currentDepth;
+                    if (currentDepth > shape.Count - 1)
+                    {
+                        shape.Add(1);
+                    }
+                    shape[currentDepth] = 1;
+                }
+                else if (c == ']')
+                {
+                    --currentDepth;
+                }
+                else if ((c == ',') && (currentDepth >= 0))
+                {
+                    ++shape[currentDepth];
+                }
+            }
+
+            bool isInteger = s.Contains("numpy.int");
+            if (s.Contains("numpy.double"))
+            {
+                throw new NotImplementedException();
+            }
+
+            s = s.ToLowerInvariant().Replace("numpy.array", "").Replace("numpy.float", "").Replace("numpy.int32", "")
+                .Replace("numpy.double", "").Replace("(", " ").Replace(")", " ").Replace("[", " ").Replace("]", " ")
+                .Replace("array", " ")
+                .Trim(',', ' ');
+
+            if (isInteger)
+            {
+                return new CpuTensor<int>(shape.ToArray(), s.Split(',').Select(int.Parse).ToArray());
+            }
+            //float
+            return new CpuTensor<float>(shape.ToArray(), s.Split(',').Select(float.Parse).ToArray());
+        }
+
+     
