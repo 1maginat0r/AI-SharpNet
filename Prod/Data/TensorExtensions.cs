@@ -163,4 +163,67 @@ namespace SharpNet.Data
             return new CpuTensor<float>(shape.ToArray(), s.Split(',').Select(float.Parse).ToArray());
         }
 
-     
+        private static void NumpyArrayHelper(Tensor t, ReadOnlySpan<float> tContent, int currentDepth, ref int idx, StringBuilder sb)
+        {
+            //if (currentDepth == 0)
+            //{
+            //    sb.Append("numpy.array(");
+            //}
+            sb.Append("[");
+            for (int indexInCurrentDepth = 0; indexInCurrentDepth < t.Shape[currentDepth]; ++indexInCurrentDepth)
+            {
+                if (currentDepth == t.Shape.Length - 1)
+                {
+                    sb.Append(tContent[idx++].ToString("G9", CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    NumpyArrayHelper(t, tContent, currentDepth + 1, ref idx, sb);
+                }
+                if (indexInCurrentDepth != t.Shape[currentDepth] - 1)
+                {
+                    sb.Append(",");
+                }
+            }
+            sb.Append("]");
+            //if (currentDepth == 0)
+            //{
+            //    sb.Append(", numpy.float)");
+            //}
+        }
+        public static bool Equals(this Tensor a, Tensor b, double epsilon, string id, ref string errors)
+        {
+            if (a == b)
+            {
+                return true;
+            }
+            if (b == null)
+            {
+                errors += id + ":a: b is null" + Environment.NewLine;
+                return false;
+            }
+            if (a == null)
+            {
+                errors += id + ":b: a is null" + Environment.NewLine;
+                return false;
+            }
+            id += ":a";
+            if (!a.SameShape(b))
+            {
+                errors += id + ":Shape: " + string.Join(",", a.Shape) + " != " + string.Join(",", b.Shape) + Environment.NewLine;
+                return false;
+            }
+            if (a.GetType() != b.GetType())
+            {
+                errors += id + ":Type: " + a.GetType() + " != " + b.GetType() + Environment.NewLine;
+                return false;
+            }
+            var contentA = a.ContentAsFloatArray();
+            var contentB = b.ContentAsFloatArray();
+            int nbFoundDifferences = 0;
+            for (int i = 0; i < a.Count; ++i)
+            {
+                if (!Utils.Equals(contentA[i], contentB[i], epsilon, id + "[" + i + "]", ref errors))
+                {
+                    ++nbFoundDifferences;
+                    if (nbFoundDifferences 
