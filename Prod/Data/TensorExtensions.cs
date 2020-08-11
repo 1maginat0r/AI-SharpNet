@@ -226,4 +226,76 @@ namespace SharpNet.Data
                 if (!Utils.Equals(contentA[i], contentB[i], epsilon, id + "[" + i + "]", ref errors))
                 {
                     ++nbFoundDifferences;
-                    if (nbFoundDifferences 
+                    if (nbFoundDifferences >= 10)
+                    {
+                        return false;
+                    }
+                }
+            }
+            if (nbFoundDifferences != 0)
+            {
+                return false;
+            }
+            return true;
+        }
+     
+        public static double ComputeAccuracy(CpuTensor<float> y_true, CpuTensor<float> y_pred)
+        {
+            using var buffer = new CpuTensor<float>(new[] { y_true.Shape[0] });
+            return y_true.ComputeAccuracy(y_pred, buffer);
+        }
+
+
+        public static bool SameFloatContent(Tensor a, Tensor b, double epsilon)
+        {
+            return SameFloatContent(a, b, epsilon, out _);
+        }
+        public static bool SameFloatContent(Tensor a, Tensor b, double epsilon, out string difference)
+        {
+            difference = "";
+            if (!SameShapeContent(a, b, out difference))
+            {
+                return false;
+            }
+            if (a == null || b == null)
+            {
+                return true;
+            }
+            return Utils.SameContent(a.ContentAsFloatArray(), b.ContentAsFloatArray(), epsilon, out difference);
+        }
+
+
+        public static bool SameHalfFloatContent(Tensor aHalf, Tensor bFloat, double epsilon)
+        {
+            return SameHalfFloatContent(aHalf, bFloat, epsilon, out _);
+        }
+        public static bool SameHalfFloatContent(Tensor aHalf, Tensor bFloat, double epsilon, out string difference)
+        {
+            difference = "";
+            if (!SameShapeContent(aHalf, bFloat, out difference))
+            {
+                return false;
+            }
+            if (aHalf == null || bFloat == null)
+            {
+                return true;
+            }
+            return Utils.SameContent(aHalf.ContentAsHalfArray(), bFloat.ContentAsFloatArray(), epsilon, out difference);
+        }
+
+        private static bool SameShapeContent(Tensor a, Tensor b, out string difference)
+        {
+            difference = "";
+            if (a == null || b == null)
+            {
+                if (a == null && b == null)
+                {
+                    return true;
+                }
+                difference = $"only one of the 2 tensors is null";
+                return false;
+            }
+            if (!a.SameShape(b))
+            {
+                difference = $"different shapes between first ({Tensor.ShapeToString(a.Shape)}) and second ({Tensor.ShapeToString(b.Shape)}) tensor";
+                
