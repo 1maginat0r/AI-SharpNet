@@ -298,4 +298,56 @@ namespace SharpNet.Data
             if (!a.SameShape(b))
             {
                 difference = $"different shapes between first ({Tensor.ShapeToString(a.Shape)}) and second ({Tensor.ShapeToString(b.Shape)}) tensor";
-                
+                return false;
+            }
+            return true;
+        }
+
+        public static bool SameIntContent(CpuTensor<int> a, CpuTensor<int> b, out string difference)
+        {
+            difference = "";
+            if (!SameShapeContent(a, b, out difference))
+            {
+                return false;
+            }
+            if (a == null || b == null)
+            {
+                return true;
+            }
+            var aContent = a.Content.ToArray();
+            var bContent = b.Content.ToArray();
+            for (int i = 0; i < aContent.Length; ++i)
+            {
+                if (aContent[i] != bContent[i])
+                {
+                    difference = $"different content at index {i} between first ({aContent[i]}) and second ({bContent[i]}) tensor";
+                    return false;
+                }
+            }
+            return true;
+        }
+        public static bool SameStringContent(CpuTensor<string> a, CpuTensor<string> b, out string difference)
+        {
+            difference = "";
+            if (!SameShapeContent(a, b, out difference))
+            {
+                return false;
+            }
+            if (a == null || b == null)
+            {
+                return true;
+            }
+            var aContent = a.Content.ToArray();
+            var bContent = b.Content.ToArray();
+            for (int i = 0; i < aContent.Length; ++i)
+            {
+                if (aContent[i] != bContent[i])
+                {
+                    difference = $"different content at index {i} between first ({aContent[i]}) and second ({bContent[i]}) tensor";
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+}
