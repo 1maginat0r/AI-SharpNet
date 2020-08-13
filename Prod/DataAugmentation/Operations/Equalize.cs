@@ -17,4 +17,47 @@ namespace SharpNet.DataAugmentation.Operations
         }
 
         public override float AugmentedValue(int indexInMiniBatch, int channel,
-    
+            CpuTensor<float> xInputMiniBatch, int rowInput, int colInput,
+            CpuTensor<float> xOutputMiniBatch, int rowOutput, int colOutput)
+        {
+            var initialValue = xInputMiniBatch.Get(indexInMiniBatch, channel, rowInput, colInput);
+            var unnormalizedValue = (int)(UnnormalizedValue(initialValue, channel, _meanAndVolatilityForEachChannel)+0.5f);
+            unnormalizedValue = Math.Min(unnormalizedValue, 255);
+            unnormalizedValue = Math.Max(unnormalizedValue, 0);
+            var unnormalizedEqualizedValue = _originalPixelToEqualizedPixelByChannel[channel][unnormalizedValue];
+            return NormalizedValue(unnormalizedEqualizedValue, channel, _meanAndVolatilityForEachChannel);
+        }
+
+
+        public static List<int[]> GetOriginalPixelToEqualizedPixelByChannel(ImageStatistic stats)
+        {
+            var originalPixelToEqualizedPixelByChannel = new List<int[]>();
+            var pixelCount = stats.Shape[1] * stats.Shape[2];
+            foreach (var v in stats.PixelCountByChannel)
+            {
+                var originalPixelToEqualizedPixel = new int[v.Length];
+                var cdf_min = 0;
+                {
+                    int cdf_i = 0;
+                    for (int i = 0; i < v.Length; ++i)
+                    {
+                        if (v[i] == 0)
+                        {
+                            continue;
+                        }
+
+                        cdf_i += v[i];
+                        if (cdf_min == 0)
+                        {
+                            cdf_min = cdf_i;
+                        }
+
+                        originalPixelToEqualizedPixel[i] = (int)(0.5f + (((float)cdf_i - cdf_min) * (v.Length - 1)) / (pixelCount - cdf_min));
+                    }
+                }
+                originalPixelToEqualizedPixelByChannel.Add(originalPixelToEqualizedPixel);
+            }
+            return originalPixelToEqualizedPixelByChannel;
+        }
+    }
+}
