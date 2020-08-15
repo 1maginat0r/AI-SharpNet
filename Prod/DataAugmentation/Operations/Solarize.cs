@@ -26,4 +26,7 @@ namespace SharpNet.DataAugmentation.Operations
                 return initialValue;
             }
             var unnormalizedAugmentedValue = 255.0f - unnormalizedInitialValue;
-            return NormalizedValue(unnormalizedAugmentedValue, channel, _meanAndVolatilityForEachCha
+            return NormalizedValue(unnormalizedAugmentedValue, channel, _meanAndVolatilityForEachChannel);
+        }
+    }
+}
