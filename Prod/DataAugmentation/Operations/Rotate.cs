@@ -22,4 +22,14 @@ namespace SharpNet.DataAugmentation.Operations
         }
         public static Rotate ValueOf(double rotationRangeInDegrees, Random rand, int nbRows, int nbCols)
         {
-     
+            if (rotationRangeInDegrees <= 0)
+            {
+                return null;
+            }
+
+            var rotationInDegrees = 2 * rotationRangeInDegrees * rand.NextDouble() - rotationRangeInDegrees;
+            return new Rotate(rotationInDegrees, nbRows, nbCols);
+        }
+
+    }
+}
