@@ -56,4 +56,38 @@ namespace SharpNet.DataAugmentation.Operations
             //special case: when the y tensor is of shape (batchSize, 1)
             if (yOriginalMiniBatch.Shape.Length == 2 && yOriginalMiniBatch.Shape[1] == 1)
             {
-                var originalValue = yOriginalMiniBatch.Get(indexInMi
+                var originalValue = yOriginalMiniBatch.Get(indexInMiniBatch, 0);
+                var otherValue = yOriginalMiniBatch.Get(_indexInMiniBatchForMixup, 0);
+                if (originalValue != otherValue)
+                {
+                    // We need to update the expected y value at 'indexInMiniBatch':
+                    // the updated y value is:
+                    //      '_percentageFromOriginalElement' * y value of the element at 'indexInMiniBatch' (original element)
+                    //      +'1-_percentageFromOriginalElement' * y value of the element at '_indexInMiniBatchForMixup' (other element)
+                    yDataAugmentedMiniBatch.Set(indexInMiniBatch, 0, _percentageFromOriginalElement * originalValue + (1 - _percentageFromOriginalElement) * otherValue);
+                }
+                return;
+            }
+
+            // the associated y is:
+            //      '_percentageFromOriginalElement' % of the category of the element at 'indexInMiniBatch' (original element)
+            //      '1-_percentageFromOriginalElement' % of the category of the element at 'indexInMiniBatchForMixup' (other element)
+            var originalCategoryIndex = indexInMiniBatchToCategoryIndex(indexInMiniBatch);
+            var otherCategoryIndex = indexInMiniBatchToCategoryIndex(_indexInMiniBatchForMixup);
+            yDataAugmentedMiniBatch.Set(indexInMiniBatch, originalCategoryIndex, _percentageFromOriginalElement);
+            yDataAugmentedMiniBatch.Set(indexInMiniBatch, otherCategoryIndex, 1f - _percentageFromOriginalElement);
+        }
+
+        public override float AugmentedValue(int indexInMiniBatch, int channel,
+            CpuTensor<float> xInputMiniBatch, int rowInput, int colInput, 
+            CpuTensor<float> xOutputMiniBatch, int rowOutput, int colOutput)
+        {
+            var originalValue = xInputMiniBatch.Get(indexInMiniBatch, channel, rowInput, colInput);
+            var otherValue = _xOriginalMiniBatch.Get(_indexInMiniBatchForMixup, channel, rowInput, colInput);
+
+            //!D To test: return Math.Max(initialValue, otherValue);
+
+            return _percentageFromOriginalElement * originalValue + (1 - _percentageFromOriginalElement) * otherValue;
+        }
+    }
+}
