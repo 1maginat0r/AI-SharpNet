@@ -61,4 +61,21 @@ namespace SharpNet.DataAugmentation
             switch (_rand.Next(14))
             {
                 //case 0:
-     
+                default: return null; //Identity
+                case 1: return AutoContrast(1.0);
+                case 2: return Equalize(1.0);
+                case 3: return Rotate(1.0, magnitudePercentage);
+                case 4: return Solarize(1.0, magnitudePercentage);
+                case 5: return Color(1.0, magnitudePercentage);
+                case 6: return Posterize(1.0, magnitudePercentage);
+                case 7: return Contrast(1.0, magnitudePercentage);
+                case 8: return Brightness(1.0, magnitudePercentage);
+                case 9: return Sharpness(1.0, magnitudePercentage);
+                case 10: return ShearX(1.0, magnitudePercentage);
+                case 11: return ShearY(1.0, magnitudePercentage);
+                case 12: return TranslateX(1.0, magnitudePercentage);
+                case 13: return TranslateY(1.0, magnitudePercentage);
+            }
+        }
+    }
+}
