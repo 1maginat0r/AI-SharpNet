@@ -33,4 +33,11 @@ namespace SharpNet.Datasets
         {
             if (columnsToRandomize.Count == 0)
             {
-      
+                return this;
+            }
+            var randomizedTraining = Training == null ? null : new RandomizeColumnDataSet(Training, columnsToRandomize, r);
+            var randomizedValidation = Test == null ? null : new RandomizeColumnDataSet(Test, columnsToRandomize, r);
+            return new TrainingAndTestDataset(randomizedTraining, randomizedValidation, nameof(RandomizeColumnDataSet)+"_");
+        }
+    }
+}
