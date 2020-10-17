@@ -114,4 +114,70 @@ public static class Biosonar85Utils
         {
             allSites.Add(Tuple.Create(site,count/totalCount));
         }
-        allSites = allSites.OrderByDescending(s =>
+        allSites = allSites.OrderByDescending(s => s.Item2).ToList();
+
+        List<Tuple<string, double>> res = new();
+        AllCombinations_Helper(0, 0, new List<string>(), allSites, res);
+        res = res.Where(s => s.Item2 >= minPercentage && s.Item2 <= maxPercentage).ToList();
+        var allAvailableCombinations = res.OrderBy(s=>s.Item2).Select(s=>s.Item1).ToList();
+        return string.Join(", ", allAvailableCombinations);
+    }
+
+    private static Dictionary<string, int> SiteToCount()
+    {
+        var siteToCount = new Dictionary<string, int>();
+        var ids = DataFrame.read_string_csv(Biosonar85DatasetSample.Y_train_path).StringColumnContent("id");
+        foreach (var id in ids)
+        {
+            var site = IdToSite(id);
+            if (!siteToCount.ContainsKey(site))
+            {
+                siteToCount[site] = 0;
+            }
+            ++siteToCount[site];
+        }
+        return siteToCount;
+    }
+
+    // ReSharper disable once UnusedMember.Local
+    private static void ParseLogFile()
+    {
+        const string log_directory = @"C:\Projects\Challenges\Biosonar85\MandatorySitesForTraining";
+        var csvPath = Path.Combine(log_directory, "data.csv");
+        Dictionary<string, int> siteToCount = SiteToCount();
+        foreach (var logPath in Directory.GetFiles(log_directory, "*.log"))
+        {
+            var lines = File.ReadAllLines(logPath);
+            var currentBlock = new List<string>();
+
+            for (int i = 0; i < lines.Length; ++i)
+            {
+                if (lines[i].Contains("sites for training"))
+                {
+                    ProcessBlock(currentBlock, siteToCount, csvPath);
+                    currentBlock.Clear();
+                    currentBlock.Add(lines[i]);
+                }
+                else
+                {
+                    currentBlock.Add(lines[i]);
+                    if (i == lines.Length - 1)
+                    {
+                        ProcessBlock(currentBlock, siteToCount, csvPath);
+                        currentBlock.Clear();
+                    }
+                }
+            }
+        }
+
+    }
+    private static void ProcessBlock(List<string> lines, Dictionary<string, int> siteToCount, string csvPath)
+    {
+        var sites = lines.FirstOrDefault(l => l.Contains("sites for training"));
+        if (string.IsNullOrEmpty(sites))
+        {
+            return; 
+        }
+        sites = sites.Split().Last();
+        double totalCount = siteToCount.Select(m => m.Value).Sum();
+        double
