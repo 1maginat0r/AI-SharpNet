@@ -180,4 +180,78 @@ public static class Biosonar85Utils
         }
         sites = sites.Split().Last();
         double totalCount = siteToCount.Select(m => m.Value).Sum();
-        double
+        double siteCount = 0;
+        foreach (var site in sites.Split(','))
+        {
+            siteCount += siteToCount[site];
+        }   
+        var networkName = lines.FirstOrDefault(l => l.Contains("Network Name:"));
+        if (string.IsNullOrEmpty(networkName))
+        {
+            return ;
+        }
+        networkName = networkName.Split().Last();
+        int bestEpoch = -1;
+        float bestScore = 0;
+        for (int epoch = 1;; ++epoch)
+        {
+            var epochLine = lines.FirstOrDefault(l => l.Contains($"Epoch {epoch}/20"));
+            if (string.IsNullOrEmpty(epochLine))
+            {
+                break;
+            }
+            const string toFind = "val_accuracy:";
+            var index = epochLine.IndexOf(toFind, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                break;
+            }
+            var score = float.Parse(epochLine.Substring(index + toFind.Length).Trim().Split()[0]);
+            if (bestEpoch == -1 || score > bestScore)
+            {
+                bestEpoch = epoch;
+                bestScore = score;
+            }
+        }
+
+        if (bestEpoch == -1)
+        {
+            return;
+        }
+
+        if (!File.Exists(csvPath))
+        {
+            File.AppendAllText(csvPath, "Sep=;"+Environment.NewLine);
+            File.AppendAllText(csvPath, $"NetworkName;Sites;% in training;BestEpoch;BestScore" + Environment.NewLine);
+        }
+        File.AppendAllText(csvPath, $"{networkName};{sites};{siteCount / totalCount};{bestEpoch};{bestScore}" + Environment.NewLine);
+    }
+
+
+
+    private static void AllCombinations_Helper(int depth, double totalCount, List<string> currentPath, List<Tuple<string, double>> allSites, List<Tuple<string, double>> res)
+    {
+        if (depth>=allSites.Count)
+        {
+            res.Add(Tuple.Create("\""+string.Join(",", currentPath)+"\"", totalCount));
+            return;
+        }
+
+        //without site at index 'depth'
+        AllCombinations_Helper(depth + 1, totalCount, currentPath, allSites, res);
+
+        //with site at index 'depth'
+        currentPath.Add(allSites[depth].Item1);
+        AllCombinations_Helper(depth + 1, totalCount+ allSites[depth].Item2, currentPath, allSites, res);
+        currentPath.RemoveAt(currentPath.Count - 1);
+    }
+
+    public static string IdToSite(string id) 
+    {
+        return id.Split(new[] { '-', '.' })[1]; 
+    }
+
+
+
+    // ReSharper disable once UnusedMember.Global
+    publ
