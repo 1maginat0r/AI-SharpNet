@@ -254,4 +254,56 @@ public static class Biosonar85Utils
 
 
     // ReSharper disable once UnusedMember.Global
-    publ
+    public static void ComputeAverage_avg()
+    {
+        var dfs = new List<DataFrame>();
+        const string path = @"\\RYZEN2700X-DEV\Challenges\Biosonar85\Submit\";
+        foreach (var file in new[]
+                 {
+                     @"7E45F84676_predict_test_0,9353867531264475.csv",
+                     @"569C5C14D2_predict_test_0.936063704706595.csv",
+                 })
+        {
+            dfs.Add(DataFrame.read_csv(Path.Combine(path, file), true, x => x == "id" ? typeof(string) : typeof(float)));
+        }
+        DataFrame.Average(dfs.ToArray()).to_csv(Path.Combine(path, "7E45F84676_569C5C14D2_avg.csv"));
+    }
+
+
+    public static (int[] shape, string n_fft, string hop_len, string f_min, string f_max, string top_db) ProcessXFileName(string xPath)
+    {
+        var xSplitted = Path.GetFileNameWithoutExtension(xPath).Split("_");
+        var xShape = new[] { int.Parse(xSplitted[^8]), int.Parse(xSplitted[^7]), int.Parse(xSplitted[^6]) };
+        var n_fft = xSplitted[^5];
+        var hop_len = xSplitted[^4];
+        var f_min = xSplitted[^3];
+        var f_max = xSplitted[^2];
+        var top_db = xSplitted[^1];
+        return (xShape, n_fft, hop_len, f_min, f_max, top_db);
+    }
+
+    public static InMemoryDataSet Load(string xFileName, [CanBeNull] string yFileNameIfAny, string csvPath, float mean = 0f, float stdDev = 1f)
+    {
+        
+        var meanAndVolatilityForEachChannel = new List<Tuple<float, float>> { Tuple.Create(mean, stdDev) };
+        
+        var xPath = Path.Join(DataDirectory, xFileName);
+        (int[] xShape, var  _, var _, var _, var _, var _) = ProcessXFileName(xPath);
+
+        ISample.Log.Info($"Loading {xShape[0]} tensors from {xPath} with shape {Tensor.ShapeToString(xShape)} (Y file:{yFileNameIfAny})");
+
+
+        var xTensor = CpuTensor<float>.LoadFromBinFile(xPath, xShape);
+        var yTensor = string.IsNullOrEmpty(yFileNameIfAny)
+            ?null //no Y available for Dataset
+            :CpuTensor<float>.LoadFromBinFile(Path.Join(DataDirectory, yFileNameIfAny), new []{ xShape[0], 1 });
+
+        /*
+        //mean = 0f; stdDev = 1f; //!D //no standardization
+        // we disable standardization
+        var xAccBefore = new DoubleAccumulator();
+        xAccBefore.Add(xTensor.SpanContent);
+        Log.Info($"Stats for {xFileName} before standardization: {xAccBefore}");
+
+        //We standardize the input
+        Log.Info($"Mean: {mean}, StdDev:
