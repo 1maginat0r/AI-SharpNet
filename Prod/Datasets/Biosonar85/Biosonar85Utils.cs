@@ -306,4 +306,64 @@ public static class Biosonar85Utils
         Log.Info($"Stats for {xFileName} before standardization: {xAccBefore}");
 
         //We standardize the input
-        Log.Info($"Mean: {mean}, StdDev:
+        Log.Info($"Mean: {mean}, StdDev: {stdDev}");
+        xTensor.LinearFunction(1f / stdDev, xTensor, -mean / stdDev);
+
+        var xAccAfter = new DoubleAccumulator();
+        xAccAfter.Add(xTensor.SpanContent);
+        Log.Info($"Stats for {xFileName} after standardization: {xAccAfter}");
+        */
+
+        var yID = DataFrame.read_string_csv(csvPath).StringColumnContent("id");
+
+        var dataset = new Biosonar85InMemoryDataSet(
+            xTensor,
+            yTensor,
+            xFileName,
+            meanAndVolatilityForEachChannel,
+            yID);
+        return dataset;
+    }
+
+
+    // ReSharper disable once RedundantAssignment
+    // ReSharper disable once RedundantAssignment
+    public static TensorListDataSet LoadTensorListDataSet(string xFileName, string xAugmentedFileNameIfAny, [CanBeNull] string yFileNameIfAny, string csvPath, float mean, float stdDev)
+    {
+        //!D we disable standardization
+        mean = 0; stdDev = 1;
+
+        var xPath = Path.Join(DataDirectory, xFileName);
+
+        (int[] xShape, var _, var _, var _, var _, var _) = ProcessXFileName(xPath);
+
+        List<CpuTensor<float>> xTensorList = CpuTensor<float>.LoadTensorListFromBinFileAndStandardizeIt(xPath, xShape , mean, stdDev);
+
+        List<CpuTensor<float>> augmentedXTensorList = null;
+        if (!string.IsNullOrEmpty(xAugmentedFileNameIfAny))
+        {
+            augmentedXTensorList = CpuTensor<float>.LoadTensorListFromBinFileAndStandardizeIt(Path.Join(DataDirectory, xAugmentedFileNameIfAny), xShape, mean, stdDev);
+        }
+
+        var yTensor = string.IsNullOrEmpty(yFileNameIfAny)
+            ? null //no Y available for Dataset
+            : CpuTensor<float>.LoadFromBinFile(Path.Join(DataDirectory, yFileNameIfAny), new[] { xShape[0], 1 });
+
+        /*
+        if (string.IsNullOrEmpty(yFileNameIfAny) && xShape[0] == 950)
+        {
+            var y_test_expected = DataFrame.read_csv(@"\\RYZEN2700X-DEV\Challenges\Biosonar85\Submit\2E3950406D_19_D560131427_45_avg_predict_test_0.956247550504151.csv", true, (col) => col == "id" ? typeof(string) : typeof(float));
+            yTensor = new CpuTensor<float>(new[] { xShape[0], 1 }, y_test_expected.FloatColumnContent(y_test_expected.Columns[1]));
+        }
+        */
+
+        /*
+        ISample.Log.Info($"Standardization between -1 and +1");
+        foreach (var t in xTensorList)
+        {
+            var xAccBefore = new MathTools.DoubleAccumulator();
+            xAccBefore.Add(t.SpanContent);
+
+            if (xAccBefore.Max > xAccBefore.Min)
+            {
+                mean = (float)xAccBefore.Average;
