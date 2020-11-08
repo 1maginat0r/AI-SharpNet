@@ -367,3 +367,57 @@ public static class Biosonar85Utils
             if (xAccBefore.Max > xAccBefore.Min)
             {
                 mean = (float)xAccBefore.Average;
+                var max = xAccBefore.Max-mean;
+                var min = xAccBefore.Min-mean;
+                var divider = (float) Math.Max(Math.Abs(min), Math.Abs(max));
+                // x= (x-mean)/divider
+
+                //We standardize the input between -1 and +1
+                t.LinearFunction(1f / divider, t, -mean / divider);
+            }
+        }
+        */
+
+        var yID = DataFrame.read_string_csv(csvPath).StringColumnContent("id");
+
+        var dataset = new TensorListDataSet(
+            xTensorList,
+            augmentedXTensorList,
+            yTensor,
+            xFileName,
+            Objective_enum.Classification,
+            null,
+            null /* columnNames*/, 
+            null, /* isCategoricalColumn */
+            yID,
+            "id",
+            ',');
+        return dataset;
+    }
+
+
+    // ReSharper disable once UnusedMember.Global
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO_Transformers(int numEpochs = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+            //{ nameof(AbstractDatasetSample.PercentageInTraining), 0.5},
+            { nameof(AbstractDatasetSample.PercentageInTraining), new[]{0.5,0.8}},
+            
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.TRANSFORMERS_3D)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.87},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BCEWithFocalLoss)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BCEWithFocalLoss_Gamma), new []{0, /*0.35*/}},
+            { nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass), 0.5},
+            //{ nameof(NetworkSample.BatchSize), new[] {1024} },
+            { nameof(NetworkSample.BatchSize), new[] {256} },
+
+            {nameof(TransformerNetworkSample.embedding_dim), 64},
+            {nameof(TransformerNetworkSample.input_is_already_embedded), true },
+            {nameof(TransformerNetworkSample.encoder_num_transformer_blocks), new[]{4} },
+            {nameof(TransformerNetworkSample.encoder_num_heads), new[
