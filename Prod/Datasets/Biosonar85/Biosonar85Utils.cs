@@ -420,4 +420,37 @@ public static class Biosonar85Utils
             {nameof(TransformerNetworkSample.embedding_dim), 64},
             {nameof(TransformerNetworkSample.input_is_already_embedded), true },
             {nameof(TransformerNetworkSample.encoder_num_transformer_blocks), new[]{4} },
-            {nameof(TransformerNetworkSample.encoder_num_heads), new[
+            {nameof(TransformerNetworkSample.encoder_num_heads), new[]{8} },
+            {nameof(TransformerNetworkSample.encoder_mha_use_bias_Q_V_K), new[]{false /*,true*/ } },
+            {nameof(TransformerNetworkSample.encoder_mha_use_bias_O), true  }, // must be true
+            {nameof(TransformerNetworkSample.encoder_mha_dropout), new[]{0.2, 0.4 } },
+            {nameof(TransformerNetworkSample.encoder_feed_forward_dim), 4*64},
+            {nameof(TransformerNetworkSample.encoder_feed_forward_dropout), new[]{ 0.2,0.4 }}, //0.2
+            {nameof(TransformerNetworkSample.encoder_use_causal_mask), true},
+            {nameof(TransformerNetworkSample.output_shape_must_be_scalar), true},
+            {nameof(TransformerNetworkSample.pooling_before_dense_layer), new[]{ nameof(POOLING_BEFORE_DENSE_LAYER.NONE) /*,nameof(POOLING_BEFORE_DENSE_LAYER.GlobalAveragePooling), nameof(POOLING_BEFORE_DENSE_LAYER.GlobalMaxPooling)*/ } }, //must be NONE
+            {nameof(TransformerNetworkSample.layer_norm_before_last_dense), false}, // must be false
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            //{ nameof(NetworkSample.lambdaL2Regularization), 0.0005 },
+            { nameof(NetworkSample.lambdaL2Regularization), 0},
+            
+            { nameof(NetworkSample.AdamW_L2Regularization), 0.00005},
+            //{ nameof(NetworkSample.AdamW_L2Regularization), new[]{0.00001,0.00005, 0.0001,0.0005,0.001, 0.005,0.01}},
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate),0.005},
+            //{ nameof(NetworkSample.InitialLearningRate),new[]{0.0001,0.0005,0.001, 0.005, 0.01, 0.05, 0.1}},
+
+            // Learning Rate Scheduler
+            //{nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle", "CyclicCosineAnnealing" } },
+            {nameof(NetworkSample.LearningRateSchedulerType), "OneCycle" },
+            //{nameof(NetworkSample.LearningRateSchedulerType), new[]{ "CyclicCosineAnnealing" } },
+            {nameof(TransformerNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing),0.1}
