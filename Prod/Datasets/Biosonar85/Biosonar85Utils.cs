@@ -453,4 +453,46 @@ public static class Biosonar85Utils
             {nameof(TransformerNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
             {nameof(NetworkSample.DisableReduceLROnPlateau), true},
             {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
-            {nameof(NetworkSample.OneCycle_PercentInAnnealing),0.1}
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing),0.1},
+            {nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-6},
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+
+            
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), new[]{0,0.5215608}},
+            { nameof(NetworkSample.AlphaMixup), new[]{0,1.2}},
+            { nameof(NetworkSample.CutoutPatchPercentage), new[]{0,0.06450188,0.1477559}},
+            { nameof(NetworkSample.CutoutCount), 1 },
+            //{ nameof(NetworkSample.RowsCutoutPatchPercentage), new[]{0.12661687}  },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[]{ 0, 0.047216333 }  },
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            { nameof(NetworkSample.ColumnsCutoutPatchPercentage), new[] {  0, 0.007914994} },
+            { nameof(NetworkSample.ColumnsCutoutCount), new[] { 1} },
+            //{ nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect)} },
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Nearest)} },
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), new[] { 0, 0.034252543 } },
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[] {0, 0.06299627, 0.008304262 } },
+            
+
+
+        };
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(new TransformerNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+    // ReSharper disable once UnusedMember.Global
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO(int numEpochs = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+            //{"KFold", 2},
+            {nameof(AbstractDatasetSample.PercentageInTraining), 0.8}, //will be automatically set to 1 if KFold is enabled
+            
+            //Related to model
+       
