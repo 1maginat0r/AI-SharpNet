@@ -495,4 +495,38 @@ public static class Biosonar85Utils
             {nameof(AbstractDatasetSample.PercentageInTraining), 0.8}, //will be automatically set to 1 if KFold is enabled
             
             //Related to model
-       
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BinaryCrossentropy)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.AUC)},
+            { nameof(NetworkSample.BatchSize), new[] {256} },
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            //{ nameof(NetworkSample.OptimizerType), new[] { "SGD"} },
+            //{ nameof(NetworkSample.AdamW_L2Regularization), AbstractHyperparameterSearchSpace.Range(0.00001f,0.01f, AbstractHyperparameterSearchSpace.range_type.normal) },
+            //{ nameof(NetworkSample.AdamW_L2Regularization), AbstractHyperparameterSearchSpace.Range(0.00001f,0.01f, AbstractHyperparameterSearchSpace.range_type.normal) },
+            { nameof(NetworkSample.AdamW_L2Regularization), 0.01 },
+
+            //Dataset
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.NETWORK_4D)},
+
+
+            //{ "Use_MaxPooling", new[]{true,false}},
+            //{ "Use_AvgPooling", new[]{/*true,*/false}}, //should be false
+                
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), 0.5}, //must be > 0
+            { nameof(NetworkSample.AlphaMixup), new[] { 0 /*, 0.25*/} }, // must be 0
+            { nameof(NetworkSample.CutoutPatchPercentage), new[] {0, 0.1,0.2} },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), 0.2 },
+            { nameof(NetworkSample.ColumnsCutoutPatchPercentage), new[] {0.1, 0.2} },
+            //{ nameof(NetworkSample.HorizontalFlip),new[]{true,false } },
+            //{ nameof(NetworkSample.VerticalFlip),new[]{true,false } },
+            //{ nameof(NetworkSample.Rotate180Degrees),new[]{true,false } },
+            { nameof(NetworkSample.FillMode),nameof(ImageDataGenerator.FillModeEnum.Modulo) },
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), 0.1 },
+            //{ nameof(NetworkSample.HeightShiftRangeInPercentage), new[] { 0.0 , 0.1,0.2 } }, //0
+            //{ nameof(NetworkSample.ZoomRange), 
