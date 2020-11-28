@@ -600,4 +600,38 @@ public static class Biosonar85Utils
             {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
             //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
             {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
-            {nameof(Net
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[]{ 0.1} }, //discard: 0.4
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+            {nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), new[] { 0.0,  1.0} }, //0
+            { nameof(NetworkSample.AlphaMixup), new[] { 0.0,  1.0} }, // 1 or 0 , 1 seems better
+            { nameof(NetworkSample.CutoutPatchPercentage), new[] {/*0,*/ 0.05, 0.1} }, //0.1 or 0.2
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[] {/*0 ,*/ 0.1} }, //0 or 0.1
+            { nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 }, // must be 0            
+            { nameof(NetworkSample.HorizontalFlip),new[]{true,false } },
+            
+            //{ nameof(NetworkSample.VerticalFlip),new[]{true,false } },
+            //{ nameof(NetworkSample.Rotate180Degrees),new[]{true,false } },
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            //{ nameof(NetworkSample.HeightShiftRangeInPercentage), AbstractHyperparameterSearchSpace.Range(0.05f, 0.30f) }, // must be > 0 , 0.1 seems good default
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[]{0.05, 0.1   } }, //to discard: 0.2
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}}, // must be 0
+
+        };
+
+        //model: FB0927A468_17
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.00025;
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.0025;
+        searchSpace[nameof(Network
