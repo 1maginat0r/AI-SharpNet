@@ -562,4 +562,42 @@ public static class Biosonar85Utils
     {
         var searchSpace = new Dictionary<string, object>
         {
-            //related to Data
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.8}, //will be automatically set to 1 if KFold is enabled
+
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            //{ nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.PNG_1CHANNEL)},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.PNG_1CHANNEL_V2)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.94},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BinaryCrossentropy)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BatchSize), new[] {128} },
+            
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+            
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" /*, "SGD"*/ } },
+            //{ nameof(NetworkSample.SGD_usenesterov), new[] { true, false } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0.0005 /*, 0.001*/} },
+            { nameof(NetworkSample.AdamW_L2Regularization), new[] { /*0.005,0.001,, 0.05*/ 0.0005, 0.00025 } }, // to discard: 0.005, 0.05 0.001
+            
+            { nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), -1 },
+            //{ nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), 4 },
+
+            // Learning Rate
+            //{ nameof(NetworkSample.InitialLearningRate), AbstractHyperparameterSearchSpace.Range(0.003f, 0.03f)},
+            
+            { nameof(NetworkSample.InitialLearningRate), new[]{0.0025, 0.005 , 0.01} }, //0.005 or 0.01
+
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), new[] { "OneCycle" } },
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
+            {nameof(Net
