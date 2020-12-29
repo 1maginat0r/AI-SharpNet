@@ -700,4 +700,43 @@ public static class Biosonar85Utils
             // Learning Rate
             { nameof(NetworkSample.InitialLearningRate), 0.01},
 
-   
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[]{ 0.1} },
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+            {nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            //{ nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), 0},
+            //{ nameof(NetworkSample.CutoutPatchPercentage), 0.0 },
+            //{ nameof(NetworkSample.CutoutCount), 0 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage), 0.2},
+            { nameof(NetworkSample.RowsCutoutCount), 0},
+            { nameof(NetworkSample.RowsCutoutPatchPercentage),  0.0 },
+            { nameof(NetworkSample.HorizontalFlip),true},
+            //{ nameof(NetworkSample.VerticalFlip),true},
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), 0.0},
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), 0.0},
+
+        };
+
+     
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+
+
+    // ReSharp
