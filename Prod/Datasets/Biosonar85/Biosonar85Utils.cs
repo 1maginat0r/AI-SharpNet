@@ -779,4 +779,46 @@ public static class Biosonar85Utils
 
             { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
             // Optimizer 
-            { nameof(NetworkSam
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0.0005} },
+
+            
+            { nameof(NetworkSample.AdamW_L2Regularization), new[] {0.00015,  0.00025,  0.0005} },
+
+            { nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), -1 },
+            //{ nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), 5 },
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate), new[]{0.00125, 0.0025, 0.005 } },
+
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[]{ 0.1} },
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+            {nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), new[] { 1.0, 1.2} },
+            { nameof(NetworkSample.CutoutPatchPercentage), new[] {0, 0.1, 0.2} },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[] {0.1, 0.2} },
+            { nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            { nameof(NetworkSample.HorizontalFlip),true/*new[]{true,false } */},
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[]{0, 0.05} },
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
+
+        };
+
+        //model: FB0927A468_17
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.00025;
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+   
