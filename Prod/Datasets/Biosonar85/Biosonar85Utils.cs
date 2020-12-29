@@ -739,4 +739,44 @@ public static class Biosonar85Utils
 
 
 
-    // ReSharp
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO_MEL_SPECTROGRAM_128_401_BinaryCrossentropy(int numEpochs = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        //when LossFunction = BinaryCrossentropy
+        //  InitialLearningRate ==
+        //  AdamW_L2Regularization == 0.00025
+        //  OneCycle_PercentInAnnealing == 0
+        //  AlphaMixup == 1.2
+        //  SkipConnectionsDropoutRate >= 0.4
+
+
+
+        // stats from FindBestLearningRate
+        //     DefaultMobileBlocksDescriptionCount     BatchSize   Best learning rate                           Free GPU Memory     
+        //     B0 + -1                                 64          0.002 => 0.030 or 0.08                       12700MB             A305BB2D2F
+        //     B0 + 5                                  64          0.003 => 0.025 or 0.06                       14587MB             93898B4B73  
+        //     B0 + 5                                  128         ?     => 0.002                               7268MB              C05FD055A3
+        //     B0 + -1                                 128         ?     => 0.01 or 0.1                         5500MB             A305BB2D2F                                       
+
+        #region previous tests
+        var searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_128_401)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.93},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BinaryCrossentropy)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BatchSize), new[] {128} }, //because of memory issues, we have to use small batches
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSam
