@@ -821,4 +821,43 @@ public static class Biosonar85Utils
         //model: FB0927A468_17
         searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.00025;
         searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
-   
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = -1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.HorizontalFlip)] = true;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.0025;
+        searchSpace[nameof(NetworkSample.MinimumRankingScoreToSaveModel)] = 0.94;
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 0.5;
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+
+
+
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = new[] { 0.00025, 0.0005 };
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.02;
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BinaryCrossentropy);
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = new[]{0,0.1};
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = new[]{5,-1}; //new[]{2,3,4,5,6, -1};
+        //best: 0.9440      393C258A23
+        //AdamW_L2Regularization = 0.00025
+        //LossFunction = BinaryCrossentropy
+        //DefaultMobileBlocksDescriptionCount = 5
+        //OneCycle_PercentInAnnealing = 0
+
+
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.0002
