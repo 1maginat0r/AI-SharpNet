@@ -860,4 +860,38 @@ public static class Biosonar85Utils
 
 
 
-        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.0002
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.00025; //new[] { 0.00025, 0.0005 };
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.02;
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BinaryCrossentropy);
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = 0; //new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = new[] { 0.1f, 0.2f, 0.3f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0.1f, 0.2f, 0.3f, 0.4f };
+        //best: 0.9514 89B2D5CEDF
+        //AdamW_L2Regularization = 0.00025
+        //DefaultMobileBlocksDescriptionCount = 5
+        //LossFunction = BinaryCrossentropy
+        //OneCycle_PercentInAnnealing = 0
+        //TopDropoutRate = 0.2
+        //SkipConnectionsDropoutRate = 0.2
+        //TopDropoutRate = 0.1
+
+
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BinaryCrossentropy);
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = new[] { 0.0f, 0.2f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0.0f, 0.2f, 0.4f, 0.5f };
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = new[] { 1, 1.2, 1.5};
+        searchSpace[nameof(EfficientNetNetworkSample.De
