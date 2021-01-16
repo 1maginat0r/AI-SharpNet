@@ -970,4 +970,44 @@ public static class Biosonar85Utils
         #endregion
 
         //with Data Augmentation on waveform
-        searchSpace
+        searchSpace = new Dictionary<string, object>
+        {
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_128_401)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.94},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BinaryCrossentropy)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)},
+            { nameof(NetworkSample.BatchSize), new[] {128} }, //because of memory issues, we have to use small batches
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0.0005} },
+
+
+            { nameof(NetworkSample.AdamW_L2Regularization), new[] { 0.000125, 0.00025, 0.0005 } },
+
+            { nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), new[] { 5, -1 } },
+
+            { nameof(EfficientNetNetworkSample.TopDropoutRate), new[] { 0f, 0.2f, 0.5f }},
+            { nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate), new[] { 0f, 0.2f, 0.5f } },
+
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate), new[] { 0.005, 0.01, 0.02} },
+
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[] { 0, 0.1 } },
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplie
