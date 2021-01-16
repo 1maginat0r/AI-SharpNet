@@ -934,4 +934,40 @@ public static class Biosonar85Utils
 
         searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.00025; //new[] { 0.00025, 0.0005 };
         searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
-        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.2; //1.0; //new[] { 1, 1.2, 1.5, 2
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.2; //1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = new[]{0.01,0.02,0.04};
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BinaryCrossentropy);
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = 0; //new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = 0.2f; //new[] { 0.2f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0f, 0.2f, 0.4f};
+        //best 0.9502 7046B1D862
+        //SkipConnectionsDropoutRate = 0
+        //InitialLearningRate = 0.02
+        //TopDropoutRate = 0.2
+        #region stats (hpo_25492.csv)
+        /*
+        Stats for InitialLearningRate:
+         0.02:-0.9446551203727722 +/- 0.003921505446990086 (3 evals at 559.1s/eval) (target Time: 55.7%)
+         0.01:-0.9432544112205505 +/- 0.0018052004396709764 (3 evals at 563.8s/eval) (target Time: 38.8%)
+         0.04:-0.9311263759930929 +/- 0.00738073029813322 (3 evals at 565.6s/eval) (target Time: 5.6%)
+        Stats for SkipConnectionsDropoutRate:
+         0:-0.9420586824417114 +/- 0.006738606448944757 (3 evals at 555s/eval) (target Time: 41.8%)
+         0.4:-0.9406238198280334 +/- 0.0014258936491357123 (3 evals at 551.9s/eval) (target Time: 33.8%)
+         0.2:-0.9363534053166708 +/- 0.010897142170991284 (3 evals at 581.6s/eval) (target Time: 24.5%)
+         */
+        #endregion
+        #endregion
+
+        //with Data Augmentation on waveform
+        searchSpace
