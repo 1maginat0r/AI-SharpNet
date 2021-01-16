@@ -894,4 +894,44 @@ public static class Biosonar85Utils
         searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0.0f, 0.2f, 0.4f, 0.5f };
         searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = new[] { 0, 0.1 };
         searchSpace[nameof(NetworkSample.AlphaMixup)] = new[] { 1, 1.2, 1.5};
-        searchSpace[nameof(EfficientNetNetworkSample.De
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        //best: 0.9511 9CEE8F0073
+        //AlphaMixup = 1.2
+        //LossFunction = BinaryCrossentropy
+        //SkipConnectionsDropoutRate = 0.5
+        //TopDropoutRate = 0.4
+        //OneCycle_PercentInAnnealing = 0
+        #region stats (hpo_16380.csv)
+        /*
+         * Stats for AlphaMixup:
+         1.2:-0.9425161921459696 +/- 0.005026113550600352 (23 evals at 549.6s/eval) (target Time: 44.9%)
+         1.5:-0.9396843284368515 +/- 0.00708116208620747 (20 evals at 546.7s/eval) (target Time: 30%)
+         1:-0.9385012310484181 +/- 0.007097887046079005 (23 evals at 545.1s/eval) (target Time: 25.1%)
+        Stats for BCEWithFocalLoss_Gamma:
+         0:-0.9402588985183022 +/- 0.0066713671938491695 (66 evals at 547.1s/eval) (target Time: 50%)
+         0.7:empty (target Time: 50%)
+        Stats for BCEWithFocalLoss_PercentageInTrueClass:
+         0.5:-0.9402588985183022 +/- 0.0066713671938491695 (66 evals at 547.1s/eval) (target Time: 33.3%)
+         0.4:empty (target Time: 33.3%)
+         0.6:empty (target Time: 33.3%)
+        Stats for OneCycle_PercentInAnnealing:
+         0:-0.9420196516173226 +/- 0.0062835303533355265 (35 evals at 551.3s/eval) (target Time: 64.3%)
+         0.1:-0.9382709514710211 +/- 0.006536636545131606 (31 evals at 542.4s/eval) (target Time: 35.7%)
+        Stats for SkipConnectionsDropoutRate:
+         0.4:-0.9408757798373699 +/- 0.0073601562871463844 (16 evals at 546.1s/eval) (target Time: 26.9%)
+         0.2:-0.9406338754822227 +/- 0.004946303973481242 (17 evals at 553s/eval) (target Time: 26.1%)
+         0.5:-0.9405490942299366 +/- 0.006036560713137301 (16 evals at 544s/eval) (target Time: 25.8%)
+         0:-0.939030201996074 +/- 0.0078074921220547475 (17 evals at 545.3s/eval) (target Time: 21.2%)
+        Stats for TopDropoutRate:
+         0:-0.941954721575198 +/- 0.005152757288117706 (23 evals at 551s/eval) (target Time: 42%)
+         0.4:-0.9401502013206482 +/- 0.0074750716188162385 (22 evals at 545.6s/eval) (target Time: 33%)
+         0.2:-0.938515441758292 +/- 0.006786811112259223 (21 evals at 544.5s/eval) (target Time: 25%)
+         */
+        #endregion
+
+
+
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.00025; //new[] { 0.00025, 0.0005 };
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.2; //1.0; //new[] { 1, 1.2, 1.5, 2
