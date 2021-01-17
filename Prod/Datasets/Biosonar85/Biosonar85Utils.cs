@@ -1052,4 +1052,39 @@ public static class Biosonar85Utils
          0.05:-0.8874849336487907 +/- 0.1238971924906097 (42 evals at 566.3s/eval) (target Time: 32.5%)
          0.1:-0.8778669549071271 +/- 0.1251656872793232 (23 evals at 566.8s/eval) (target Time: 30.2%)
         Stats for DefaultMobileBlocksDescriptionCount:
-         5:-0.9328659780820211 +/- 0.014218148134131598 (75 eva
+         5:-0.9328659780820211 +/- 0.014218148134131598 (75 evals at 540.1s/eval) (target Time: 70.5%)
+         -1:-0.7852364244132206 +/- 0.18035574752376546 (29 evals at 623.3s/eval) (target Time: 29.5%)
+        Stats for HeightShiftRangeInPercentage:
+         0:-0.8927666483254268 +/- 0.09257094835157732 (29 evals at 565s/eval) (target Time: 50.3%)
+         0.05:-0.891287624835968 +/- 0.12467128503616376 (75 evals at 562.6s/eval) (target Time: 49.7%)
+        Stats for InitialLearningRate:
+         0.01:-0.9101193526695515 +/- 0.09675270521461657 (29 evals at 550.8s/eval) (target Time: 39.7%)
+         0.005:-0.8933569073677063 +/- 0.11421729557163274 (60 evals at 572.4s/eval) (target Time: 34.2%)
+         0.02:-0.8494619329770406 +/- 0.1468119232479954 (15 evals at 550.8s/eval) (target Time: 26.1%)
+        Stats for OneCycle_PercentInAnnealing:
+         0.1:-0.8936671334870008 +/- 0.11425247446878099 (49 evals at 555.7s/eval) (target Time: 50.8%)
+         0:-0.8899475476958535 +/- 0.11865083929206394 (55 evals at 570.1s/eval) (target Time: 49.2%)
+        Stats for RowsCutoutPatchPercentage:
+         0.1:-0.8960317853671401 +/- 0.11730019684567332 (67 evals at 561s/eval) (target Time: 35.3%)
+         0:-0.8936418169423154 +/- 0.0807621718442116 (19 evals at 563s/eval) (target Time: 34.6%)
+         0.05:-0.8735266957018111 +/- 0.1416569056303118 (18 evals at 572s/eval) (target Time: 30.1%)
+        Stats for SkipConnectionsDropoutRate:
+         0:-0.9289139120475106 +/- 0.056270076240568116 (46 evals at 552.7s/eval) (target Time: 44.7%)
+         0.2:-0.8624956828576548 +/- 0.14624622548564203 (27 evals at 571.4s/eval) (target Time: 28.2%)
+         0.5:-0.8619155249288005 +/- 0.13641952621539116 (31 evals at 572s/eval) (target Time: 27.1%)
+        Stats for TopDropoutRate:
+         0.2:-0.9040996193885803 +/- 0.10182528176748463 (40 evals at 562.1s/eval) (target Time: 36.9%)
+         0.5:-0.9016091050328435 +/- 0.10332706932548322 (37 evals at 555.4s/eval) (target Time: 36%)
+         0:-0.8597512223102428 +/- 0.14493542054474506 (27 evals at 575.9s/eval) (target Time: 27.1%)
+        */
+        #endregion
+
+
+
+        //TO find the best learning rate
+        //searchSpace[nameof(NetworkSample.BatchSize)] = 8;
+        //searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 1.0;
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const b
