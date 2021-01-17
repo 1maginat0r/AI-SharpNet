@@ -1010,4 +1010,46 @@ public static class Biosonar85Utils
             {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
             {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[] { 0, 0.1 } },
             //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
-            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplie
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            //{ nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), 1.2 },
+            { nameof(NetworkSample.CutoutPatchPercentage), new[] { 0, 0.05, 0.1} },
+            { nameof(NetworkSample.CutoutCount), 1 },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[] { 0, 0.05, 0.1 } },
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
+            //{ nameof(NetworkSample.HorizontalFlip),true/*new[]{true,false } */},
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[]{0, 0.05} },
+            //{ nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
+
+        };
+        //best score:  0.9469099 (FCB789043E)
+        //AdamW_L2Regularization = 0.0005
+        //CutoutPatchPercentage = 0.05
+        //DefaultMobileBlocksDescriptionCount = 5
+        //HeightShiftRangeInPercentage = 0.05
+        //InitialLearningRate = 0.01
+        //OneCycle_PercentInAnnealing = 0.1
+        //RowsCutoutPatchPercentage = 0.1
+        //SkipConnectionsDropoutRate = 0
+        //TopDropoutRate = 0.5
+        #region stats (hpo)
+        /*
+        Stats for AdamW_L2Regularization:
+         0.00025:-0.9055530903515993 +/- 0.09953088082035416 (54 evals at 554.6s/eval) (target Time: 38.4%)
+         0.0005:-0.877870343980335 +/- 0.1317073628888182 (21 evals at 568.6s/eval) (target Time: 31.1%)
+         0.000125:-0.8759193297090202 +/- 0.1304431866656265 (29 evals at 575.6s/eval) (target Time: 30.5%)
+        Stats for CutoutPatchPercentage:
+         0:-0.9043973714877398 +/- 0.10099409896939227 (39 evals at 558s/eval) (target Time: 37.3%)
+         0.05:-0.8874849336487907 +/- 0.1238971924906097 (42 evals at 566.3s/eval) (target Time: 32.5%)
+         0.1:-0.8778669549071271 +/- 0.1251656872793232 (23 evals at 566.8s/eval) (target Time: 30.2%)
+        Stats for DefaultMobileBlocksDescriptionCount:
+         5:-0.9328659780820211 +/- 0.014218148134131598 (75 eva
