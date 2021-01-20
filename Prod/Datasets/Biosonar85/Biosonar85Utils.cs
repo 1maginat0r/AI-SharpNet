@@ -1087,4 +1087,50 @@ public static class Biosonar85Utils
 
         var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
         IScore bestScoreSoFar = null;
-        const b
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+
+
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO_MEL_SPECTROGRAM_128_401_BCEWithFocalLoss(int numEpochs = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        //when LossFunction = BCEWithFocalLoss && PercentageInTraining == 0.5
+        //  InitialLearningRate == 0.01
+        //  AdamW_L2Regularization == 0.0005
+        //  AlphaMixup == 1.2
+
+        var searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_128_401)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.93},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BCEWithFocalLoss)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BatchSize), new[] {128} }, //because of memory issues, we have to use small batches
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0.0005} },
+            { nameof(NetworkSample.AdamW_L2Regularization), new[] {0.00015,  0.00025,  0.0005} },
+
+            { nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), -1 },
+            //{ nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), 5 },
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate), new[]{0.00125, 0.0025, 0.005 } },
+
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+  
