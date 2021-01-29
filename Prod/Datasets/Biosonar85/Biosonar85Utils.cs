@@ -1169,4 +1169,37 @@ public static class Biosonar85Utils
         searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
         searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
         searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
-        searchSpace[nameof(NetworkSample.HeightShiftR
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = new[] { 0.01, 0.02, 0.04 };
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BCEWithFocalLoss); //new[]{nameof(EvaluationMetricEnum.BinaryCrossentropy), nameof(EvaluationMetricEnum.BCEWithFocalLoss)};
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = new[] { 0.0f, 0.2f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0.0f, 0.2f, 0.4f, 0.5f };
+        //best score: 0.9530 DEE753FA84
+        //frequencies filtered in [1Khz, 127 KHz]
+        //AdamW_L2Regularization = 0.0005
+        //AlphaMixup = 1.2
+        //BCEWithFocalLoss_Gamma = 0.7
+        //InitialLearningRate = 0.01
+        //LossFunction = BCEWithFocalLoss
+        //OneCycle_PercentInAnnealing = 0.1
+        //SkipConnectionsDropoutRate = 0.4
+        //TopDropoutRate = 0.4
+        #region stats hpo_14968.csv
+        /*
+        Stats for AdamW_L2Regularization:
+         0.0005:-0.9475946337618726 +/- 0.003874275395588275 (47 evals at 559.3s/eval) (target Time: 57.2%)
+         0.00025:-0.9441028104888068 +/- 0.004865525116561218 (18 evals at 551.8s/eval) (target Time: 27%)
+         0.000125:-0.9395049611727396 +/- 0.007121081470705447 (12 evals at 551.1s/eval) (target Time: 15.8%)
+        Stats for BCEWithFocalLoss_Gamma:
+         0.7:-0.9463937282562256 +/- 0.004299672373975014 (55 evals at 557.8s/eval) (target Time: 60.2%)
+         0:-0.9433274025266821 +/- 0.007532276866440651 (22 evals at 552.5s/eval) (target Time: 39.8%)
+        Stats for BCEWithFocalLoss_PercentageInTrueClass:
+         0.5:-0.9466376658529043 +/- 0.004914843386027181 (32 evals at 560.4s/eval) (target Time: 41%)
+         0.6:-0.94588134544236
