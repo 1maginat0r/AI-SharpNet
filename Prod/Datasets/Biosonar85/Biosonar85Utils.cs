@@ -1202,4 +1202,35 @@ public static class Biosonar85Utils
          0:-0.9433274025266821 +/- 0.007532276866440651 (22 evals at 552.5s/eval) (target Time: 39.8%)
         Stats for BCEWithFocalLoss_PercentageInTrueClass:
          0.5:-0.9466376658529043 +/- 0.004914843386027181 (32 evals at 560.4s/eval) (target Time: 41%)
-         0.6:-0.94588134544236
+         0.6:-0.9458813454423632 +/- 0.004566989560571666 (28 evals at 555s/eval) (target Time: 35.2%)
+         0.4:-0.9428102900000179 +/- 0.007224465977089863 (17 evals at 550.7s/eval) (target Time: 23.8%)
+        Stats for InitialLearningRate:
+         0.01:-0.9469701013867817 +/- 0.004018769666231349 (63 evals at 559.1s/eval) (target Time: 70.6%)
+         0.02:-0.9405759990215301 +/- 0.005814162150319022 (10 evals at 546.2s/eval) (target Time: 20.5%)
+         0.04:-0.9349953830242157 +/- 0.007700915063784506 (4 evals at 538.2s/eval) (target Time: 8.8%)
+        Stats for OneCycle_PercentInAnnealing:
+         0.1:-0.9458404429580854 +/- 0.004938108742290611 (46 evals at 558.4s/eval) (target Time: 53.1%)
+         0:-0.9450386301163705 +/- 0.006423515574597289 (31 evals at 553.2s/eval) (target Time: 46.9%)
+        Stats for SkipConnectionsDropoutRate:
+         0:-0.9464393827048215 +/- 0.004338147617049178 (22 evals at 556.5s/eval) (target Time: 30.9%)
+         0.2:-0.946089988663083 +/- 0.004247042477788084 (21 evals at 553.8s/eval) (target Time: 28.5%)
+         0.4:-0.945903303367751 +/- 0.005022418648494283 (28 evals at 560s/eval) (target Time: 27.8%)
+         0.5:-0.9383348723252615 +/- 0.00978371785892827 (6 evals at 546.9s/eval) (target Time: 12.8%)
+        Stats for TopDropoutRate:
+         0.2:-0.9457620173692703 +/- 0.004443007135792191 (20 evals at 553.3s/eval) (target Time: 34.5%)
+         0:-0.9455617620394781 +/- 0.004844876735403736 (26 evals at 555.5s/eval) (target Time: 33.1%)
+         0.4:-0.9453229596537929 +/- 0.006732685834161584 (31 evals at 558.9s/eval) (target Time: 32.3%)
+        */
+        #endregion
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = new[] { 0.0005, 0.001 };
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = new[] { 1, 1.2, 1.5 }; //1.2; //1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_Gamma)] = 0.7; //new[] { 0, 0.7 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass)] = 0.5; //new[] { 0.4, 0.5, 0.6 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(Netw
