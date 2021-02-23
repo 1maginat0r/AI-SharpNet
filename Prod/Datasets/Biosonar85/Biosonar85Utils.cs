@@ -1265,4 +1265,35 @@ public static class Biosonar85Utils
          1.5:-0.9437480807304383 +/- 0.0037019231444786107 (20 evals at 548s/eval) (target Time: 31.9%)
         Stats for InitialLearningRate:
          0.01:-0.9458138346672058 +/- 0.0037814263715099873 (36 evals at 552.1s/eval) (target Time: 65.1%)
-         0.005:-0.9428372634084601 +/- 0.0034752833199035464 (19 evals at 546.5s/eval) (tar
+         0.005:-0.9428372634084601 +/- 0.0034752833199035464 (19 evals at 546.5s/eval) (target Time: 28.3%)
+         0.001:-0.9383775666356087 +/- 0.0033481430877265778 (8 evals at 552.5s/eval) (target Time: 6.5%)
+        Stats for SkipConnectionsDropoutRate:
+         0.4:-0.9450428019399228 +/- 0.0038817164187930756 (23 evals at 551.1s/eval) (target Time: 41.9%)
+         0.2:-0.94401577824638 +/- 0.004265958047158649 (21 evals at 548.9s/eval) (target Time: 32.9%)
+         0.1:-0.9426268841090956 +/- 0.004819821059514996 (19 evals at 551.4s/eval) (target Time: 25.1%)
+        Stats for TopDropoutRate:
+         0.2:-0.9445303471192069 +/- 0.004591580714187518 (23 evals at 550.1s/eval) (target Time: 37.6%)
+         0.1:-0.9438837484309548 +/- 0.0037630135111553814 (19 evals at 553.5s/eval) (target Time: 32.6%)
+         0.4:-0.9434398753302438 +/- 0.004698970635829483 (21 evals at 548.1s/eval) (target Time: 29.8%)
+         */
+        #endregion
+
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.0005; //new[] { 0.0005, 0.001 };
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.2; //new[] { 1, 1.2, 1.5 }; //1.2; //1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_Gamma)] = 0.7; //new[] { 0, 0.7 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass)] = 0.5; //new[] { 0.4, 0.5, 0.6 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.01; //new[] { 0.001, 0.005, 0.01 };
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BCEWithFocalLoss); //new[]{nameof(EvaluationMetricEnum.BinaryCrossentropy), nameof(EvaluationMetricEnum.BCEWithFocalLoss)};
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = 0.1; //new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPe
