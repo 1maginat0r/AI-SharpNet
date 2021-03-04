@@ -1296,4 +1296,39 @@ public static class Biosonar85Utils
         searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = 0.1; //new[] { 0, 0.1 };
         searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
         searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
-        searchSpace[nameof(NetworkSample.WidthShiftRangeInPe
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = new[] { 0.1f, 0.2f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0.1f, 0.2f, 0.4f };
+        searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 0.5;
+        //best score 0.9520344 9F981742E0
+        //using no min max for frequencies (instead of [1Khz, 127Khz]
+        //HorizontalFlip = False
+        //LossFunction = BCEWithFocalLoss
+        //PercentageInTraining = 0.5
+        //SkipConnectionsDropoutRate = 0.1
+        //TopDropoutRate = 0.4
+        #region stats  (hpo_2838800.csv)
+        /*
+        Stats for HorizontalFlip:
+         False:-0.9489981532096863 +/- 0.0027299571800770924 (8 evals at 575.6s/eval) (target Time: 62.7%)
+         True:-0.9476127113614764 +/- 0.002666123989124074 (7 evals at 563.1s/eval) (target Time: 37.3%)
+        Stats for SkipConnectionsDropoutRate:
+         0.4:-0.9488059878349304 +/- 0.002439593718939452 (6 evals at 564.6s/eval) (target Time: 39.2%)
+         0.2:-0.9487205843130747 +/- 0.0019134571086830776 (6 evals at 576.8s/eval) (target Time: 37.8%)
+         0.1:-0.9467049241065979 +/- 0.004028103288209574 (3 evals at 566s/eval) (target Time: 23%)
+        Stats for TopDropoutRate:
+         0.2:-0.9499077647924423 +/- 0.0010207306463129444 (4 evals at 587.3s/eval) (target Time: 51.6%)
+         0.4:-0.9491305450598398 +/- 0.002009837369652986 (6 evals at 565.5s/eval) (target Time: 34.9%)
+         0.1:-0.9461719751358032 +/- 0.003195609504752072 (5 evals at 560.9s/eval) (target Time: 13.5%)
+         */
+        #endregion
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.0005; //new[] { 0.0005, 0.001 };
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.2; //new[] { 1, 1.2, 1.5 }; //1.2; //1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_Gamma)] = 0.7; //new[] { 0, 0.7 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass)] = 0.5; //new[] { 0.4, 0.5, 0.6 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPat
