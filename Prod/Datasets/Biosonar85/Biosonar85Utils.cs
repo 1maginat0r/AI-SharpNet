@@ -1331,4 +1331,36 @@ public static class Biosonar85Utils
         searchSpace[nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass)] = 0.5; //new[] { 0.4, 0.5, 0.6 };
         searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
         searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
-        searchSpace[nameof(NetworkSample.CutoutPat
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = new[] { 0.005, 0.01 };
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BCEWithFocalLoss); //new[]{nameof(EvaluationMetricEnum.BinaryCrossentropy), nameof(EvaluationMetricEnum.BCEWithFocalLoss)};
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = new[] { 0, 0.1 }; //0.1; //new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = new[] { 0.2f, 0.4f };  //0.2f; //new[] { 0.1f, 0.2f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = new[] { 0.1f, 0.2f, 0.4f };
+        searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 0.8;
+        //best score 0.9362 346AA4C20A
+        //frequencies filtered in [1Khz, 127 KHz]
+        //InitialLearningRate = 0.01
+        //LossFunction = BCEWithFocalLoss
+        //OneCycle_PercentInAnnealing = 0
+        //PercentageInTraining = 0.8
+        //SkipConnectionsDropoutRate = 0.1
+        //TopDropoutRate = 0.4
+        #region stats (hpo_27500.csv)
+        /*
+        Stats for InitialLearningRate:
+         0.01:-0.9296465267737707 +/- 0.004080871365891207 (12 evals at 638s/eval) (target Time: 54.7%)
+         0.005:-0.9285298188527426 +/- 0.005996010820847613 (12 evals at 633.9s/eval) (target Time: 45.3%)
+        Stats for OneCycle_PercentInAnnealing:
+         0:-0.9319609055916468 +/- 0.004194974567202304 (12 evals at 637s/eval) (target Time: 82.8%)
+         0.1:-0.9262154400348663 +/- 0.004373348409127221 (12 evals at 634.8s/eval) (target Time: 17.2%)
+        Stats for SkipConnectionsDropoutRate:
+         0.1:-0.9326568320393562 +/- 0.0021401979
