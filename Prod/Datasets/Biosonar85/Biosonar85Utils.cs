@@ -1363,4 +1363,38 @@ public static class Biosonar85Utils
          0:-0.9319609055916468 +/- 0.004194974567202304 (12 evals at 637s/eval) (target Time: 82.8%)
          0.1:-0.9262154400348663 +/- 0.004373348409127221 (12 evals at 634.8s/eval) (target Time: 17.2%)
         Stats for SkipConnectionsDropoutRate:
-         0.1:-0.9326568320393562 +/- 0.0021401979
+         0.1:-0.9326568320393562 +/- 0.002140197900684004 (8 evals at 642.5s/eval) (target Time: 60.9%)
+         0.4:-0.9289667829871178 +/- 0.005012753511225588 (8 evals at 637.7s/eval) (target Time: 28.1%)
+         0.2:-0.9256409034132957 +/- 0.005049939350394046 (8 evals at 627.6s/eval) (target Time: 11%)
+        Stats for TopDropoutRate:
+         0.4:-0.9300025949875513 +/- 0.004669493688728327 (12 evals at 632.7s/eval) (target Time: 58.4%)
+         0.2:-0.9281737506389618 +/- 0.005454600629231032 (12 evals at 639.2s/eval) (target Time: 41.6%)
+        */
+        #endregion
+
+
+
+
+
+
+        searchSpace[nameof(NetworkSample.AdamW_L2Regularization)] = 0.0005;
+        searchSpace[nameof(NetworkSample.AlphaCutMix)] = 0;
+        searchSpace[nameof(NetworkSample.AlphaMixup)] = 1.2; //new[] { 1, 1.2, 1.5 }; //1.2; //1.0; //new[] { 1, 1.2, 1.5, 2.0,3 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_Gamma)] = 0.7; //new[] { 0, 0.7 };
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass)] = 0.5; //new[] { 0.4, 0.5, 0.6 };
+        searchSpace[nameof(NetworkSample.ColumnsCutoutPatchPercentage)] = 0;
+        searchSpace[nameof(NetworkSample.ColumnsCutoutCount)] = 0;
+        searchSpace[nameof(NetworkSample.CutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.CutoutCount)] = 1;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.05;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.01; //new[] { 0.001, 0.005, 0.01 };
+        searchSpace[nameof(NetworkSample.LossFunction)] = nameof(EvaluationMetricEnum.BCEWithFocalLoss); //new[]{nameof(EvaluationMetricEnum.BinaryCrossentropy), nameof(EvaluationMetricEnum.BCEWithFocalLoss)};
+        searchSpace[nameof(NetworkSample.NumEpochs)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_DividerForMinLearningRate)] = 20;
+        searchSpace[nameof(NetworkSample.OneCycle_PercentInAnnealing)] = 0.1; //new[] { 0, 0.1 };
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.1;
+        searchSpace[nameof(NetworkSample.RowsCutoutCount)] = 1; //new[] { 1, 10 };
+        searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
+        searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = 0.4f; // new[] { 0.1f, 0.2f, 0.4f };
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = 0.4f; //new[]
