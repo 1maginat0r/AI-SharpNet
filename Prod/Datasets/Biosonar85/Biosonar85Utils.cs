@@ -1397,4 +1397,44 @@ public static class Biosonar85Utils
         searchSpace[nameof(NetworkSample.WidthShiftRangeInPercentage)] = 0;
         searchSpace[nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount)] = 5; //new[] { 5, -1 }; //new[]{2,3,4,5,6, -1};
         searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = 0.4f; // new[] { 0.1f, 0.2f, 0.4f };
-        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = 0.4f; //new[]
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = 0.4f; //new[] { 0.1f, 0.2f, 0.4f };
+        searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 0.5;
+        //with random length for RowsCutoutPatchPercentage && CutoutPatchPercentage
+        //best score: 0.95264935 DEE753FA84_17 (hpo_21260.csv)
+        //frequencies filtered in [1Khz, 127 KHz]
+        //AdamW_L2Regularization = 0.0005
+        //AlphaMixup = 1.2
+        //InitialLearningRate = 0.01
+        //LossFunction = BCEWithFocalLoss
+        //PercentageInTraining = 0.5
+        //SkipConnectionsDropoutRate = 0.4
+        //TopDropoutRate = 0.4
+
+
+
+        //To find the best learning rate
+        //searchSpace[nameof(NetworkSample.BatchSize)] = 8;
+        //searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 1.0;
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO_MEL_SPECTROGRAM_256_801_BinaryCrossentropy(int numEpochs = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        //for numEpochs = 20
+        //HorizontalFlip = False
+        //AdamW_L2Regularization: 0.000125 (or 0.0000625)
+        //InitialLearningRate: 0.0025, (or 0.00125)
+        // stats from FindBestLearningRate
+        //     DefaultMobileBlocksDescriptionCount     BatchSize   Best learning rate                           Free GPU Memory
+        //     B0 + -1                                 8           0.0001   0.001
+        //     B0 + -1                                 32          0.006    0.02 (between 0.01 and 0.025)
+        //     B2 + -1                                 8           ?        0.045                               16000 MB/25GB   D58CB83204
+        //     B2 + -1                                 16          ?        0.05                                10171 MB/25GB   32093F4126
+        //     B2 + -1                                 32          ?        0.05                                  666 MB/25GB   9D677FD756
+
+        #region previous tests
