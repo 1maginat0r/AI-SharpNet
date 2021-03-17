@@ -1477,4 +1477,46 @@ public static class Biosonar85Utils
             {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[]{ 0.1} },
             {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
             {nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
-            {nameof(NetworkSample.CyclicCo
+            {nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), new[] { 1.0, 1.2} },
+            { nameof(NetworkSample.CutoutPatchPercentage), new[] {0, 0.1, 0.2} },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[] {0.1, 0.2} },
+            { nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            { nameof(NetworkSample.HorizontalFlip),new[]{true,false } },
+            
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[]{0, 0.05} },
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
+        };
+        #endregion
+
+        searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+            
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_256_801)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.94},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BinaryCrossentropy)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BatchSize), new[] {42} }, //because of memory issues, we have to use small batches
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0.0005} },
+            { nameof(NetworkSample.AdamW_L2Regularization),  new[]{0.0000625,0.000125,0.00025}},
+
+            { nameof(
