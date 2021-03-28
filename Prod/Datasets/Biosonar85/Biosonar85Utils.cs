@@ -1640,4 +1640,42 @@ public static class Biosonar85Utils
             //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
             //{nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
 
-            {nameof(EfficientNetNetworkSample.SkipConne
+            {nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate), 0.4},
+            {nameof(EfficientNetNetworkSample.TopDropoutRate), 0.4},
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), 1.2 },
+            { nameof(NetworkSample.CutoutPatchPercentage), 0.1477559 /*new[] {0, 0.1, 0.2}*/ },
+            { nameof(NetworkSample.CutoutCount), 1 },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), 0.12661687 /*new[] {0.1, 0.2}*/ },
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
+            { nameof(NetworkSample.HorizontalFlip), new[]{true,false } },
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), 0.06299627 /*new[]{0, 0.05}*/ },
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
+
+        };
+        //best score 0.951522 (F8FBA26AB7)
+        //AdamW_L2Regularization = 0.000125
+        //HorizontalFlip = False
+        //InitialLearningRate = 0.005
+        //OneCycle_PercentInAnnealing = 0
+        #region stats (hpo_28692.csv)
+        /*
+        Stats for AdamW_L2Regularization:
+         0.000125:-0.9395733028650284 +/- 0.00686067682360214 (12 evals at 1246.8s/eval) (target Time: 39.5%)
+         0.00025:-0.9387533714373907 +/- 0.00538090237567531 (12 evals at 1234s/eval) (target Time: 35%)
+         0.0005:-0.9363448570171992 +/- 0.007498458417104663 (12 evals at 1242.2s/eval) (target Time: 25.5%)
+        Stats for HorizontalFlip:
+         False:-0.9395590689447191 +/- 0.00621623967913609 (18 evals at 1251.8s/eval) (target Time: 59.5%)
+         True:-0.936888618601693 +/- 0.007050814312582564 (18 evals at 1230.2s/eval) (target Time: 40.5%)
+        Stats for InitialLearningRate:
+         0.005:-0.9427675952514013 +/- 0.007217818169133016 (12 evals at 1273.6s/eval) (target Time: 56.5%)
+         0.01:-0.9388985683520635 +/- 0.004694809306424899 (12 evals at 1247.8s/eval) (target Time: 32.6%)
+         0.02:-0.9330053677161535 +/- 0.003925601794271406 (12 evals at 1201.5s/eval) (target Time: 10.9%)
+      
