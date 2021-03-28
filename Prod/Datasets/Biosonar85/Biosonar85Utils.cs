@@ -1559,4 +1559,47 @@ public static class Biosonar85Utils
         //AdamW_L2Regularization = 0.000125
         //HorizontalFlip = False
         //InitialLearningRate = 0.0025
-        //f
+        //for: 07D3470DB7_16, Valid Score: 0.9546, Test score AUC: 0.938326148145509
+        #region stats (hpo_18276.csv)
+        /*
+        Stats for AdamW_L2Regularization:
+         6.25E-05:-0.9526493748029073 +/- 0.0012039836999502 (6 evals at 2462.1s/eval) (target Time: 39.4%)
+         0.000125:-0.9524956345558167 +/- 0.002981476658451587 (6 evals at 2468s/eval) (target Time: 37.4%)
+         0.00025:-0.9503535866737366 +/- 0.004427104142241886 (5 evals at 2508s/eval) (target Time: 23.2%)
+        Stats for HorizontalFlip:
+         False:-0.9532643109560013 +/- 0.001495791456737716 (8 evals at 2448.9s/eval) (target Time: 66.6%)
+         True:-0.9507248335414462 +/- 0.003833549650885314 (9 evals at 2503.2s/eval) (target Time: 33.4%)
+        Stats for InitialLearningRate:
+         0.00125:-0.9534692962964376 +/- 0.0013017994292096654 (6 evals at 2467.5s/eval) (target Time: 47.6%)
+         0.0025:-0.9529773354530334 +/- 0.001915661825006404 (5 evals at 2602.6s/eval) (target Time: 36.7%)
+         0.005:-0.9494892557462057 +/- 0.003947943378510277 (6 evals at 2383.6s/eval) (target Time: 15.7%)
+        */
+        #endregion
+
+
+        //TO find the best learning rate
+        //searchSpace[nameof(NetworkSample.BatchSize)] = 8;
+        //searchSpace[nameof(AbstractDatasetSample.PercentageInTraining)] = 1.0;
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+
+
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO_MEL_SPECTROGRAM_256_801_BCEWithFocalLoss(int numEpochs = 20, int maxAllowedSecondsForAllComputation = 0)
+    {
+        // DefaultMobileBlocksDescriptionCount = 6 (bad: 5)
+        // PercentageInTraining = 0.5
+        // AlphaRowsCutMix = 0 (bad: 1)
+
+        #region previous tests
+        var searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to
