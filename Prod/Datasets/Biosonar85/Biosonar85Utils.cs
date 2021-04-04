@@ -1719,4 +1719,44 @@ public static class Biosonar85Utils
             // Learning Rate Scheduler
             //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
             {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
-            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SI
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing), new[] { 0, 0.1 }},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+            {nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate), 0.4},
+            {nameof(EfficientNetNetworkSample.TopDropoutRate), 0.4},
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            //{ nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), 1.2 },
+            { nameof(NetworkSample.CutoutPatchPercentage), 0.1477559 /*new[] {0, 0.1, 0.2}*/ },
+            { nameof(NetworkSample.CutoutCount), 1 },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), 0.12661687 /*new[] {0.1, 0.2}*/ },
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
+            //{ nameof(NetworkSample.HorizontalFlip), false /*new[]{true,false }*/ },
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), 0.06299627 /*new[]{0, 0.05}*/ },
+            //{ nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
+
+        };
+        //best results 0.95316184  (6F17982D0A) , test AUC: 0.951722663626322
+        //AdamW_L2Regularization = 0.000125
+        //DefaultMobileBlocksDescriptionCount = -1
+        //InitialLearningRate = 0.0025
+        //OneCycle_PercentInAnnealing = 0.1
+        //SkipConnectionsDropoutRate = 0.4
+        //TopDropoutRate = 0.4
+        #region stats (hpo_23384.csv)
+        /*
+        Stats for AdamW_L2Regularization:
+         0.000125:-0.9472686275839806 +/- 0.00351058497435207 (8 evals at 2545.2s/eval) (target Time: 68.6%)
+         0.00025:-0.944655105471611 +/- 0.0017677829989537954 (4 evals at 2458.9s/eval) (target Time: 31.4%)
+        St
