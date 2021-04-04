@@ -1678,4 +1678,45 @@ public static class Biosonar85Utils
          0.005:-0.9427675952514013 +/- 0.007217818169133016 (12 evals at 1273.6s/eval) (target Time: 56.5%)
          0.01:-0.9388985683520635 +/- 0.004694809306424899 (12 evals at 1247.8s/eval) (target Time: 32.6%)
          0.02:-0.9330053677161535 +/- 0.003925601794271406 (12 evals at 1201.5s/eval) (target Time: 10.9%)
-      
+        Stats for OneCycle_PercentInAnnealing:
+         0.1:-0.9393996364540524 +/- 0.005619643922845447 (18 evals at 1239.3s/eval) (target Time: 57.7%)
+         0:-0.9370480510923598 +/- 0.0075878782317587885 (18 evals at 1242.7s/eval) (target Time: 42.3%)
+        */
+        #endregion
+
+        searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_256_801)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.94},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BCEWithFocalLoss)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BCEWithFocalLoss_Gamma), 0.7},
+            { nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass), 0.5},
+            { nameof(NetworkSample.BatchSize), new[] {32} }, //because of memory issues, we have to use small batches
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0.0005} },
+            { nameof(NetworkSample.AdamW_L2Regularization), new[] { 0.000125, 0.00025}},
+
+            { nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), new[]{6,-1} },
+            //{ nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), 5 },
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate), new[] { 0.00125, 0.0025, 0.005 } },
+
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SI
