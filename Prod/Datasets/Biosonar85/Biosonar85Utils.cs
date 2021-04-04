@@ -1759,4 +1759,40 @@ public static class Biosonar85Utils
         Stats for AdamW_L2Regularization:
          0.000125:-0.9472686275839806 +/- 0.00351058497435207 (8 evals at 2545.2s/eval) (target Time: 68.6%)
          0.00025:-0.944655105471611 +/- 0.0017677829989537954 (4 evals at 2458.9s/eval) (target Time: 31.4%)
-        St
+        Stats for DefaultMobileBlocksDescriptionCount:
+         -1:-0.9464828670024872 +/- 0.003048080340943342 (6 evals at 2495.8s/eval) (target Time: 51.2%)
+         6:-0.9463120400905609 +/- 0.003499434111791521 (6 evals at 2537.1s/eval) (target Time: 48.8%)
+        Stats for InitialLearningRate:
+         0.0025:-0.9492056965827942 +/- 0.0029007571975109745 (5 evals at 2588.3s/eval) (target Time: 82.1%)
+         0.00125:-0.9446294903755188 +/- 0.0016227589301145721 (4 evals at 2472.4s/eval) (target Time: 9.7%)
+         0.005:-0.9440743327140808 +/- 0.0016910158559540903 (3 evals at 2455.5s/eval) (target Time: 8.2%)
+        Stats for OneCycle_PercentInAnnealing:
+         0.1:-0.9485241323709488 +/- 0.003980929326076737 (4 evals at 2595.2s/eval) (target Time: 70%)
+         0:-0.9453341141343117 +/- 0.0022017258167526346 (8 evals at 2477.1s/eval) (target Time: 30%)
+        */
+        #endregion
+
+        searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+            
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_256_801)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.94},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BCEWithFocalLoss)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)/*+","+nameof(EvaluationMetricEnum.AUC)*/},
+            { nameof(NetworkSample.BCEWithFocalLoss_Gamma), new[]{0.7, 1.5}},
+            { nameof(NetworkSample.BCEWithFocalLoss_PercentageInTrueClass), 0.5},
+            { nameof(NetworkSample.BatchSize), new[] {42} }, //because of memory issues, we have to use small batches
+
+            { nameof(NetworkSample.NumEpochs), new[] { numEpochs } },
+
+            { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), n
