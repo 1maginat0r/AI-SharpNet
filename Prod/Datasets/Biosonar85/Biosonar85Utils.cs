@@ -1834,4 +1834,44 @@ public static class Biosonar85Utils
             //{ nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
 
         };
-        //best results 0.9542892 (9811DDD19E) , tes
+        //best results 0.9542892 (9811DDD19E) , test AUC: 0.952791534542345
+        //BCEWithFocalLoss_Gamma = 0.7
+        //CutoutPatchPercentage = 0.2
+        //HeightShiftRangeInPercentage = 0.05
+        //RowsCutoutPatchPercentage = 0.15
+        //SkipConnectionsDropoutRate = 0.4
+        //TopDropoutRate = 0.2
+        #region stats (hpo_3052.csv)
+        /*
+        Stats for BCEWithFocalLoss_Gamma:
+         0.7:-0.9509815682064403 +/- 0.0027598442248482004 (11 evals at 2499.4s/eval) (target Time: 69.2%)
+         1.5:-0.9480828642845154 +/- 0.0037676355471132445 (9 evals at 2402.3s/eval) (target Time: 30.8%)
+        Stats for CutoutPatchPercentage:
+         0.2:-0.9505141576131185 +/- 0.002998847351561212 (12 evals at 2479.5s/eval) (target Time: 63.3%)
+         0.1:-0.9484216421842575 +/- 0.003940141698979831 (8 evals at 2420s/eval) (target Time: 36.7%)
+        Stats for HeightShiftRangeInPercentage:
+         0.05:-0.950268438229194 +/- 0.003297668726573796 (13 evals at 2474.8s/eval) (target Time: 61.2%)
+         0.1:-0.9485790474074227 +/- 0.003756445936684401 (7 evals at 2420.2s/eval) (target Time: 38.8%)
+        Stats for RowsCutoutPatchPercentage:
+         0.15:-0.9498206317424774 +/- 0.003533527077467958 (10 evals at 2467.6s/eval) (target Time: 52%)
+         0.1:-0.9495336711406708 +/- 0.0035757834113661928 (10 evals at 2443.8s/eval) (target Time: 48%)
+        Stats for TopDropoutRate:
+         0.2:-0.9497591435909272 +/- 0.00423641648383309 (10 evals at 2423.7s/eval) (target Time: 51%)
+         0.4:-0.949595159292221 +/- 0.0027115574410394123 (10 evals at 2487.7s/eval) (target Time: 49%)*
+        */
+        #endregion
+
+        searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+            
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_256_801)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.95},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BCEWithFocalLoss)},
+            { nameof(NetworkSample.EvaluationMetrics), nameof(Ev
