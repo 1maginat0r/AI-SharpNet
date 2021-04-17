@@ -1913,4 +1913,44 @@ public static class Biosonar85Utils
             { nameof(NetworkSample.CutoutPatchPercentage), 0.1477559 },
             { nameof(NetworkSample.CutoutCount), 1 },
             { nameof(NetworkSample.RowsCutoutPatchPercentage), 0.12661687  },
-        
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
+            //{ nameof(NetworkSample.HorizontalFlip), false /*new[]{true,false }*/ },
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), 0.06299627 },
+
+        };
+        //best results 0.95828635 (5373FD5B44) , test AUC: 0.947607510599636
+        //SkipConnectionsDropoutRate = 0.4
+        //TopDropoutRate = 0
+        #region stats (hpo_11480.csv)
+        /*
+        Stats for SkipConnectionsDropoutRate:
+         0.4:-0.9545710682868958 +/- 0.002953050433433706 (4 evals at 2406.4s/eval) (target Time: 32.7%)
+         0:-0.9536742866039276 +/- 0.002315695194055391 (4 evals at 2472.7s/eval) (target Time: 24.1%)
+         0.2:-0.9535461664199829 +/- 0.001813775627589635 (4 evals at 2389s/eval) (target Time: 23.1%)
+         0.6:-0.95316182076931 +/- 0.001776674562473303 (4 evals at 2369.3s/eval) (target Time: 20.1%)
+        Stats for TopDropoutRate:
+         0.6:-0.9546991735696793 +/- 0.0008905567798440595 (4 evals at 2393.3s/eval) (target Time: 35.9%)
+         0:-0.954186737537384 +/- 0.0027615352713985693 (4 evals at 2471.4s/eval) (target Time: 29.8%)
+         0.4:-0.9536230266094208 +/- 0.0019479943720284924 (4 evals at 2384.1s/eval) (target Time: 20.4%)
+         0.2:-0.9524444043636322 +/- 0.0025632930678885484 (4 evals at 2388.7s/eval) (target Time: 14%)       
+        */
+        #endregion
+
+        searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), new[]{0.5,0.8}}, //will be automatically set to 1 if KFold is enabled
+            
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.MEL_SPECTROGRAM_256_801)},
+            { nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.95},
+
+            //related to model
+            { nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.BCEWithFocalLoss)},
+          
