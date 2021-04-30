@@ -1991,4 +1991,45 @@ public static class Biosonar85Utils
             { nameof(NetworkSample.AlphaMixup), 1.2 },
             { nameof(NetworkSample.CutoutPatchPercentage), 0.1477559 },
             { nameof(NetworkSample.CutoutCount), 1 },
-            { nameof(NetworkSample.RowsCutoutPatchPercentage), 0
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), 0.12661687  },
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
+            //{ nameof(NetworkSample.HorizontalFlip), false /*new[]{true,false }*/ },
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), 0.06299627 },
+
+        };
+        //best results 0.9540842 (AB8803D9AA)
+        //InitialLearningRate = 0.002
+        //BCEWithFocalLoss_Gamma = 0.7
+        //SkipConnectionsDropoutRate = 0.4
+        //PercentageInTraining = 0.5
+        //TopDropoutRate = 0.4
+        #region stats (hpo_8448.csv)
+        /*
+        Stats for BCEWithFocalLoss_Gamma:
+         0.35:-0.9434492588043213 +/- 0.006478073273873414 (4 evals at 2302.3s/eval) (target Time: 58.3%)
+         0.7:-0.9388564705848694 +/- 0.013882268756469385 (5 evals at 2450.7s/eval) (target Time: 41.7%)
+        Stats for DefaultMobileBlocksDescriptionCount:
+         6:-0.9463829278945923 +/- 0.009372360606343106 (5 evals at 2545.6s/eval) (target Time: 80.8%)
+         5:-0.9340411871671677 +/- 0.010007898687944283 (4 evals at 2183.7s/eval) (target Time: 19.2%)
+        Stats for InitialLearningRate:
+         0.0025:-0.9434572656949362 +/- 0.0074802175557260415 (3 evals at 2399.3s/eval) (target Time: 57.5%)
+         0.002:-0.939617931842804 +/- 0.012786592108888037 (6 evals at 2377.5s/eval) (target Time: 42.5%)
+        Stats for PercentageInTraining:
+         0.5:-0.946790337562561 +/- 0.007447656238284497 (6 evals at 2222.3s/eval) (target Time: 90.9%)
+         0.8:-0.929112454255422 +/- 0.008573271299997805 (3 evals at 2709.7s/eval) (target Time: 9.1%)
+        Stats for SkipConnectionsDropoutRate:
+         0.75:-0.9409775535265604 +/- 0.009165780088122386 (3 evals at 2364.8s/eval) (target Time: 50.2%)
+         0.4:-0.9408577879269918 +/- 0.012424842708492695 (6 evals at 2394.8s/eval) (target Time: 49.8%)
+        */
+        #endregion
+
+        searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if
