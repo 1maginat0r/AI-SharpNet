@@ -2119,4 +2119,40 @@ public static class Biosonar85Utils
 
             { nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
             // Optimizer 
- 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW" } },
+            { nameof(NetworkSample.lambdaL2Regularization), 0.0005 },
+            { nameof(NetworkSample.AdamW_L2Regularization),  0.000125},
+
+            { nameof(EfficientNetNetworkSample.DefaultMobileBlocksDescriptionCount), 6},
+
+            //{ nameof(EfficientNetNetworkSample.DefaultActivation), new[]{nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_LEAKY_RELU),nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_CLIPPED_RELU),nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SWISH)   }},
+            
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate),new[]{0.0025, 0.0035}},
+
+            // Learning Rate Scheduler
+            //{ nameof(NetworkSample.LearningRateSchedulerType), "CyclicCosineAnnealing" },
+            {nameof(NetworkSample.LearningRateSchedulerType), new[]{"OneCycle"} },
+            {nameof(EfficientNetNetworkSample.LastActivationLayer), nameof(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing),0.1},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochsInFirstRun), 10},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_nbEpochInNextRunMultiplier), 2},
+            //{nameof(NetworkSample.CyclicCosineAnnealing_MinLearningRate), 1e-5},
+
+            {nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate),0.4},
+            {nameof(EfficientNetNetworkSample.TopDropoutRate),new[]{0.4,0.2}},
+
+            // DataAugmentation
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            //{ nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), 1.2 },
+            { nameof(NetworkSample.CutoutPatchPercentage), 0.1477559 },
+            { nameof(NetworkSample.CutoutCount), 1 },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[]{0.12661687,0.25}  },
+            { nameof(NetworkSample.RowsCutoutCount), 1 },
+            //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
+            //{ nameof(NetworkSample.HorizontalFlip), false /*new[]
