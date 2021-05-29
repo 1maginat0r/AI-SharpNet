@@ -2155,4 +2155,52 @@ public static class Biosonar85Utils
             { nameof(NetworkSample.RowsCutoutCount), 1 },
             //{ nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
             //{ nameof(NetworkSample.ColumnsCutoutCount),  0 },
-            //{ nameof(NetworkSample.HorizontalFlip), false /*new[]
+            //{ nameof(NetworkSample.HorizontalFlip), false /*new[]{true,false }*/ },
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[]{0.06299627, 0.15} },
+
+        };
+        //best results 
+        #region stats (hpo_.csv)
+        /*
+        */
+        #endregion
+
+        //like 1EF57E45FC_16
+        searchSpace[nameof(NetworkSample.BCEWithFocalLoss_Gamma)] = 0.35;
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = 0.3;
+        searchSpace[nameof(NetworkSample.RowsCutoutPatchPercentage)] = 0.12661687;
+        searchSpace[nameof(NetworkSample.HeightShiftRangeInPercentage)] = 0.06299627;
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = 0.25;
+
+        //changes on 1EF57E45FC_16
+        searchSpace[nameof(NetworkSample.NumEpochs)] = new[]{/*50,100*/ 50};
+        searchSpace[nameof(NetworkSample.InitialLearningRate)] = new[] { /*0.001, */0.001};
+        searchSpace[nameof(EfficientNetNetworkSample.SkipConnectionsDropoutRate)] = 0.75; //new[] { 0.4, 0.5, 0.6, 0.65}; //0.4
+        searchSpace[nameof(EfficientNetNetworkSample.TopDropoutRate)] = 0.5; //new[] { 0.3, 0.5, 0.6, 0.65 }; //0.3
+
+
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+
+
+
+    // ReSharper disable once UnusedMember.Local
+    private static void Launch_HPO_MEL_SPECTROGRAM_64_401(int numEpochs = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        // stats from FindBestLearningRate
+        //     DefaultMobileBlocksDescriptionCount     BatchSize   Best learning rate:
+        //     B0 + -1                                 8           0.0001   0.015
+        //     B0 + -1                                 32          0.001    0.025
+        //     B0 + -1                                 64          0.0005   0.03
+        //     B0 + -1                                 128         0.002    0.05
+
+        var searchSpace = new Dictionary<string, object>
+        {
+      
