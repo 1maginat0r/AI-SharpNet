@@ -2293,4 +2293,49 @@ public static class Biosonar85Utils
             FillMode = ImageDataGenerator.FillModeEnum.Reflect,
             //AlphaMixup = 0.0,
             //AlphaCutMix = 0.0,
-  
+            //CutoutPatchPercentage = 0.0
+        }
+            .WithSGD(0.9, false)
+            .WithCyclicCosineAnnealingLearningRateScheduler(10, 2);
+        return config;
+
+    }
+
+
+
+    // ReSharper disable once UnusedMember.Local
+    private static void LaunchCatBoostHPO(int iterations = 10, int maxAllowedSecondsForAllComputation = 0)
+    {
+        // ReSharper disable once ConvertToConstant.Local
+        var searchSpace = new Dictionary<string, object>
+          {
+
+              //related to Dataset 
+              //{"KFold", 2},
+              { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+              { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+              { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.LIBROSA_FEATURES)},
+              //{ nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.92},
+
+              //related to model
+              {"loss_function", nameof(CatBoostSample.loss_function_enum.Logloss)},
+              {"eval_metric", nameof(CatBoostSample.metric_enum.Accuracy)},
+              { "thread_count",1},
+              { "task_type","GPU"},
+              { "logging_level", nameof(CatBoostSample.logging_level_enum.Verbose)},
+              { "allow_writing_files",false},
+              { "iterations", iterations },
+              //{ "od_type", "Iter"},
+              //{ "od_wait",iterations/10},
+              { "depth", new[]{5,6,7,8,9,10} },
+              { "learning_rate", new[]{0.01,0.02, 0.03}},
+              //{ "random_strength",AbstractHyperparameterSearchSpace.Range(1e-9f, 10f, AbstractHyperparameterSearchSpace.range_type.normal)},
+              //{ "bagging_temperature",AbstractHyperparameterSearchSpace.Range(0.0f, 2.0f)},
+              { "l2_leaf_reg",new[]{0,1,5,10,20}},
+              //{"grow_policy", new []{ "SymmetricTree", "Depthwise" /*, "Lossguide"*/}},
+          };
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(new CatBoostSample{loss_function = CatBoostSample.loss_function_enum.Logloss , eval_metric = CatBoostSample.metric_enum.Accuracy }, new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAnd
