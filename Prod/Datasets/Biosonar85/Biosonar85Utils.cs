@@ -2246,4 +2246,51 @@ public static class Biosonar85Utils
 
 
             // DataAugmentation
-            { nameof(NetworkSample.DataAugmentationType)
+            { nameof(NetworkSample.DataAugmentationType), nameof(ImageDataGenerator.DataAugmentationEnum.DEFAULT) },
+            { nameof(NetworkSample.AlphaCutMix), 0 },
+            { nameof(NetworkSample.AlphaMixup), new[] { 1.0, 1.2} },
+            { nameof(NetworkSample.CutoutPatchPercentage), new[] {0, 0.1, 0.2} },
+            { nameof(NetworkSample.RowsCutoutPatchPercentage), new[] {0, 0.1, 0.2} },
+            { nameof(NetworkSample.RowsCutoutCount), new[] {1, 3, 5} },
+            { nameof(NetworkSample.ColumnsCutoutPatchPercentage),  0 },
+            { nameof(NetworkSample.HorizontalFlip),new[]{true,false } },
+
+            { nameof(NetworkSample.FillMode),new[]{ nameof(ImageDataGenerator.FillModeEnum.Reflect) /*, nameof(ImageDataGenerator.FillModeEnum.Modulo)*/ } }, //Reflect
+            { nameof(NetworkSample.HeightShiftRangeInPercentage), new[]{0, 0.05, 0.10} },
+            { nameof(NetworkSample.WidthShiftRangeInPercentage), new[]{0}},
+
+        };
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(DefaultEfficientNetNetworkSample(), new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+
+    
+
+    /// <summary>
+    /// The default EfficientNet Hyperparameters for CIFAR10
+    /// </summary>
+    /// <returns></returns>
+    private static EfficientNetNetworkSample DefaultEfficientNetNetworkSample()
+    {
+        var config = (EfficientNetNetworkSample)new EfficientNetNetworkSample()
+        {
+            LossFunction = EvaluationMetricEnum.BinaryCrossentropy,
+            EvaluationMetrics = new List<EvaluationMetricEnum> {EvaluationMetricEnum.AUC},
+            CompatibilityMode = CompatibilityModeEnum.TensorFlow,
+            lambdaL2Regularization = 0.0005,
+            //!D WorkingDirectory = Path.Combine(NetworkSample.DefaultWorkingDirectory, CIFAR10DataSet.NAME),
+            NumEpochs = 10,
+            BatchSize = 64,
+            InitialLearningRate = 0.01,
+
+
+            //Data augmentation
+            DataAugmentationType = ImageDataGenerator.DataAugmentationEnum.DEFAULT,
+            FillMode = ImageDataGenerator.FillModeEnum.Reflect,
+            //AlphaMixup = 0.0,
+            //AlphaCutMix = 0.0,
+  
