@@ -2338,4 +2338,59 @@ public static class Biosonar85Utils
         var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(new CatBoostSample{loss_function = CatBoostSample.loss_function_enum.Logloss , eval_metric = CatBoostSample.metric_enum.Accuracy }, new Biosonar85DatasetSample()), WorkingDirectory);
         IScore bestScoreSoFar = null;
         const bool retrainOnFullDatasetIfBetterModelFound = false;
-        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAnd
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+    // ReSharper disable once UnusedMember.Local
+    private static void LaunchLightGBMHPO(int num_iterations = 100, int maxAllowedSecondsForAllComputation = 0)
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset 
+            //{"KFold", 2},
+            { nameof(AbstractDatasetSample.PercentageInTraining), 0.5}, //will be automatically set to 1 if KFold is enabled
+            { nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+            { nameof(Biosonar85DatasetSample.InputDataType), nameof(Biosonar85DatasetSample.InputDataTypeEnum.LIBROSA_FEATURES)},
+            //{ nameof(NetworkSample.MinimumRankingScoreToSaveModel), 0.92},
+          
+            //uncomment appropriate one
+            ////for regression:
+            //{"objective", "regression"},      
+
+            ////for binary classification:
+            {"objective", "binary"},
+            {"metric", "accuracy"},
+
+            ////for multi class classification:
+            //{"objective", "multiclass"},      
+            //{"num_class", number_of_class },
+
+            //high priority
+            
+            //!D { "bagging_fraction", new[]{0.8f, 0.9f, 1.0f} },
+            { "bagging_fraction", 0.8 },
+            //!D
+            { "bagging_freq", 5 },
+
+            //{ "boosting", new []{"gbdt", "dart"}},
+            { "boosting", new []{"dart"}},
+            
+            //!D { "colsample_bytree",AbstractHyperparameterSearchSpace.Range(0.3f, 1.0f)},
+            { "colsample_bytree",0.8},
+
+            //{ "early_stopping_round", num_iterations/10 },
+
+
+            //against over fitting
+            { "extra_trees", new[] { true , false } },
+            { "min_sum_hessian_in_leaf", new[]{0,0.1,1.0} },
+            { "path_smooth", new[]{0,0.1,1.0} },
+            { "min_gain_to_split", new[]{0,0.1,1.0} },
+            { "max_bin", new[]{10,50, 255} },
+            { "lambda_l1",new[]{0,1,5,10,50}},
+            { "lambda_l2",new[]{0,1,5,10,50}},
+            { "min_data_in_leaf", new[]{10,100,500} },
+            
+            
+            //!D { "learning_rate",AbstractHyperparameterSearchSpace.Range(0.005f, 0.1f)},
+            { "learning_rate", new[]{0.001, 0.005, 0.01, 0.05, 
