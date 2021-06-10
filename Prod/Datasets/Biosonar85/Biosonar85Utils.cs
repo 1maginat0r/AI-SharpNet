@@ -2393,4 +2393,33 @@ public static class Biosonar85Utils
             
             
             //!D { "learning_rate",AbstractHyperparameterSearchSpace.Range(0.005f, 0.1f)},
-            { "learning_rate", new[]{0.001, 0.005, 0.01, 0.05, 
+            { "learning_rate", new[]{0.001, 0.005, 0.01, 0.05, 0.1}},
+            
+            //!D{ "max_depth", new[]{10, 20, 50, 100, 255} },
+            { "max_depth", new[]{10, 50} },
+
+            { "num_iterations", num_iterations },
+            { "num_leaves", new[]{3, 10, 50} },
+            { "num_threads", -1},
+            { "verbosity", "0" },
+
+            ////medium priority
+            //{ "drop_rate", new[]{0.05, 0.1, 0.2}},                               //specific to dart mode
+            //{ "lambda_l2",AbstractHyperparameterSearchSpace.Range(0f, 2f)},
+            //{ "min_data_in_bin", new[]{3, 10, 100, 150}  },
+            //{ "max_bin", AbstractHyperparameterSearchSpace.Range(10, 255) },
+            //{ "max_drop", new[]{40, 50, 60}},                                   //specific to dart mode
+            //{ "skip_drop",AbstractHyperparameterSearchSpace.Range(0.1f, 0.6f)},  //specific to dart mode
+
+            ////low priority
+            ////{ "colsample_bynode",AbstractHyperparameterSearchSpace.Range(0.5f, 1.0f)}, //very low priority
+            //{ "path_smooth", AbstractHyperparameterSearchSpace.Range(0f, 1f) }, //low priority
+        };
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(new LightGBMSample{objective =  LightGBMSample.objective_enum.binary}, new Biosonar85DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        const bool retrainOnFullDatasetIfBetterModelFound = false;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, retrainOnFullDatasetIfBetterModelFound, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+}
