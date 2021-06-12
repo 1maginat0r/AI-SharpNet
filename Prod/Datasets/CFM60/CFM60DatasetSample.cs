@@ -101,4 +101,88 @@ public class CFM60DatasetSample : DatasetSampleForTimeSeries
             {
                 xElementId[idx++] = entry.abs_ret[i];
             }
-      
+        }
+
+        //rel_vol
+        if (Use_rel_vol)
+        {
+
+            //asSpan.CopyTo(xDest.Slice(idx, entry.rel_vol.Length));
+            //idx += entry.rel_vol.Length;
+            for (int i = 0; i < entry.rel_vol.Length; ++i)
+            {
+                xElementId[idx++] = entry.rel_vol[i];
+            }
+        }
+
+        //LS
+        if (Use_LS)
+        {
+            xElementId[idx++] = entry.LS;
+        }
+
+        //NLV
+        if (Use_NLV)
+        {
+            xElementId[idx++] = entry.NLV;
+        }
+
+        //y estimate
+        if (Use_prev_Y && isEncoder)
+        {
+            xElementId[idx++] = prev_Y;
+        }
+
+        return idx- start_idx;
+    }
+
+
+    public const string NAME = "CFM60";
+    #region load of datasets
+    public static string WorkingDirectory => Path.Combine(Utils.ChallengesPath, NAME);
+    public static string DataDirectory => Path.Combine(NetworkSample.DefaultDataDirectory, NAME);
+    // ReSharper disable once MemberCanBePrivate.Global
+    #endregion
+
+
+
+
+    // ReSharper disable once EmptyConstructor
+    public CFM60DatasetSample()
+    {
+    }
+
+    #region Hyperparameters
+    //pid embedding
+    public int Pid_EmbeddingDim = 4;  //validated on 16-jan-2021: -0.0236
+
+    //y estimate
+    public bool Use_y_LinearRegressionEstimate = true; //validated on 19-jan-2021: -0.0501 (with other changes)
+    /// <summary>
+    /// should we use the average observed 'y' outcome of the company (computed in the training dataSet) in the input tensor
+    /// </summary>
+    public bool Use_mean_pid_y = false; //discarded on 19-jan-2021: +0.0501 (with other changes)
+    public bool Use_volatility_pid_y = true; //validated on 17-jan-2021: -0.0053
+    public bool Use_variance_pid_y = false;
+    
+
+    //rel_vol fields
+    public bool Use_rel_vol = true;
+    public bool Use_rel_vol_start_and_end_only = false; //use only the first 12 and last 12 elements of rel_vol
+    public bool Use_volatility_rel_vol = false; //'true' discarded on 22-jan-2020: +0.0065
+
+    //abs_ret
+    public bool Use_abs_ret = true;  //validated on 16-jan-2021: -0.0515
+
+    //LS
+    public bool Use_LS = true; //validated on 16-jan-2021: -0.0164
+    /// <summary>
+    /// normalize LS value between in [0,1] interval
+    /// </summary>
+
+    //NLV
+    public bool Use_NLV = true; //validated on 5-july-2021: -0.0763
+
+    // year/day field
+    /// <summary>
+    /// add the fraction of the year of the curr
