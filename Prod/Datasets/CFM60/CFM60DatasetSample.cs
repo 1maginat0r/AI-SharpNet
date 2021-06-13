@@ -185,4 +185,61 @@ public class CFM60DatasetSample : DatasetSampleForTimeSeries
 
     // year/day field
     /// <summary>
-    /// add the fraction of the year of the curr
+    /// add the fraction of the year of the current day as an input
+    /// it is a value between 1/250f (1-jan) to 1f (31-dec)
+    /// </summary>
+    public bool Use_fraction_of_year = false;
+
+    /// <summary>
+    /// add a cyclical encoding of the current year into 2 new features:
+    ///     year_sin: sin(2*pi*fraction_of_year)
+    ///and 
+    ///     year_cos: cos (2*pi*fraction_of_year)
+    ///where
+    ///     fraction_of_year: a real between 0 (beginning of the year(, and 1 (end of the year)
+    /// see: https://www.kaggle.com/avanwyk/encoding-cyclical-features-for-deep-learning
+    /// </summary>
+    public bool Use_year_Cyclical_Encoding = false; //discarded on 18-sep-2021: +0.01
+
+    /// <summary>
+    /// when 'Use_day' is true, we add the following feature value:   day / Use_day_Divider 
+    /// </summary>
+    //public float Use_day_Divider = 1151f;
+    public float Use_day_Divider = 650f; //validated on 18-sept-2021 -0.002384 vs 1151f
+
+    public bool Use_day = false; //discarded on 19-jan-2021: +0.0501 (with other changes)
+    public bool Use_EndOfYear_flag = true;  //validated on 19-jan-2021: -0.0501 (with other changes)
+    public bool Use_Christmas_flag = true;  //validated on 19-jan-2021: -0.0501 (with other changes)
+    public bool Use_EndOfTrimester_flag = true;  //validated on 19-jan-2021: -0.0501 (with other changes)
+    #endregion
+
+    public override int[] X_Shape(int batchSize) => new[] { batchSize, encoderDecoder_NetworkSample.Encoder_TimeSteps, GetInputSize(true) };
+    public override int NumClass => 1;
+
+
+    /// <summary>
+    /// day is the end of year
+    /// </summary>
+    public static readonly int[] SortedEndOfYear = { 19, 269, 519, 770, 1021 };
+    public static readonly HashSet<int> EndOfYear = new(SortedEndOfYear);
+    /// <summary>
+    /// day is the end of teh trimester
+    /// </summary>
+    public static readonly HashSet<int> EndOfTrimester = new(new[]
+    {
+        77, 327, 577, 828,1084, //march
+        141, 391, 641, 892,1147, //june
+        201, 451, 702, 953, //sept
+        19, 269, 519, 770,1021 // dec //TODO: check without line
+    });
+
+    /// <summary>
+    /// return the day as a fraction of the day in year in ]0,1] range
+    /// 1-jan   => 1/250f
+    /// 31-dec  => 1
+    /// </summary>
+    /// <param name="day"></param>
+    /// <returns></returns>
+    public static float DayToFractionOfYear(int day)
+    {
+        for (int i = SortedEndOfYear.Length - 1; i >= 0
