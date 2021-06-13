@@ -242,4 +242,76 @@ public class CFM60DatasetSample : DatasetSampleForTimeSeries
     /// <returns></returns>
     public static float DayToFractionOfYear(int day)
     {
-        for (int i = SortedEndOfYear.Length - 1; i >= 0
+        for (int i = SortedEndOfYear.Length - 1; i >= 0; --i)
+        {
+            if (day > SortedEndOfYear[i])
+            {
+                float daysInYear = (i == SortedEndOfYear.Length - 1) ? 250f : (SortedEndOfYear[i + 1] - SortedEndOfYear[i]);
+                return ((day - SortedEndOfYear[i]) / daysInYear);
+            }
+        }
+        return (day + (250f - SortedEndOfYear[0])) / 250f;
+    }
+
+
+    /// <summary>
+    /// day is just before the end of year (Christmas ?)
+    /// </summary>
+    public static readonly HashSet<int> Christmas = new(new[] { 14, 264, 514, 765, 1016 });
+    public override string IdColumn => "ID";
+    public override string[] TargetLabels => new[] { "target" };
+    public override bool IsCategoricalColumn(string columnName) => DefaultIsCategoricalColumn(columnName, new[] { "pid" });
+
+    public override Objective_enum GetObjective()
+    {
+        return Objective_enum.Regression;
+    }
+
+    private List<string> Encoder_FeatureNames;
+    private List<string> Decoder_FeatureNames;
+
+    public override string[] GetColumnNames()
+    {
+        GetInputSize(true);
+        return Encoder_FeatureNames.ToArray();
+    }
+    public override int GetInputSize(bool isEncoderInputSize)
+    {
+        if (isEncoderInputSize && Encoder_FeatureNames != null)
+        {
+            return Encoder_FeatureNames.Count;
+        }
+        if (!isEncoderInputSize && Decoder_FeatureNames != null)
+        {
+            return Decoder_FeatureNames.Count;
+        }
+
+        var featureNames = new List<string>();
+
+        int result = 0;
+
+        if (isEncoderInputSize)
+        {
+            ++result;
+            featureNames.Add(nameof(CFM60Entry.ID));
+        }
+
+        //pid embedding
+        if (Pid_EmbeddingDim >= 1) { ++result; featureNames.Add(nameof(CFM60Entry.pid)); }
+
+        //y estimate
+        if (Use_prev_Y && isEncoderInputSize) { ++result; featureNames.Add("prev_y"); }
+
+        //day/year
+        if (Use_day) { ++result; featureNames.Add("day/" + (int)Use_day_Divider); }
+        if (Use_fraction_of_year) { ++result; featureNames.Add("fraction_of_year"); }
+        if (Use_year_Cyclical_Encoding)
+        {
+            ++result;
+            featureNames.Add("sin_year");
+            ++result;
+            featureNames.Add("cos_year");
+        }
+        if (Use_EndOfYear_flag) { ++result; featureNames.Add("EndOfYear_flag"); }
+        if (Use_Christmas_flag) { ++result; featureNames.Add("Christmas_flag"); }
+        if (Use
