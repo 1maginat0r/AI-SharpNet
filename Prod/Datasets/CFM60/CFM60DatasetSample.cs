@@ -314,4 +314,98 @@ public class CFM60DatasetSample : DatasetSampleForTimeSeries
         }
         if (Use_EndOfYear_flag) { ++result; featureNames.Add("EndOfYear_flag"); }
         if (Use_Christmas_flag) { ++result; featureNames.Add("Christmas_flag"); }
-        if (Use
+        if (Use_EndOfTrimester_flag) { ++result; featureNames.Add("EndOfTrimester_flag"); }
+
+        //abs_ret
+        if (Use_abs_ret)
+        {
+            result += CFM60Entry.POINTS_BY_DAY;
+            for (int i = 0; i < CFM60Entry.POINTS_BY_DAY; ++i)
+            {
+                featureNames.Add(VectorFeatureName("abs_ret", i));
+            }
+        }
+        //rel_vol
+        if (Use_rel_vol)
+        {
+            result += CFM60Entry.POINTS_BY_DAY;
+            for (int i = 0; i < CFM60Entry.POINTS_BY_DAY; ++i)
+            {
+                featureNames.Add(VectorFeatureName("rel_vol", i));
+            }
+        }
+
+        //LS
+        if (Use_LS)
+        {
+            ++result;
+            featureNames.Add("LS");
+        }
+
+        //NLV
+        if (Use_NLV)
+        {
+            ++result;
+            featureNames.Add("NLV");
+        }
+        if (result != featureNames.Count)
+        {
+            throw new Exception($"invalid count {result} != {featureNames.Count}");
+        }
+
+        if (isEncoderInputSize)
+        {
+            Encoder_FeatureNames = featureNames;
+            _cacheColumns = featureNames.ToArray();
+        }
+        else
+        {
+            Decoder_FeatureNames = featureNames;
+        }
+
+        return result;
+    }
+
+
+    private TimeSeriesDataset _TestDataset;
+    private TimeSeriesDataset _FullTrainingAndValidation;
+
+    public override TimeSeriesDataset TestDataset()
+    {
+        return LoadAndEncodeDataset_If_Needed().testDataset;
+    }
+
+    public override TimeSeriesDataset FullTrainingAndValidation()
+    {
+        return LoadAndEncodeDataset_If_Needed().fullTrainingAndValidation;
+    }
+
+
+
+    
+    private (TimeSeriesDataset fullTrainingAndValidation, TimeSeriesDataset testDataset) LoadAndEncodeDataset_If_Needed()
+    {
+        if (_TestDataset != null && _FullTrainingAndValidation != null)
+        {
+            return (_FullTrainingAndValidation, _TestDataset);
+        }
+
+        _FullTrainingAndValidation = new TimeSeriesDataset(
+            NAME,
+            EntriesTrain,
+            encoderDecoder_NetworkSample,
+            this,
+            null);
+
+        _TestDataset = new TimeSeriesDataset(
+            NAME,
+            EntriesTest,
+            encoderDecoder_NetworkSample,
+            this,
+            _FullTrainingAndValidation);
+
+        return (_FullTrainingAndValidation, _TestDataset);
+
+    }
+
+    public static int DayThreshold(IList<CFM60Entry> entries
