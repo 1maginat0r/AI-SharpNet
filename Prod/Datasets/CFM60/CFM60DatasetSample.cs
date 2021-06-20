@@ -408,4 +408,65 @@ public class CFM60DatasetSample : DatasetSampleForTimeSeries
 
     }
 
-    public static int DayThreshold(IList<CFM60Entry> entries
+    public static int DayThreshold(IList<CFM60Entry> entries, double percentageInTrainingSet)
+    {
+        var sortedDays = entries.Select(e => e.day).OrderBy(x => x).ToArray();
+        var countInTraining = (int)(percentageInTrainingSet * entries.Count);
+        var dayThreshold = sortedDays[countInTraining];
+        return dayThreshold;
+    }
+
+    public static IDictionary<int, double> LoadPredictions(string datasetPath)
+    {
+        var res = new Dictionary<int, double>();
+        foreach (var l in File.ReadAllLines(datasetPath).Skip(1))
+        {
+            var splitted = l.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+            var ID = int.Parse(splitted[0]);
+            var Y = double.Parse(splitted[1], CultureInfo.InvariantCulture);
+            res[ID] = Y;
+        }
+        return res;
+    }
+
+
+
+    public static string VectorFeatureName(string vectorName, int indexInVector)
+    {
+        return vectorName + "[" + indexInVector.ToString("D2") + "]";
+    }
+
+
+
+    public static void TrainNetwork(int numEpochs = 1, int maxAllowedSecondsForAllComputation = 0)
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+
+            //related to Dataset 
+            //{"KFold", 2},
+            {nameof(AbstractDatasetSample.PercentageInTraining), 0.8}, //will be automatically set to 1 if KFold is enabled
+            
+            //Related to model
+            {nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.Mse)},
+            {nameof(NetworkSample.EvaluationMetrics), ""}, //same as loss function
+            {nameof(NetworkSample.ShuffleDatasetBeforeEachEpoch), true},
+            {nameof(NetworkSample.CompatibilityMode), "TensorFlow"},
+            {nameof(NetworkSample.BatchSize), 2048},
+            {nameof(NetworkSample.NumEpochs), numEpochs},
+            {nameof(NetworkSample.InitialLearningRate), 0.002},
+            {"Use_day", true},
+            {"Use_LS", false},
+            {"Pid_EmbeddingDim", 8},
+            {"DenseUnits", 50},
+            {"ClipValueForGradients", 1000},
+            {"HiddenSize", 64},
+            {"DropoutRate_Between_Encoder_And_Decoder", 0.2},
+            {"DropoutRate_After_EncoderDecoder", 0.2},
+            {nameof(NetworkSample.DisableReduceLROnPlateau), true},
+            {nameof(NetworkSample.LearningRateSchedulerType), "OneCycle"},
+            {nameof(NetworkSample.OneCycle_DividerForMinLearningRate), 20},
+            {nameof(NetworkSample.OneCycle_PercentInAnnealing), 0.1},
+
+            {nameof(NetworkSample.OptimizerType), "Adam"},
+            {nameof(NetworkSample.lambdaL2Regularizati
