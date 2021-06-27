@@ -469,4 +469,28 @@ public class CFM60DatasetSample : DatasetSampleForTimeSeries
             {nameof(NetworkSample.OneCycle_PercentInAnnealing), 0.1},
 
             {nameof(NetworkSample.OptimizerType), "Adam"},
-            {nameof(NetworkSample.lambdaL2Regularizati
+            {nameof(NetworkSample.lambdaL2Regularization), 0.00005},
+            
+            {"Encoder_NumLayers", 1},
+            {"Encoder_TimeSteps", 60},
+            {"Encoder_DropoutRate", 0.0},
+
+            {"Decoder_NumLayers", 1},
+            {"Decoder_TimeSteps", 1},
+            {"Decoder_DropoutRate", 0.0},
+
+            {"Conv1DKernelWidth", 3},
+            {"Conv1DPaddingType", "SAME"},
+            {"ActivationFunctionAfterFirstDense", "CUDNN_ACTIVATION_CLIPPED_RELU"},
+
+            //run on GPU
+            {"EncoderDecoder_NetworkSample_UseGPU", true},
+            
+        };
+
+        var hpo = new BayesianSearchHPO(searchSpace, () => ModelAndDatasetPredictionsSample.New(new EncoderDecoder_NetworkSample(), new CFM60DatasetSample()), WorkingDirectory);
+        IScore bestScoreSoFar = null;
+        hpo.Process(t => SampleUtils.TrainWithHyperparameters((ModelAndDatasetPredictionsSample)t, WorkingDirectory, true, ref bestScoreSoFar), maxAllowedSecondsForAllComputation);
+    }
+
+}
