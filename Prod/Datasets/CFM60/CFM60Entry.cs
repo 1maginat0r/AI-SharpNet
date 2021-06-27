@@ -102,3 +102,17 @@ namespace SharpNet.Datasets.CFM60
             {
                 entries[idToIndex[id]].Y = (float)y;
             }
+            log("Writing ProtoBuf file " + protoBufFile + "...");
+            using var fs = new FileStream(protoBufFile, FileMode.Create);
+            Serializer.Serialize(fs, entries);
+            fs.Close();
+            log("ProtoBuf file " + protoBufFile + " has been loaded");
+            return entries;
+        }
+
+        public string UniqueId => ID.ToString();
+        public string TimeSeriesFamily => pid.ToString();
+        public float TimeSeriesTimeStamp => day;
+        public float ExpectedTarget => Y;
+    }
+}
