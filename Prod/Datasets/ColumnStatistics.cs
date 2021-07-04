@@ -79,4 +79,71 @@ public class ColumnStatistics
                     ++CountEmptyElements;
                     return;
                 }
-                //it is a categorical column, we add it to the dict
+                //it is a categorical column, we add it to the dictionary
+                if (!_distinctCategoricalValueToCount.ContainsKey(val_before_encoding))
+                {
+                    _distinctCategoricalValueToCount[val_before_encoding] = 1;
+                    _distinctCategoricalValues.Add(val_before_encoding);
+                    _distinctCategoricalValueToIndex[val_before_encoding] = _distinctCategoricalValues.Count - 1;
+                }
+                else
+                {
+                    ++_distinctCategoricalValueToCount[val_before_encoding];
+                }
+            }
+            return;
+        }
+
+        //it is a numerical field
+        var numeric_val_before_encoding = ExtractDouble(val_before_encoding);
+        if (double.IsNaN(numeric_val_before_encoding))
+        {
+            ++CountEmptyElements;
+            return; //missing numerical value
+        }
+        _numericalValues.Add(numeric_val_before_encoding);
+    }
+    public void Fit(float val_before_encoding)
+    {
+        ++Count;
+
+        if (IsCategorical)
+        {
+            if (float.IsNaN(val_before_encoding))
+            {
+                val_before_encoding = -1; //!D missing category
+            }
+            var str_val_before_encoding = val_before_encoding.ToString(CultureInfo.InvariantCulture);
+            //it is a categorical column, we add it to the dictionary
+            if (!_distinctCategoricalValueToCount.ContainsKey(str_val_before_encoding))
+            {
+                _distinctCategoricalValueToCount[str_val_before_encoding] = 1;
+                _distinctCategoricalValues.Add(str_val_before_encoding);
+                _distinctCategoricalValueToIndex[str_val_before_encoding] = Utils.NearestInt(val_before_encoding);
+                
+                Debug.Assert(MathF.Abs(Utils.NearestInt(val_before_encoding) - val_before_encoding) < 1e-5f);
+            }
+            else
+            {
+                ++_distinctCategoricalValueToCount[str_val_before_encoding];
+            }
+            return;
+        }
+
+        //it is a numerical field
+        if (float.IsNaN(val_before_encoding))
+        {
+            ++CountEmptyElements;
+            return; //missing numerical value
+        }
+        _numericalValues.Add(val_before_encoding);
+    }
+    public void Fit(int val_before_encoding)
+    {
+        Fit((float)val_before_encoding);
+    }
+    public double Transform(string val_before_encoding)
+    {
+        if (IsCategorical)
+        {
+            if (!_allData
