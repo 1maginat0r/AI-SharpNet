@@ -212,4 +212,85 @@ public class ColumnStatistics
         var val_before_encoding = val_after_encoding;
         var volatility = _numericalValues.Volatility;
         if (volatility > 0 && _standardizeDoubleValues && !IsTargetLabel)
- 
+        {
+            val_before_encoding = volatility * val_before_encoding + _numericalValues.Average;
+        }
+        return val_before_encoding.ToString(CultureInfo.InvariantCulture);
+    }
+    public static double ExtractDouble(string featureValue)
+    {
+        bool isNegative = false;
+        bool insideNumber = false;
+        bool isLeftNumber = true;
+        double result = 0.0;
+        double divider = 10.0;
+
+        foreach (var c in featureValue)
+        {
+            if (insideNumber)
+            {
+                if (isLeftNumber)
+                {
+                    if (char.IsWhiteSpace(c) || c == ',')
+                    {
+                        continue;
+                    }
+
+                    if (c == '.')
+                    {
+                        isLeftNumber = false;
+                        continue;
+                    }
+
+                    if (char.IsDigit(c))
+                    {
+                        result = 10 * result + c - '0';
+                        continue;
+                    }
+
+                    break;
+                }
+                else
+                {
+                    if (char.IsDigit(c))
+                    {
+                        result += (c - '0') / divider;
+                        divider *= 10;
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+            else
+            {
+                if (c == '-')
+                {
+                    isNegative = true;
+                    insideNumber = true;
+                    continue;
+                }
+
+                if (c == '+')
+                {
+                    insideNumber = true;
+                    continue;
+                }
+
+                if (char.IsDigit(c))
+                {
+                    result = c - '0';
+                    insideNumber = true;
+                    continue;
+                }
+            }
+        }
+
+        if (!insideNumber)
+        {
+            return double.NaN;
+        }
+        return isNegative ? -result : result;
+
+    }
+}
