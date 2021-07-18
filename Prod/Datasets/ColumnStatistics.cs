@@ -146,4 +146,70 @@ public class ColumnStatistics
     {
         if (IsCategorical)
         {
-            if (!_allData
+            if (!_allDataFrameAreAlreadyNormalized)
+            {
+                val_before_encoding = Utils.NormalizeCategoricalFeatureValue(val_before_encoding);
+            }
+            if (val_before_encoding.Length == 0 || !_distinctCategoricalValueToCount.ContainsKey(val_before_encoding))
+            {
+                return double.NaN;
+            }
+            return _distinctCategoricalValueToIndex[val_before_encoding];
+        }
+
+        //it is a numerical field
+        var val_after_encoding = ExtractDouble(val_before_encoding);
+        if (double.IsNaN(val_after_encoding))
+        {
+            return double.NaN; //missing numerical value
+        }
+        //We do the standardization for the double value
+        var volatility = _numericalValues.Volatility;
+        if (volatility > 0 && _standardizeDoubleValues && !IsTargetLabel)
+        {
+            val_after_encoding = (val_after_encoding - _numericalValues.Average) / volatility;
+        }
+        return val_after_encoding;
+    }
+    public double Transform(float val_before_encoding)
+    {
+        if (IsCategorical)
+        {
+            return val_before_encoding;
+        }
+
+        //it is a numerical field
+        double val_after_encoding = val_before_encoding;
+        if (double.IsNaN(val_after_encoding))
+        {
+            return double.NaN; //missing numerical value
+        }
+        //We do the standardization for the double value
+        var volatility = _numericalValues.Volatility;
+        if (volatility > 0 && _standardizeDoubleValues && !IsTargetLabel)
+        {
+            val_after_encoding = (val_after_encoding - _numericalValues.Average) / volatility;
+        }
+        return val_after_encoding;
+    }
+    public string Inverse_Transform(double val_after_encoding, string missingNumberValue)
+    {
+        if (IsCategorical)
+        {
+            var categoricalFeatureIndex = (int)Math.Round(val_after_encoding);
+            if (categoricalFeatureIndex < 0 || categoricalFeatureIndex>= _distinctCategoricalValues.Count)
+            {
+                return "";
+            }
+            return _distinctCategoricalValues[categoricalFeatureIndex];
+        }
+
+        if (double.IsNaN(val_after_encoding))
+        {
+            return missingNumberValue;
+        }
+
+        var val_before_encoding = val_after_encoding;
+        var volatility = _numericalValues.Volatility;
+        if (volatility > 0 && _standardizeDoubleValues && !IsTargetLabel)
+ 
