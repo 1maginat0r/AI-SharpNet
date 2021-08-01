@@ -875,3 +875,212 @@ namespace SharpNet.Datasets
         ///     save only 'x' (feature) tensor
         /// </summary>
         /// <param name="path">the path where to save the dataset (it contains both the directory and the filename)</param>
+        /// <param name="addTargetColumnAsFirstColumn"></param>
+        /// <param name="includeIdColumns"></param>
+        /// <param name="overwriteIfExists">overwrite the file if it already exists</param>
+        /// <param name="separator"></param>
+        private void to_csv([NotNull] string path, char separator, bool addTargetColumnAsFirstColumn, bool includeIdColumns, bool overwriteIfExists)
+        {
+            if (!CanBeSavedInCSV)
+            {
+                return;
+            }
+
+            lock (Lock_to_csv)
+            {
+                if (File.Exists(path) && !overwriteIfExists)
+                {
+                    //Log.Debug($"No need to save dataset {Name} in path {path} : it already exists");
+                    return;
+                }
+
+                var sw = Stopwatch.StartNew();
+                Log.Debug($"Saving dataset {Name} in path {path} (addTargetColumnAsFirstColumn =  {addTargetColumnAsFirstColumn})");
+
+                // ReSharper disable once PossibleNullReferenceException
+
+                //!D load at the same time as X
+                var y = LoadFullY();
+                var yDataAsSpan = (addTargetColumnAsFirstColumn && y != null) ? y.AsFloatCpuSpan : null;
+
+                List<int> validIdxColumns;
+                if (includeIdColumns)
+                {
+                    validIdxColumns = Enumerable.Range(0, ColumnNames.Length).ToList();
+                }
+                else
+                {
+                    validIdxColumns = new List<int>();
+                    for (var index = 0; index < ColumnNames.Length; index++)
+                    {
+                        if (string.IsNullOrEmpty(IdColumn) || !Equals(ColumnNames[index], IdColumn))
+                        {
+                            validIdxColumns.Add(index);
+                        }
+                    }
+                }
+
+                //we construct the header
+                var header = new List<string>();
+                if (addTargetColumnAsFirstColumn)
+                {
+                    header.Add("y");
+                }
+                header.AddRange(validIdxColumns.Select(idx => ColumnNames[idx]));
+
+                int rows = Count;
+                int cols = (addTargetColumnAsFirstColumn ? 1 : 0) + validIdxColumns.Count;
+                using var floatTensor = new CpuTensor<float>(new[] { rows, cols });
+                using var singleRow = new CpuTensor<float>(new[] { 1, ColumnNames.Length });
+                var floatTensorSpan = floatTensor.SpanContent;
+                var singleRowAsSpan = singleRow.AsReadonlyFloatCpuSpan;
+                int idx = 0;
+                for (int row = 0; row < Count; ++row)
+                {
+                    if (addTargetColumnAsFirstColumn)
+                    {
+                        float yValue;
+                        if (yDataAsSpan == null) { yValue = AbstractSample.DEFAULT_VALUE; }
+                        else if (IsRegressionProblem) { yValue = yDataAsSpan[row]; }
+                        else { yValue = ElementIdToCategoryIndex(row); }
+                        floatTensorSpan[idx++] = yValue;
+                    }
+                    LoadAt(row, 0, singleRow, null, false, false);
+                    foreach (var colIdx in validIdxColumns)
+                    {
+                        floatTensorSpan[idx++] = singleRowAsSpan[colIdx];
+                    }
+                }
+
+                var df = DataFrame.New(floatTensor, header);
+                df.to_csv(path, separator, true);
+                Log.Debug($"Dataset {Name} saved in path {path} in {Math.Round(sw.Elapsed.TotalSeconds, 1)}s (addTargetColumnAsFirstColumn =  {addTargetColumnAsFirstColumn})");
+            }
+        }
+        private static readonly object Lock_to_csv = new();
+        private static long ComputeMiniBatchHashId(int[] shuffledElementId, int firstIndexInShuffledElementId, int miniBatchSize)
+        {
+            long result = 1;
+            for (int i = firstIndexInShuffledElementId; i < firstIndexInShuffledElementId + miniBatchSize; ++i)
+            {
+                result += (i + 1) * shuffledElementId[i%shuffledElementId.Length];
+            }
+            return result;
+        }
+        private static string ComputeUniqueDatasetName(DataSet dataset, bool addTargetColumnAsFirstColumn, bool includeIdColumns)
+        {
+            var desc = ComputeDescription(dataset);
+            if (addTargetColumnAsFirstColumn)
+            {
+                var y = dataset.LoadFullY();
+                desc += '_' + ComputeDescription(y);
+            }
+            if (!includeIdColumns)
+            {
+                desc += "_without_ids";
+            }
+            return Utils.ComputeHash(desc, 10);
+        }
+        private static string ComputeDescription(Tensor tensor)
+        {
+            if (tensor == null || tensor.Count == 0)
+            {
+                return "";
+            }
+            Debug.Assert(tensor.Shape.Length == 2);
+            var xDataSpan = tensor.AsReadonlyFloatCpuSpan;
+            var desc = string.Join('_', tensor.Shape);
+            for (int col = 0; col < tensor.Shape[1]; ++col)
+            {
+                int row = ((tensor.Shape[0] - 1) * col) / Math.Max(1, tensor.Shape[1] - 1);
+                var val = xDataSpan[row * tensor.Shape[1] + col];
+                desc += '_' + Math.Round(val, 6).ToString(CultureInfo.InvariantCulture);
+            }
+            return desc;
+        }
+        private static string ComputeDescription(DataSet dataset)
+        {
+            if (dataset == null || dataset.Count == 0)
+            {
+                return "";
+            }
+            int rows = dataset.Count;
+            int cols = dataset.ColumnNames.Length;
+            var desc = rows + "_" + cols;
+            using CpuTensor<float> xBuffer = new(new[] { 1, cols });
+            var xDataSpan = xBuffer.AsReadonlyFloatCpuSpan;
+            for (int col = 0; col < cols; ++col)
+            {
+                int row = ((rows - 1) * col) / Math.Max(1, cols - 1);
+                dataset.LoadAt(row, 0, xBuffer, null, false, false);
+                var val = xDataSpan[col];
+                desc += '_' + Math.Round(val, 6).ToString(CultureInfo.InvariantCulture);
+            }
+            return desc;
+        }
+        /// <summary>
+        /// save the dataset in path 'path' in 'libsvm' format.
+        /// </summary>
+        /// <param name="path">the path where to save the dataset (it contains both the directory and the filename)</param>
+        /// <param name="overwriteIfExists">overwrite the file if it already exists</param>
+        /// <param name="separator"></param>
+        private void to_libsvm(string path, char separator, bool overwriteIfExists)
+        {
+            lock (Lock_to_csv)
+            {
+                if (File.Exists(path) && !overwriteIfExists)
+                {
+                    //Log.Debug($"No need to save dataset {Name} in path {path} : it already exists");
+                    return;
+                }
+
+                var sw = Stopwatch.StartNew();
+                Log.Debug($"Saving dataset {Name} in path {path}");
+
+                // ReSharper disable once PossibleNullReferenceException
+                var y = LoadFullY();
+                var yDataAsSpan = y != null ? y.AsFloatCpuSpan : null;
+
+                List<int> validIdxColumns = new();
+                for (var index = 0; index < ColumnNames.Length; index++)
+                {
+                    if (string.IsNullOrEmpty(IdColumn) || !Equals(ColumnNames[index], IdColumn))
+                    {
+                        validIdxColumns.Add(index);
+                    }
+                }
+
+                var sb = new StringBuilder();
+                using var singleRow = new CpuTensor<float>(new[] { 1, ColumnNames.Length });
+                var singleRowAsSpan = singleRow.AsReadonlyFloatCpuSpan;
+                for (int row = 0; row < Count; ++row)
+                {
+                    float yValue;
+                    if (yDataAsSpan == null) { yValue = AbstractSample.DEFAULT_VALUE; }
+                    else if (IsRegressionProblem) { yValue = yDataAsSpan[row]; }
+                    else { yValue = ElementIdToCategoryIndex(row); }
+                    sb.Append(yValue.ToString(CultureInfo.InvariantCulture) + " ");
+                    LoadAt(row, 0, singleRow, null, false, false);
+                    for (var index = 0; index < validIdxColumns.Count; index++)
+                    {
+                        var val = singleRowAsSpan[validIdxColumns[index]];
+                        if (!float.IsNaN(val) && !float.IsInfinity(val))
+                        {
+                            sb.Append($"{1 + index}:{val.ToString(CultureInfo.InvariantCulture)} ");
+                        }
+                    }
+
+                    sb.Append(Environment.NewLine);
+                }
+
+                File.WriteAllText(path, sb.ToString());
+                Log.Debug($"Dataset {Name} saved in path {path} in {Math.Round(sw.Elapsed.TotalSeconds, 1)}s)");
+            }
+
+        }
+        /// <summary>
+        /// true if the current data set is normalized (with mean=0 and volatility=1 in each channel)
+        /// </summary>
+        private bool IsNormalized => MeanAndVolatilityForEachChannel != null && MeanAndVolatilityForEachChannel.Count != 0;
+    }
+}
