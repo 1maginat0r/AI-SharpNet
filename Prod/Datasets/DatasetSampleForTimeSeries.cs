@@ -11,4 +11,12 @@ public abstract class DatasetSampleForTimeSeries : AbstractDatasetSample
     protected EncoderDecoder_NetworkSample encoderDecoder_NetworkSample { get; }
 
 
-    // ReSharper 
+    // ReSharper disable once FieldCanBeMadeReadOnly.Global
+    public bool Use_prev_Y = true;
+
+    protected DatasetSampleForTimeSeries() {}
+    protected DatasetSampleForTimeSeries(EncoderDecoder_NetworkSample encoderDecoderNetworkSample)
+    {
+        encoderDecoder_NetworkSample = encoderDecoderNetworkSample;
+    }
+}
