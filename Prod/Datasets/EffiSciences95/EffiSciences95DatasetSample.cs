@@ -45,4 +45,41 @@ public class EffiSciences95DatasetSample : AbstractDatasetSample
     {
         if (LazyFullTrainingAndValidation == null || LazyFullTrainingAndValidation.Disposed)
         {
-            Lazy
+            LazyFullTrainingAndValidation = EffiSciences95DirectoryDataSet.ValueOf(this, "Labeled");
+        }
+
+        return LazyFullTrainingAndValidation;
+    }
+    public override bool FixErrors()
+    {
+        if (!base.FixErrors())
+        {
+            return false;
+        }
+
+        if (MinEnlargeForBox > MaxEnlargeForBox)
+        {
+            return false;
+        }
+       
+        return true;
+    }
+
+    #region Dispose pattern
+    protected override void Dispose(bool disposing)
+    {
+        if (disposed)
+        {
+            return;
+        }
+        disposed = true;
+        //Release Unmanaged Resources
+        if (disposing)
+        {
+            LazyFullTrainingAndValidation?.Dispose();
+            LazyTestDataset?.Dispose();
+            //Release Managed Resources
+        }
+    }
+    #endregion
+}
