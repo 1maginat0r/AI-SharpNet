@@ -95,4 +95,63 @@ public class EffiSciences95DirectoryDataSet : DirectoryDataSet
     /// return a picture (from the training (Labeled) or test (Unlabeled) dataset) after removing the box that seems to contain the label 
     /// </summary>
     /// <returns></returns>
-    public override BitmapContent OriginalElementCo
+    public override BitmapContent OriginalElementContent(int elementId, int channels, int targetHeight, int targetWidth, bool withDataAugmentation, bool isTraining)
+    {
+        var res = base.OriginalElementContent(elementId, channels, targetHeight, targetWidth, withDataAugmentation, isTraining);
+        if (res == null || !isTraining || _labelCoordinates[elementId] == null || _labelCoordinates[elementId].IsEmpty)
+        {
+            return res;
+        }
+
+        //we need to draw a black box on the picture
+        var labelCoordinateToRemove0 = _labelCoordinates[elementId];
+        var rectBoxToRemove = labelCoordinateToRemove0.Shape;
+
+        var otherLabelCoordinate = FindBiggerBoxWithLabels(labelCoordinateToRemove0);
+        if (otherLabelCoordinate != null)
+        {
+            rectBoxToRemove.Y -= (otherLabelCoordinate.Height - labelCoordinateToRemove0.Height) / 2;
+            rectBoxToRemove.Height = otherLabelCoordinate.Height;
+            rectBoxToRemove.X -= (otherLabelCoordinate.Width - labelCoordinateToRemove0.Width) / 2;
+            rectBoxToRemove.Width = otherLabelCoordinate.Width;
+        }
+        ClearBitmap(res, rectBoxToRemove);
+        return res;
+    }
+
+    private void ClearBitmap(BitmapContent res, Rectangle rect)
+    {
+        if (_datasetSample.MaxEnlargeForBox > 0)
+        {
+            int min = _datasetSample.MinEnlargeForBox;
+            int max = _datasetSample.MaxEnlargeForBox;
+            int dy = _r.Next(min, max+1);
+            rect.Y -= dy;
+            rect.Height += dy+_r.Next(min, max + 1);
+            int dx = _r.Next(min, max + 1);
+            rect.X -= dx;
+            rect.Width += dx + _r.Next(min, max + 1);
+        }
+
+        var row_Start = Math.Max(rect.Top, 0);
+        var row_End = Math.Min(rect.Bottom-1, 217);
+        var col_Start = Math.Max(rect.Left, 0);
+        var col_End = Math.Min(rect.Right - 1, 177);
+        var width = col_End - col_Start + 1;
+
+        var span = res.SpanContent;
+        for (int c = 0; c < res.GetChannels(); ++c)
+        {
+            for (int row = row_Start; row <= row_End; ++row)
+            {
+                int idx = res.Idx(c, row, col_Start);
+                span.Slice(idx, width).Clear();
+            }
+        }
+    }
+
+    /// <summary>
+    /// return an element from the training dataset containing "young" and with a box label bigger than the one in 'box'
+    /// </summary>
+    /// <returns></returns>
+    private EffiSciences95Labe
