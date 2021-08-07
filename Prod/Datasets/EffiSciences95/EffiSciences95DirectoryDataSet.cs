@@ -154,4 +154,28 @@ public class EffiSciences95DirectoryDataSet : DirectoryDataSet
     /// return an element from the training dataset containing "young" and with a box label bigger than the one in 'box'
     /// </summary>
     /// <returns></returns>
-    private EffiSciences95Labe
+    private EffiSciences95LabelCoordinates FindBiggerBoxWithLabels(EffiSciences95LabelCoordinates box)
+    {
+        for (int i = 0; i <= 20; ++i)
+        {
+            //we look for a bigger box containing "young" from the training (Labeled) dataset
+            var otherLabelCoordinate = _labelCoordinates[_r.Next(_labelCoordinates.Count)];
+            if (otherLabelCoordinate == null || otherLabelCoordinate.IsEmpty || otherLabelCoordinate.Label != "y")
+            {
+                continue;
+            }
+            if (otherLabelCoordinate.Width >= box.Width && otherLabelCoordinate.Height >= box.Height)
+            {
+                return otherLabelCoordinate;
+            }
+        }
+        return null;
+    }
+
+    private static readonly List<Tuple<float, float>> PrecomputedMeanAndVolatilityForEachChannel = new()
+        {
+            Tuple.Create(128.42516f, 79.42157f),
+            Tuple.Create(107.48822f, 74.195564f),
+            Tuple.Create(97.46115f, 73.76817f)
+        };
+}
