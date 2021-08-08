@@ -108,4 +108,5 @@ public class EffiSciences95LabelCoordinates
     {
         return new EffiSciences95LabelCoordinates(pictureId, Label, 0, 0, 0, 0, 0, "", 0);
     }
-    pub
+    public bool IsEmpty => Width == 0;
+}
