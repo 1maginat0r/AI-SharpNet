@@ -146,3 +146,213 @@ public static class MatrixTools
     }
     public static bool[,] ExtractBoolMatrix(int[,] kmeanTextColorIndex, int index)
     {
+        var res = new bool[kmeanTextColorIndex.GetLength(0), kmeanTextColorIndex.GetLength(1)];
+        for (int row = 0; row < kmeanTextColorIndex.GetLength(0); ++row)
+        {
+            for (int col = 0; col < kmeanTextColorIndex.GetLength(1); ++col)
+            {
+                res[row, col] = kmeanTextColorIndex[row, col] == index;
+            }
+        }
+        return res;
+    }
+    public static int RemoveSingleIsolatedElements(bool[,] m)
+    {
+        int removedElements = 0;
+        for (int row = 0; row < m.GetLength(0); ++row)
+        {
+            for (int col = 0; col < m.GetLength(1); ++col)
+            {
+                if (!m[row, col])
+                {
+                    continue;
+                }
+                if (Default(m, row - 1, col - 1, false) || Default(m, row, col - 1, false) || Default(m, row + 1, col - 1, false)
+                    || Default(m, row - 1, col + 1, false) || Default(m, row, col + 1, false) || Default(m, row + 1, col + 1, false)
+                    || Default(m, row - 1, col, false) || Default(m, row + 1, col, false)
+                   )
+                {
+                    continue;
+                }
+
+                ++removedElements;
+                m[row, col] = false;
+            }
+        }
+        return removedElements;
+    }
+    public static int FirstNonEmptyColInRow(int[,] countMatrix, int row, int col_start, int col_end)
+    {
+        int totalNonEmpty = RowCount(countMatrix, row, col_start, col_end);
+        if (totalNonEmpty == 0)
+        {
+            return -1; // all cells are empty
+        }
+        var countAtStart = RowCount(countMatrix, row, col_start, col_start);
+        if (countAtStart == 1)
+        {
+            return col_start;
+        }
+        var lastBeforeNonEmpty = MaximumValidIndex(col_start, col_end, c => RowCount(countMatrix, row, col_start, c) == 0);
+        return lastBeforeNonEmpty + 1;
+    }
+    public static int LastNonEmptyColInRow(int[,] countMatrix, int row, int col_start, int col_end)
+    {
+        int totalNonEmpty = RowCount(countMatrix, row, col_start, col_end);
+        if (totalNonEmpty == 0)
+        {
+            return -1; // all cells are empty
+        }
+        int countAtEnd = RowCount(countMatrix, row, col_end, col_end);
+        if (countAtEnd == 1)
+        {
+            return col_end;
+        }
+        var lastAfterNonEmpty = -MaximumValidIndex(-col_end, -col_start, neg_start => RowCount(countMatrix, row, -neg_start, col_end) == 0);
+        return lastAfterNonEmpty - 1;
+    }
+    public static int FirstNonEmptyRowInCol(int[,] countMatrix, int col, int row_start, int row_end)
+    {
+        int totalNonEmpty = ColCount(countMatrix, col, row_start, row_end);
+        if (totalNonEmpty == 0)
+        {
+            return -1; // all cells are empty
+        }
+        int countAtStart = ColCount(countMatrix, col, row_start, row_start);
+        if (countAtStart == 1)
+        {
+            return row_start;
+        }
+        var lastBeforeNonEmpty = MaximumValidIndex(row_start, row_end, c => ColCount(countMatrix, col, row_start, c) == 0);
+        return lastBeforeNonEmpty + 1;
+    }
+    public static int LastNonEmptyRowInCol(int[,] countMatrix, int col, int row_start, int row_end)
+    {
+        int totalNonEmpty = ColCount(countMatrix, col, row_start, row_end);
+        if (totalNonEmpty == 0)
+        {
+            return -1; // all cells are empty
+        }
+        int countAtEnd = ColCount(countMatrix, col, row_end, row_end);
+        if (countAtEnd == 1)
+        {
+            return row_end;
+        }
+        var lastAfterNonEmpty = -MaximumValidIndex(-row_end, -row_start, neg_start => ColCount(countMatrix, col, -neg_start, row_end) == 0);
+        return lastAfterNonEmpty - 1;
+    }
+    public static void MakeValidIfHasValidWithinDistance(bool[] isValid, int distanceToValidToMakeItValid)
+    {
+        var subSum = CreateSubSum(isValid);
+
+        int last = isValid.Length - 1;
+
+        while (last > 0 && !isValid[last])
+        {
+            --last;
+        }
+
+
+        for (int i = 0; i <= last; ++i)
+        {
+            if (isValid[i])
+            {
+                continue;
+            }
+            int countValidWithinDistance = GetSubSum(subSum, i - distanceToValidToMakeItValid, i + distanceToValidToMakeItValid);
+            if (countValidWithinDistance != 0)
+            {
+                isValid[i] = true;
+            }
+        }
+
+    }
+    public static int CountTrue(bool[,] m)
+    {
+        int res = 0;
+        for (int row = 0; row < m.GetLength(0); ++row)
+        {
+            for (int col = 0; col < m.GetLength(1); ++col)
+            {
+                if (m[row, col])
+                {
+                    ++res;
+                }
+            }
+        }
+        return res;
+    }
+
+
+    /// <summary>
+    /// Find the max index for which IsValid is true using dichotomy search
+    /// hypothesis: IsValid[min] is true and will always be true for an interval [min, y] then always false after y
+    /// Complexity:         o( log(N) ) 
+    /// </summary>
+    /// <param name="minLength"></param>
+    /// <param name="maxLength"></param>
+    /// <param name="isValid"></param>
+    /// <returns></returns>
+    private static int MaximumValidIndex(int minLength, int maxLength, Func<int, bool> isValid)
+    {
+        while (minLength < maxLength)
+        {
+            var middle = (minLength + maxLength + 1) / 2;
+            if (isValid(middle))
+            {
+                minLength = middle;
+            }
+            else
+            {
+                maxLength = middle - 1;
+            }
+        }
+        return minLength;
+    }
+    private static int[] CreateSubSum(bool[] c)
+    {
+        var res = new int[c.Length];
+        for (int i = 0; i < c.Length; ++i)
+        {
+            res[i] = c[i] ? 1 : 0;
+            if (i != 0)
+            {
+                res[i] += res[i - 1];
+            }
+        }
+        return res;
+    }
+    private static int GetSubSum(int[] subSum, int start, int end)
+    {
+        if (start > end || start >= subSum.Length)
+        {
+            return 0;
+        }
+
+        int prevSum = start <= 0 ? 0 : subSum[start - 1];
+        int totalSum = end >= subSum.Length ? subSum[^1] : subSum[end];
+        return totalSum - prevSum;
+    }
+    private static int Count(int[,] countMatrix, int row_start, int row_end, int col_start, int col_end)
+    {
+        int rows = countMatrix.GetLength(0);
+        int cols = countMatrix.GetLength(1);
+        if (row_start > row_end || col_start > col_end || row_start >= rows || col_start >= cols)
+        {
+            return 0;
+        }
+        return countMatrix[row_end, col_end]
+               - Default(countMatrix, row_start - 1, col_end, 0)
+               - Default(countMatrix, row_end, col_start - 1, 0)
+               + Default(countMatrix, row_start - 1, col_start - 1, 0);
+    }
+    private static bool IsValidCoordinate<T>(T[,] data, int row, int col)
+    {
+        return row >= 0 && col >= 0 && row < data.GetLength(0) && col < data.GetLength(1);
+    }
+    private static T Default<T>(T[,] data, int row, int col, T defaultIfInvalid)
+    {
+        return IsValidCoordinate(data, row, col) ? data[row, col] : defaultIfInvalid;
+    }
+
+}
