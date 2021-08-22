@@ -44,4 +44,24 @@ namespace SharpNet.Datasets
             var height = t[0].Key.Shape[0];
             var width = t[0].Key.Shape[1];
             var X = new CpuTensor<float>(new[] { setSize, 1, height, width });
-            var Y = new CpuTensor<float>(new[] { setSize
+            var Y = new CpuTensor<float>(new[] { setSize, 10 });
+            for (int m = 0; m < setSize; ++m)
+            {
+                var matrix = t[m].Key;
+                for (int row = 0; row < height; ++row)
+                {
+                    for (int col = 0; col < width; ++col)
+                    {
+                        X.Set(m, 0, row, col, matrix.Get(row, col) / 255f);
+                    }
+                }
+                Y.Set(m, t[m].Value, 1);
+            }
+            return Tuple.Create(X, Y);
+        }
+        private static string FileNameToPath(string fileName)
+        {
+            return Path.Combine(NetworkSample.DefaultDataDirectory, "MNIST", fileName);
+        }
+    }
+}
