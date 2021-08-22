@@ -38,4 +38,45 @@ public sealed class RandomizeColumnDataSet : WrappedDataSet
         CpuTensor<float> yBuffer, bool withDataAugmentation, bool isTraining)
     {
         _original.LoadAt(subElementId, indexInBuffer, xBuffer, yBuffer, withDataAugmentation, isTraining);
-        if (xBuffer != 
+        if (xBuffer != null)
+        {
+            if (xBuffer.Shape.Length != 2)
+            {
+                throw new ArgumentException($"xBuffer.Shape.Length={xBuffer.Shape.Length}!=2");
+            }
+            int cols = xBuffer.Shape[1];
+            if (cols != ColumnNames.Length)
+            {
+                throw new ArgumentException($"cols={cols}!=ColumnNames.Length={ColumnNames.Length}");
+            }
+            Debug.Assert(xBuffer.Shape.Length == 2);
+            var xBufferSpan = xBuffer.SpanContent;
+
+            var bufferShape = (int[])xBuffer.Shape.Clone();
+            bufferShape[0] = 1;
+            var buffer = GetBuffer(bufferShape);
+            foreach (string c in _columnNameToRandomize)
+            {
+                int indexColumn = Array.IndexOf(ColumnNames, c);
+                if (indexColumn < 0)
+                {
+                    throw new Exception($"invalid column name {c}");
+                }
+                int randomSubElementId = _r.Next(0, Count);
+                _original.LoadAt(randomSubElementId, 0, buffer, null, withDataAugmentation, isTraining);
+                xBufferSpan[xBuffer.Idx(indexInBuffer, indexColumn)] = buffer.SpanContent[buffer.Idx(0, indexColumn)];
+            }
+        }
+    }
+
+    #region Dispose pattern
+    protected override void Dispose(bool disposing)
+    {
+        Disposed = true;
+#pragma warning disable CA1816
+        GC.SuppressFinalize(this);
+#pragma warning restore CA1816
+    }
+    #endregion
+
+}
