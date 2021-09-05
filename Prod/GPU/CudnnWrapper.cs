@@ -875,3 +875,251 @@ namespace SharpNet.GPU
 
         [DllImport(DLL_NAME)]
         public static extern cudnnStatus_t cudnnCreateActivationDescriptor(
+            out cudnnActivationDescriptor_t activationDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroyActivationDescriptor(
+            cudnnActivationDescriptor_t activationDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreatePoolingDescriptor(
+            out cudnnPoolingDescriptor_t poolingDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetPooling2dDescriptor(
+            cudnnPoolingDescriptor_t poolingDesc,
+            cudnnPoolingMode_t mode,
+            cudnnNanPropagation_t maxPoolingNanOpt,
+            int windowHeight,
+            int windowWidth,
+            int verticalPadding,
+            int horizontalPadding,
+            int verticalStride,
+            int horizontalStride);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroyPoolingDescriptor(
+            cudnnPoolingDescriptor_t poolingDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreateConvolutionDescriptor(out cudnnConvolutionDescriptor_t convDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetConvolutionGroupCount(cudnnConvolutionDescriptor_t convDesc, int groupCount);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetConvolution2dDescriptor(
+            cudnnConvolutionDescriptor_t convDesc,
+            int pad_h,
+            int pad_w,
+            int u,
+            int v,
+            int dilation_h,
+            int dilation_w,
+            cudnnConvolutionMode_t mode,
+            cudnnDataType_t computeType);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroyConvolutionDescriptor(
+            cudnnConvolutionDescriptor_t convDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreateFilterDescriptor(
+            out cudnnFilterDescriptor_t filterDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetFilter4dDescriptor(
+            cudnnFilterDescriptor_t filterDesc,
+            cudnnDataType_t dataType,
+            cudnnTensorFormat_t format,
+            int k,
+            int c,
+            int h,
+            int w);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroyFilterDescriptor(
+            cudnnFilterDescriptor_t filterDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreateDropoutDescriptor(
+            out cudnnDropoutDescriptor_t dropoutDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetDropoutDescriptor(
+            cudnnDropoutDescriptor_t dropoutDesc,
+            cudnnHandle_t cudnnHandle,
+            float dropout,
+            IntPtr states,
+            size_t stateSizeInBytes,
+            ulong seed);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroyDropoutDescriptor(
+            cudnnDropoutDescriptor_t dropoutDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreate(
+            out cudnnHandle_t cudnnHandle);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroy(
+            cudnnHandle_t cudnnHandle);
+
+        [DllImport(DLL_NAME)]
+        public static extern size_t cudnnGetVersion();
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreateRNNDescriptor(
+            out cudnnRNNDescriptor_t rnnDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnDestroyRNNDescriptor(
+            cudnnRNNDescriptor_t rnnDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetRNNDescriptor_v8(
+            cudnnRNNDescriptor_t rnnDesc,
+            cudnnRNNAlgo_t algo,
+            cudnnRNNMode_t cellMode,
+            cudnnRNNBiasMode_t biasMode,
+            cudnnDirectionMode_t dirMode,
+            cudnnRNNInputMode_t inputMode,
+            cudnnDataType_t dataType,
+            cudnnDataType_t mathPrec,
+            cudnnMathType_t mathType,
+            int inputSize,
+            int hiddenSize,
+            int projSize,
+            int numLayers,
+            cudnnDropoutDescriptor_t dropoutDesc,
+            uint auxFlags);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnCreateRNNDataDescriptor(
+            out cudnnRNNDataDescriptor_t RNNDataDesc);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnSetRNNDataDescriptor(
+            cudnnRNNDataDescriptor_t RNNDataDesc,
+            cudnnDataType_t dataType,
+            cudnnRNNDataLayout_t layout,
+            int maxSeqLength,
+            int batchSize,
+            int vectorSize,
+            int* seqLengthArray,
+            void* paddingFill);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="rnnDesc"></param>
+        /// <param name="fMode"></param>
+        /// <param name="xDesc"></param>
+        /// <param name="workSpaceSize">Output.
+        /// Minimum amount of GPU memory in bytes needed as a workspace buffer.
+        /// The workspace buffer is not used to pass intermediate results between APIs but as a temporary read/write buffer.</param>
+        /// <param name="reserveSpaceSize">Output.
+        /// Minimum amount of GPU memory in bytes needed as the reserve-space buffer.
+        /// The reserve space buffer is used to pass intermediate results from cudnnRNNForward()
+        /// to RNN BackwardData and BackwardWeights routines that compute first order derivatives with respect to RNN inputs
+        /// or trainable weight and biases.</param>
+        /// <returns></returns>
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnGetRNNTempSpaceSizes(
+            cudnnHandle_t handle,
+            cudnnRNNDescriptor_t rnnDesc,
+            cudnnForwardMode_t fMode,
+            cudnnRNNDataDescriptor_t xDesc,
+            out size_t workSpaceSize,       //needed both for training and inference
+            out size_t reserveSpaceSize);   //needed only for training
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnGetRNNWeightSpaceSize(
+            cudnnHandle_t handle,
+            cudnnRNNDescriptor_t rnnDesc,
+            out size_t weightSpaceSize);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnGetRNNWeightParams(
+            cudnnHandle_t handle,
+            cudnnRNNDescriptor_t rnnDesc,
+            int pseudoLayer,
+            size_t weightSpaceSize,
+            IntPtr weightSpace,
+            int linLayerID,
+            cudnnTensorDescriptor_t mDesc,
+            out IntPtr mAddress,
+            cudnnTensorDescriptor_t bDesc,
+            out IntPtr bAddress);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnRNNForward(
+            cudnnHandle_t cudnnHandle,
+            cudnnRNNDescriptor_t rnnDesc,
+            cudnnForwardMode_t fwdMode,
+            IntPtr devSeqLengths,
+            cudnnRNNDataDescriptor_t xDesc,
+            IntPtr x,
+            cudnnRNNDataDescriptor_t yDesc,
+            IntPtr y,
+            cudnnTensorDescriptor_t hDesc,
+            IntPtr hx,
+            IntPtr hy,
+            cudnnTensorDescriptor_t cDesc,
+            IntPtr cx,
+            IntPtr cy,
+            size_t weightSpaceSize,
+            IntPtr weightSpace,
+            size_t workSpaceSize,           //needed both for training and inference
+            IntPtr workSpace,               //needed both for training and inference
+            size_t reserveSpaceSize,        //needed only for training
+            IntPtr reserveSpace);           //needed only for training
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnRNNBackwardData_v8(
+            cudnnHandle_t cudnnHandle,
+            cudnnRNNDescriptor_t rnnDesc,
+            IntPtr devSeqLengths,
+            cudnnRNNDataDescriptor_t yDesc,
+            IntPtr y,
+            IntPtr dy,
+            cudnnRNNDataDescriptor_t xDesc,
+            IntPtr dx,
+            cudnnTensorDescriptor_t hDesc,
+            IntPtr hx,
+            IntPtr dhy,
+            IntPtr dhx,
+            cudnnTensorDescriptor_t cDesc,
+            IntPtr cx,
+            IntPtr dcy,
+            IntPtr dcx,
+            size_t weightSpaceSize,
+            IntPtr weightSpace,
+            size_t workSpaceSize,
+            IntPtr workSpace,
+            size_t reserveSpaceSize,
+            IntPtr reserveSpace);
+
+        [DllImport(DLL_NAME)]
+        public static extern cudnnStatus_t cudnnRNNBackwardWeights_v8(
+            cudnnHandle_t cudnnHandle,
+            cudnnRNNDescriptor_t rnnDesc,
+            cudnnWgradMode_t addGrad,
+            IntPtr devSeqLengths,
+            cudnnRNNDataDescriptor_t xDesc,
+            IntPtr x,
+            cudnnTensorDescriptor_t hDesc,
+            IntPtr hx,
+            cudnnRNNDataDescriptor_t yDesc,
+            IntPtr y,
+            size_t weightSpaceSize,
+            IntPtr dweightSpace,
+            size_t workSpaceSize,
+            IntPtr workSpace,
+            size_t reserveSpaceSize,
+            IntPtr reserveSpace);
+    }
+    
+}
