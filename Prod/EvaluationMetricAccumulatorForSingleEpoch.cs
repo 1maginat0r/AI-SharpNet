@@ -106,4 +106,32 @@ public class EvaluationMetricAccumulatorForSingleEpoch : IDisposable
     {
         List<KeyValuePair<EvaluationMetricEnum, double>> res = new();
 
-        if (_metricData.Me
+        if (_metricData.Metrics.Any(RequireFullYToCompute))
+        {
+            Debug.Assert(_full_y_true != null);
+            Debug.Assert(_full_y_pred!=null);
+            Tensor buffer = null;
+            foreach (var metric in _metricData.Metrics)
+            {
+                _memoryPool.GetFloatTensor(ref buffer, _full_y_pred.ComputeMetricBufferShape(metric));
+                res.Add(KeyValuePair.Create(metric, buffer.ComputeEvaluationMetric(_full_y_true, _full_y_pred, metric, _metricData)));
+            }
+            _memoryPool.FreeFloatTensor(buffer);
+        }
+        else
+        {
+            foreach (var metric in _metricData.Metrics)
+            {
+                res.Add(KeyValuePair.Create(metric, _currentAccumulatedMetrics[metric].Average));
+            }
+        }
+        return res;
+    }
+
+    public void Dispose()
+    {
+        _full_y_true?.Dispose();
+        _full_y_pred?.Dispose();
+        _currentAccumulatedMetrics.Clear();
+    }
+}
