@@ -1187,3 +1187,407 @@ namespace SharpNet.GPU
             //      =>  lda = Shape[1]
             //          M = Shape[0]
             //  (*) the transpose of the 'this' tensor (=C) is seen as a matrix of shape (Shape[0], Shape[1]) = (M, N) = (ldc, N)
+            //          ldc = M = Shape[0]
+            //          N = Shape[1]
+            //  (*) B is a matrix of same dimension as transposed matrix = (ldb, N) = (M, N) = (ldc, N)
+            //          ldb = M = ldc = Shape[0]
+
+            int M = Shape[0];
+            int N = Shape[1];
+            int lda = N;
+            int ldc = M;
+            int ldb = ldc;
+            float alpha = 1f;
+            float beta = 0f;
+
+            var res = CublasWrapper.cublasSgeam(CublasHandle, cublasOperation_t.CUBLAS_OP_T, cublasOperation_t.CUBLAS_OP_N, M, N, ref alpha, this, lda, ref beta, IntPtr.Zero, ldb, transposed, ldc);
+            GPUWrapper.CheckStatus(res);
+        }
+
+
+        public override void Orthogonal(Random rand)
+        {
+            var array = new float[Count];
+            Utils.NormalDistribution(array, rand, 0, 1);
+            var Q = new CpuTensor<float>(new[] { Shape[0], MultDim0 }, array);
+            Q.Q_Factorization();
+            InitializeFromHostMemory(array as T[]);
+        }
+        public override void QRFactorization(Tensor Q, Tensor R, Tensor buffer)
+        {
+            var A = this;
+            int m = A.Shape[0];
+            int n = A.Shape[1];
+            Debug.Assert(m >= n);
+            int lda = m;
+            int k = n;
+
+            var A_columnMajor = new GPUTensor<float>(new[] { n, m }, buffer.Pointer, _wrapper);
+            var A_columnMajorLength = n * m;
+            var tauLength = k;
+            const int devInfoIntLength = 1;
+            var workSpaceLength = buffer.Count - A_columnMajorLength - tauLength - devInfoIntLength;
+            var TAU = buffer.Pointer + A_columnMajorLength * sizeof(float);
+            var devInfoInt = TAU + tauLength * sizeof(float);
+            var workSpace = devInfoInt + devInfoIntLength * sizeof(float);
+
+            // 1st step involving geqrf method
+            A.Transpose(A_columnMajor);
+            var res = CusolverWrapper.cusolverDnSgeqrf(CusolverDnHandle, m, n, A_columnMajor, lda, TAU, workSpace, workSpaceLength, devInfoInt);
+            GPUWrapper.CheckStatus(res);
+
+            // 2nd step involving orgqr method
+            res = CusolverWrapper.cusolverDnSorgqr(CusolverDnHandle, m, n, k, A_columnMajor, lda, TAU, workSpace, workSpaceLength, devInfoInt);
+            GPUWrapper.CheckStatus(res);
+            // we compute 'Q' matrix (of shape (m, n))
+            A_columnMajor.Transpose(Q);
+
+            // we compute 'R' matrix (of shape (n, n))
+            R.Dot(Q, true, this, false, 1.0f, 0.0f);
+        }
+        public override int QRFactorization_FloatBufferLength()
+        {
+            int m = Shape[0];
+            int n = Shape[1];
+            int lda = m;
+            int k = n;
+
+            // we compute the workSpace size needed for the computation
+            var res = CusolverWrapper.cusolverDnSgetrf_bufferSize(_wrapper.CusolverDnHandle, m, n, this, lda, out var workSpaceLength_geqrf);
+            GPUWrapper.CheckStatus(res);
+            //res = CusolverWrapper.cusolverDnSormqr_bufferSize(_wrapper.CusolverDnHandle, cublasSideMode_t.CUBLAS_SIDE_LEFT, cublasOperation_t.CUBLAS_OP_T, m, n, k, this, lda, this /*TAU*/, this /*Q*/, m, out var workSpaceLength_ormqr);
+            res = CusolverWrapper.cusolverDnSorgqr_bufferSize(_wrapper.CusolverDnHandle, m, n, k, this /* A */, lda, IntPtr.Zero, out var workSpaceLength_orgqr);
+            GPUWrapper.CheckStatus(res);
+
+            var A_columnMajorLength = n * m;
+            var tauLength = k;
+            const int devInfoIntLength = 1;
+            var workSpaceLength = Math.Max(workSpaceLength_orgqr, workSpaceLength_geqrf);
+            return A_columnMajorLength
+                   + tauLength
+                   + devInfoIntLength
+                   + workSpaceLength;
+        }
+
+
+        public override void Update_Adding_Alpha_X(float alpha, Tensor x)
+        {
+            AddTensor(alpha, x, 1);
+        }
+        /// <summary>
+        /// compute: this = alpha * x + beta * this
+        /// Each dimension of the 'x' tensor must match the corresponding dimension of the destination tensor 'this' or must be equal to 1.
+        /// In the latter case, the same value from 'x' for those dimensions will be used to blend into the 'this' tensor.
+        /// </summary>
+        /// <param name="alpha"></param>
+        /// <param name="x"></param>
+        /// <param name="beta"></param>
+        public override void AddTensor(float alpha, Tensor x, float beta)
+        {
+            var c = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { c, x }));
+            var cDesc = TensorDesc(c);
+            var xDesc = TensorDesc(x);
+            var res = CudnnWrapper.cudnnAddTensor(CudnnHandle, &alpha, xDesc, x, &beta, cDesc, c);
+            CheckStatus(res);
+        }
+        public override void MultiplyTensor(Tensor a, Tensor diagonalMatrix)
+        {
+            var c = this;
+            //'a' shape:                (lda, n) with lda = m
+            //'c' shape:                (ldc, n) with ldc = m
+            //'diagonalMatrix' shape:   (1, n) for mode == CUBLAS_SIDE_RIGHT (and (1, m) for mode == CUBLAS_SIDE_LEFT)
+            const cublasSideMode_t mode = cublasSideMode_t.CUBLAS_SIDE_RIGHT;
+            Debug.Assert(Count%diagonalMatrix.Count == 0);
+            int m = Count/diagonalMatrix.Count; //number of rows of matrix 'a and 'c'
+            int n = diagonalMatrix.Count; //number of columns of matrix 'a' and 'c'
+            int lda = m; //leading dimension of two-dimensional array used to store the matrix 'a'
+            const int incx = 1; //stride of one
+            int ldc = lda; //leading dimension of a two-dimensional array used to store the matrix 'c'
+            var res = CublasWrapper.cublasSdgmm(CublasHandle, mode, m, n, a, lda, diagonalMatrix, incx, c, ldc);
+            GPUWrapper.CheckStatus(res);
+        }
+
+        public override void UpSampling2D(Tensor tensorBeforeUpSampling, int rowFactor, int colFactor, UpSampling2DLayer.InterpolationEnum interpolation)
+        {
+            Debug.Assert(rowFactor>=1);
+            Debug.Assert(colFactor >= 1);
+            Debug.Assert(rowFactor * tensorBeforeUpSampling.Shape[2] == Shape[2]);
+            Debug.Assert(colFactor * tensorBeforeUpSampling.Shape[3] == Shape[3]);
+            if (interpolation == UpSampling2DLayer.InterpolationEnum.Bilinear)
+            {
+                throw new NotImplementedException("only "+ UpSampling2DLayer.InterpolationEnum.Nearest+" interpolation is supported (not "+interpolation+")");
+            }
+            _wrapper.RunKernel("UpSampling2D", tensorBeforeUpSampling.Count, new object[] { tensorBeforeUpSampling.Shape[1], tensorBeforeUpSampling.Shape[2], tensorBeforeUpSampling.Shape[3], rowFactor, colFactor, tensorBeforeUpSampling , this, true});
+        }
+        public override void DownSampling2D(Tensor tensorBeforeDownSampling, int rowFactor, int colFactor)
+        {
+            Debug.Assert(rowFactor >= 1);
+            Debug.Assert(colFactor >= 1);
+            Debug.Assert(rowFactor * Shape[2] == tensorBeforeDownSampling.Shape[2]);
+            Debug.Assert(colFactor * Shape[3] == tensorBeforeDownSampling.Shape[3]);
+            _wrapper.RunKernel("UpSampling2D", Count, new object[] { Shape[1], Shape[2], Shape[3], rowFactor, colFactor, this, tensorBeforeDownSampling, false});
+        }
+
+        public override void MultiplyEachRowIntoSingleValue(Tensor a, Tensor b)
+        {
+            Debug.Assert(a.SameShape(b));
+            int nbRows = Count;
+            Debug.Assert(nbRows <= a.Count);
+            Debug.Assert(a.Count % nbRows == 0);
+            int nbColumns_in_a_and_b = a.Count / nbRows;
+            _wrapper.RunKernel("MultiplyEachRowIntoSingleValue", nbRows, new object[] { nbColumns_in_a_and_b, this, a, b });
+        }
+        public override void Clip(float lower, float upper)
+        {
+            Debug.Assert(upper>=lower);
+            int nbRows = Shape[0];
+            Debug.Assert(Count % nbRows == 0);
+            int nbColumns = Count / nbRows;
+            if (nbRows < 100)
+            {
+                nbRows = Count;
+                nbColumns = 1;
+            }
+            Debug.Assert(nbRows*nbColumns == Count);
+            _wrapper.RunKernel("Clip", nbRows, new object[] { nbColumns, this, lower, upper });
+        }
+
+
+        public override void ZeroPadding(Tensor unpaddedTensor, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight)
+        {
+            var paddedTensor = this;
+            Debug.Assert(AreCompatible(new List<Tensor> { this, unpaddedTensor }));
+            Debug.Assert(paddedTensor.Dimension == 4);
+            Debug.Assert(paddedTensor.Dimension == unpaddedTensor.Dimension);
+            Debug.Assert(paddedTensor.Shape[0] == unpaddedTensor.Shape[0]); //same batch size
+            Debug.Assert(paddedTensor.Shape[1] == unpaddedTensor.Shape[1]); //same number of channels
+            Debug.Assert(paddedTensor.Shape[2] == (paddingTop + unpaddedTensor.Shape[2] + paddingBottom)); //valid height for destination
+            Debug.Assert(paddedTensor.Shape[3] == (paddingLeft + unpaddedTensor.Shape[3] + paddingRight)); //valid width destination
+            ZeroMemory();
+            int h_src = unpaddedTensor.Shape[2];
+            int w_src = unpaddedTensor.Shape[3];
+            // number of distinct rows in tensor 'src' (n, c, h_src, w_src)
+            int srcNbRowId = unpaddedTensor.Shape[0] * unpaddedTensor.Shape[1] * h_src;
+            _wrapper.RunKernel("ApplyZeroPaddingForRowId", srcNbRowId, new object[] { h_src, w_src, paddingTop, paddingBottom, paddingLeft, paddingRight, paddedTensor, unpaddedTensor, false});
+        }
+        public override void ZeroUnpadding(Tensor paddedTensor, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight)
+        {
+            //            ((CpuTensor<T>)paddedTensor).ZeroPadding_and_Unpadding(this, paddingTop, paddingBottom, paddingLeft, paddingRight, true);
+            var unpaddedTensor = this;
+            int h_src = unpaddedTensor.Shape[2];
+            int w_src = unpaddedTensor.Shape[3];
+            // number of distinct rows in tensor 'src' (n, c, h_src, w_src)
+            int srcNbRowId = unpaddedTensor.Shape[0] * unpaddedTensor.Shape[1] * h_src;
+            _wrapper.RunKernel("ApplyZeroPaddingForRowId", srcNbRowId, new object[] { h_src, w_src, paddingTop, paddingBottom, paddingLeft, paddingRight, paddedTensor, unpaddedTensor, true });
+        }
+        public override void CopyTo(Tensor b)
+        {
+            if (Count != b.Count)
+            {
+                throw new ArgumentException("can't copy " + this + " to " + b);
+            }
+            if (b.UseGPU)
+            {
+                //copy GPU => GPU 
+                b.AsGPU<T>().InitializeFromDeviceMemory(this);
+            }
+            else
+            {
+                //copy GPU => Cpu
+                Memory<T> data = DeviceContent();
+                data.CopyTo(b.AsCpu<T>().Content);
+            }
+        }
+        public override void CopyTo(int startElement, Tensor dest, int otherStartElement, int elementCount)
+        {
+            Debug.Assert(dest.UseGPU);
+            Debug.Assert(AreCompatible(new List<Tensor> { this, dest }));
+            AssertIsNotDisposed();
+            dest.AssertIsNotDisposed();
+
+            var srcPointer = (IntPtr)this + (TypeSize * startElement);
+            var destPointer = (IntPtr)dest + (TypeSize * otherStartElement);
+
+            //Asynchronous copy
+            var res = NVCudaWrapper.cuMemcpyDtoDAsync_v2(destPointer, srcPointer, (ulong)(elementCount*TypeSize), IntPtr.Zero);
+            //for synchronous copy: var res = NVCudaWrapper.cuMemcpyDtoD_v2(destPointer, srcPointer, (ulong)(elementCount*TypeSize));
+            //var res = CublasWrapper.cublasScopy_v2(CublasHandle, elementCount, srcPointer, 1, destPointer, 1);
+            GPUWrapper.CheckStatus(res);
+        }
+        public override void YOLOV3Forward(Tensor x, int inputImageHeight, int inputImageWidth, int[] anchors)
+        {
+            var y = this;
+            Debug.Assert(anchors.Length == 6);
+            int nbAnchors = anchors.Length / 2;
+            Debug.Assert(inputImageHeight % x.Shape[2] == 0);
+            Debug.Assert(inputImageWidth % x.Shape[3] == 0);
+            Debug.Assert(y.Shape[0] == x.Shape[0]);
+            Debug.Assert(x.Shape[1] % nbAnchors == 0);
+            Debug.Assert(nbAnchors * y.Shape[2] == x.Shape[1]);
+            Debug.Assert(y.Shape[1] == nbAnchors * x.Shape[2] * x.Shape[3]);
+            int predictionLength = x.Shape[1] / nbAnchors;
+            _wrapper.RunKernel("YOLOV3Forward", x.Count/predictionLength, new object[] { y, x, x.Shape[1], x.Shape[2], x.Shape[3], inputImageHeight, inputImageWidth, anchors[0], anchors[1], anchors[2], anchors[3], anchors[4], anchors[5] });
+        }
+        public override Tensor Slice(int startIndex, int[] sliceShape)
+        {
+            return new GPUTensor<T>(sliceShape, Pointer+startIndex*TypeSize, _wrapper);
+        }
+
+        public override void WordEmbeddingForwardPropagation( /*in*/ Tensor x, /*in*/ Tensor wordEmbedding, int xIndexInLastDimensionToUse, int yIndexInLastDimensionToUse, int copyCountBeforeIndex, int copyCountAfterIndex)
+        {
+            var y = this;
+            Debug.Assert(wordEmbedding.Shape.Length == 2);
+            Debug.Assert(x.Shape[0] == y.Shape[0]); //same batchSize
+            Debug.Assert(x.Shape[1] == y.Shape[1]); //same timeSteps
+            Debug.Assert(x.Shape.Length == 3);
+            Debug.Assert(y.Shape.Length == 3);
+            Debug.Assert(xIndexInLastDimensionToUse >= 0);
+            Debug.Assert(yIndexInLastDimensionToUse >= 0);
+            // x shape: (batchSize, timeSteps, inputSize)
+            int batchSize = x.Shape[0];
+            int timeSteps = x.Shape[1];
+            int inputSize = x.Shape[2];
+            int embeddingDim = wordEmbedding.Shape[1];
+            // 'y' shape:  (batchSize, timeSteps, outputSize)
+            int outputSize = y.Shape[2];
+            _wrapper.RunKernel("WordEmbeddingForwardPropagation", batchSize* timeSteps, new object[] { inputSize, outputSize, xIndexInLastDimensionToUse, yIndexInLastDimensionToUse, copyCountBeforeIndex, copyCountAfterIndex, embeddingDim, x, y, wordEmbedding});
+        }
+
+        public override void WordEmbeddingBackwardPropagation( /*in*/ Tensor x, /*out*/ Tensor dx, /*in*/ Tensor dy, int dxIndexInLastDimensionToUse, int dyIndexInLastDimensionToUse, int copyCountBeforeIndex, int copyCountAfterIndex)
+        {
+            var dW = this;
+
+            Debug.Assert(dW.Shape.Length == 2);
+            Debug.Assert(x.Shape[0] == dy.Shape[0]); //same batchSize
+            Debug.Assert(x.Shape[1] == dy.Shape[1]); //same timeSteps
+            Debug.Assert(x.Shape.Length == 3);
+            Debug.Assert(dy.Shape.Length == 3);
+            Debug.Assert(dxIndexInLastDimensionToUse >= 0);
+            Debug.Assert(dyIndexInLastDimensionToUse >= 0);
+            dW.ZeroMemory();
+            // 'x' shape:   (batchSize, timeSteps, inputSize)
+            int batchSize = x.Shape[0];
+            int timeSteps = x.Shape[1];
+            int inputSize = x.Shape[2];
+            int embeddingDim = dW.Shape[1];
+            // 'dy' shape:  (batchSize, timeSteps, outputSize)
+            int outputSize = dy.Shape[2];
+            _wrapper.RunKernel("WordEmbeddingBackwardPropagation", batchSize* timeSteps, new object[] { inputSize, outputSize, dxIndexInLastDimensionToUse, dyIndexInLastDimensionToUse, copyCountBeforeIndex, copyCountAfterIndex, embeddingDim, x, dx, dy, dW });
+        }
+
+        protected override int DeviceId => _wrapper.DeviceId;
+
+        public override void UpdateWithPositionalEncoding_AttnIsAllYouNeed(int n)
+        {
+            Debug.Assert(Shape.Length == 3);
+            int batchSize = Shape[0];
+            int timeSteps = Shape[1];
+            int embeddingDim = Shape[2];
+            _wrapper.RunKernel("UpdateWithPositionalEncoding_AttnIsAllYouNeed", batchSize * timeSteps* embeddingDim, new object[] { timeSteps, embeddingDim, n, this });
+        }
+
+
+        public override void ZeroMemory()
+        {
+            AssertIsNotDisposed();
+            CUresult res;
+            if (ReallyNeededMemoryInBytes % 4 == 0)
+            {
+                res = NVCudaWrapper.cuMemsetD32_v2(Pointer, 0, ReallyNeededMemoryInBytes / 4);
+            }
+            else
+            {
+                res = NVCudaWrapper.cuMemsetD8_v2(Pointer, (char)0, ReallyNeededMemoryInBytes);
+            }
+            GPUWrapper.CheckStatus(res);
+        }
+
+        public override void AssertIsNotDisposed()
+        {
+            if (_disposed)
+            {
+                throw new Exception("Tensor is disposed " + this);
+            }
+        }
+        /// <summary>
+        /// pointer to device memory (in GPU)
+        /// </summary>
+        public override IntPtr Pointer
+        {
+            get
+            {
+                AssertIsNotDisposed();
+                Debug.Assert(_pointerToStartOfTensor != IntPtr.Zero);
+                return _pointerToStartOfTensor;
+            }
+        }
+        #endregion
+
+        #region Dispose pattern
+        public override void Dispose()
+        {
+            FreeDeviceMemory();
+            GC.SuppressFinalize(this);
+        }
+        ~GPUTensor()
+        {
+            FreeDeviceMemory();
+        }
+        // ReSharper disable once UnusedParameter.Local
+        private void FreeDeviceMemory()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+            //unmanaged memory
+            if (IsOwnerOfMemory)
+            {
+                /*var res =*/ NVCudaWrapper.cuMemFree_v2(_pointerToStartOfTensor);
+                //GPUWrapper.CheckStatus(res);
+            }
+        }
+        #endregion
+
+        private cudnnTensorDescriptor_t TensorDesc(Tensor a) { return _wrapper.TensorDesc(CudaType, a.Shape); }
+
+        private cudnnFilterDescriptor_t FilterDesc(Tensor a, bool isDepthwiseConvolution) { return _wrapper.FilterDesc(CudaType, a.Shape, isDepthwiseConvolution); }
+        private cudnnActivationDescriptor_t ActivationDesc(cudnnActivationMode_t activationFunctionType)
+        {
+            return _wrapper.ActivationDesc(activationFunctionType);
+        }
+        private cudnnPoolingDescriptor_t PoolingDesc(cudnnPoolingMode_t poolingMode, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride)
+        {
+            return _wrapper.PoolingDesc(poolingMode, poolingHeight, poolingWidth, verticalStride, horizontalStride);
+        }
+        private cudnnConvolutionDescriptor_t ConvDesc(int paddingTop, int paddingBottom, int paddingLeft, int paddingRight, int stride, int groupCount) { return _wrapper.ConvDesc(CudaType, paddingTop, paddingBottom, paddingLeft, paddingRight, stride, groupCount); }
+        private cudnnDataType_t CudaType { get; } = cudnnDataType_t.CUDNN_DATA_FLOAT;
+        private cudnnHandle_t CudnnHandle => _wrapper.CudnnHandle;
+        private IntPtr CublasHandle => _wrapper.CudaBlasHandle;
+        private cusolverDnHandle_t CusolverDnHandle => _wrapper.CusolverDnHandle;
+        private CudartWrapper CudartWrapper => _wrapper.CudartWrapper;
+        //private CudnnWrapper CudnnWrapper => _wrapper.CudnnWrapper;
+        private CublasWrapper CublasWrapper => _wrapper.CublasWrapper;
+        private T[] DeviceContent()
+        {
+            Debug.Assert(!_disposed);
+            _wrapper.SwCopyDeviceToHost.Start();
+            _wrapper.LogCopyDeviceToHostCall(ReallyNeededMemoryInBytes);
+
+            var _hostMemory = new T[Count];
+            var handle = GCHandle.Alloc(_hostMemory, GCHandleType.Pinned);
+            var _hostMemoryPointer = handle.AddrOfPinnedObject();
+            var res = NVCudaWrapper.cuMemcpyDtoH_v2(_hostMemoryPointer, Pointer, ReallyNeededMemoryInBytes);
+            GPUWrapper.CheckStatus(res);
+            handle.Free();
+            _wrapper.SwCopyDeviceToHost.Stop();
+            return _hostMemory;
+        }
+        private static void CheckStatus(cudnnStatus_t status)
+        {
+            GPUWrapper.CheckStatus(status);
+        }
+    }
+}
