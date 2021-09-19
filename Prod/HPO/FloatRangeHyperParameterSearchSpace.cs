@@ -24,4 +24,21 @@ public class FloatRangeHyperparameterSearchSpace : RangeHyperparameterSearchSpac
     }
     public override void RegisterScore(object sampleValue, IScore score, double elapsedTimeInSeconds)
     {
-        int bucketIndex = 
+        int bucketIndex = SampleValueToBucketIndex(SampleValueToFloat(sampleValue), _min, _max, _rangeType);
+        StatsByBucket[bucketIndex].RegisterScore(score, elapsedTimeInSeconds);
+    }
+    public override string SampleStringValue_at_Index_For_GridSearch(int index)
+    {
+        return ((LowerValueForBucket(index) + UpperValueForBucket(index)) / 2).ToString(CultureInfo.InvariantCulture);
+    }
+
+    public override bool IsConstant => MathF.Abs(_min - _max)<1e-6f;
+    protected override float LowerValueForBucket(int bucketIndex)
+    {
+        return BucketIndexToBucketLowerValue(bucketIndex, _min, _max, _rangeType);
+    }
+    protected override float UpperValueForBucket(int bucketIndex)
+    {
+        return BucketIndexToBucketUpperValue(bucketIndex, _min, _max, _rangeType);
+    }
+}
