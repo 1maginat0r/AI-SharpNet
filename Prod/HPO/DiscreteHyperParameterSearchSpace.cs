@@ -97,4 +97,46 @@ public class DiscreteHyperparameterSearchSpace : HyperparameterSearchSpace
     /// for each possible value of the Hyper-Parameter '_HyperparameterName'
     /// the % of time (between 0 and 1.0) we are willing to invest on search this specif value.
     ///  => a value close to 1 means we want to invest most of our time on this value (because it seems very promising
-    ///  => a value close to 0 means we want to invest very little CPU time on thi
+    ///  => a value close to 0 means we want to invest very little CPU time on this value (because it doesn't seem use full
+    /// </summary>
+    /// <returns></returns>
+    private double[] TargetCpuInvestmentTime()
+    {
+        var t = _allHyperparameterValuesAsString.Select(HyperparameterName => _statistics[HyperparameterName]).ToArray();
+        return TargetCpuInvestmentTime(t);
+    }
+    
+    private static string[] ToObjectArray(object parameterValues)
+    {
+        string[] ToStringObjects<T>(IEnumerable<T> values)
+        {
+            return values.Select(t => Utils.FieldValueToString(t)).ToArray();
+        }
+
+        if (parameterValues is bool[])
+        {
+            return ToStringObjects((bool[])parameterValues);
+        }
+        if (parameterValues is int[])
+        {
+            return ToStringObjects((int[])parameterValues);
+        }
+        if (parameterValues is float[])
+        {
+            return ToStringObjects((float[])parameterValues);
+        }
+        if (parameterValues is double[])
+        {
+            return ToStringObjects((double[])parameterValues);
+        }
+        if (parameterValues is string[])
+        {
+            return ToStringObjects((string[])parameterValues);
+        }
+        if (parameterValues is bool || parameterValues is int || parameterValues is float || parameterValues is double || parameterValues is string)
+        {
+            return new[] { Utils.FieldValueToString(parameterValues) };
+        }
+        throw new InvalidEnumArgumentException($"can not process {parameterValues}");
+    }
+}
