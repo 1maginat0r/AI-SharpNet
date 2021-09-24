@@ -42,4 +42,24 @@ namespace SharpNet.HPO
                     t.Set(Utils.FromString2String_to_String2Object(sample));
                     if (t.FixErrors())
                     {
-                        var sa
+                        var sampleDescription = ToSampleDescription(sample, t);
+                        return (t, _nextSampleId++, sampleDescription);
+                    }
+                }
+            }
+        }
+
+        private int SearchSpaceSize
+        {
+            get
+            {
+                int result = 1;
+                foreach (var v in SearchSpace.Values)
+                {
+                    result *= v.LengthForGridSearch;
+                }
+                return result;
+            }
+        }
+    }
+}
