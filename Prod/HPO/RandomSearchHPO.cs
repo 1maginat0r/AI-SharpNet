@@ -40,4 +40,23 @@ namespace SharpNet.HPO
                     //we try to fix inconsistencies in the sample
                     if (!sample.FixErrors())
                     {
-                        con
+                        continue; //we failed to fix the inconsistencies in the sample : we have to discard it 
+                    }
+
+                    //we ensure that we have not already processed this search space
+                    lock (_processedSpaces)
+                    {
+                        if (!_processedSpaces.Add(sample.ComputeHash()))
+                        {
+                            continue; //already processed before
+                        }
+                    }
+
+                    var sampleDescription = ToSampleDescription(searchSpaceHyperparameters, sample);
+                    return (sample, _nextSampleId++, sampleDescription);
+                }
+                return (null,-1, "");
+            }
+        }
+    }
+}
