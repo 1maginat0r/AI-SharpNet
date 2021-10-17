@@ -137,4 +137,51 @@ public abstract class AbstractSample : ISample
     }
     protected IDictionary<string,object> ToDictionaryConfigContent(Func<string, object, bool> accept)
     {
-        var result = n
+        var result = new Dictionary<string, object>();
+        foreach (var parameterName in HyperparameterNames())
+        {
+            var fieldValue = Get(parameterName);
+            if (accept == null || accept(parameterName, fieldValue))
+            {
+                result[parameterName] = fieldValue;
+            }
+        }
+        return result;
+    }
+    /// <summary>
+    /// TODO : add tests
+    /// </summary>
+    /// <param name="fieldValue"></param>
+    /// <returns></returns>
+    private static bool IsDefaultValue(object fieldValue)
+    {
+        if (fieldValue == null)
+        {
+            return true;
+        }
+        if (   (fieldValue.GetType().IsEnum && ((int)fieldValue ==  DEFAULT_VALUE) )
+            || (fieldValue is int fieldValueInt && (fieldValueInt == DEFAULT_VALUE))
+            || (fieldValue is float fieldValueFloat && MathF.Abs(fieldValueFloat - DEFAULT_VALUE) < 1e-6f)
+            || (fieldValue is double fieldValueDouble && Math.Abs(fieldValueDouble - DEFAULT_VALUE) < 1e-6)
+           )
+        {
+            return true;
+        }
+        return false;
+    }
+
+    public virtual void SetTaskId(int taskId)
+    {
+    }
+
+    public virtual void FillSearchSpaceWithDefaultValues(IDictionary<string, object> HyperparameterSearchSpace)
+    {
+    }
+
+    private static bool DefaultAcceptForConfigContent(string fieldName, object fieldValue)
+    {
+        return !IsDefaultValue(fieldValue);
+    }
+
+
+}
