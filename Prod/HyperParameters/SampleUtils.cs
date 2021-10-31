@@ -36,4 +36,26 @@ public static class SampleUtils
                 modelAndDataset.Save(workingDirectory, model.ModelName);
                 modelAndDataset.Dispose();
                 if (retrainOnFullDatasetIfBetterModelFound)
-          
+                {
+                    // ReSharper disable once RedundantAssignment
+                    var modelAndDatasetPredictionsSampleOnFullDataset = modelAndDatasetPredictionsSample.CopyWithNewPercentageInTrainingAndKFold(1.0, 1);
+                    using var modelAndDatasetOnFullDataset = new ModelAndDatasetPredictions(modelAndDatasetPredictionsSampleOnFullDataset, workingDirectory, model.ModelName+"_FULL", true);
+                    Model.Log.Info($"Retraining Model '{model.ModelName}' on full Dataset no KFold (Model on full Dataset name: '{modelAndDatasetOnFullDataset.Model.ModelName}')");
+                    modelAndDatasetOnFullDataset.Fit(true, true, true);
+                    //modelAndDatasetOnFullDataset.ComputeAndSaveFeatureImportance();
+                }
+            }
+            else
+            {
+                Model.Log.Info($"No interest to save the Model because best score {bestScoreSoFar} is better than threshold");
+            }
+        }
+        else
+        {
+            Model.Log.Info($"Removing all model '{model.ModelName}' files because of low score ({validationRankingScore})");
+            modelAndDataset.AllFiles().ForEach(path => Utils.TryDelete(path));
+        }
+
+        return validationRankingScore;
+    }
+}
