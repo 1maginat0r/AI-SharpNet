@@ -29,4 +29,61 @@ namespace SharpNet.Layers
         }
 
         #region forward and backward propagation
-        pub
+        public override void ForwardPropagation(List<Tensor> allX, Tensor y, bool isTraining)
+        {
+            Debug.Assert(allX.Count == 1);
+            StartForwardTimer(LayerType()+">"+ToString(ActivationFunction), isTraining);
+            allX[0].ActivationForward(ActivationFunction, _activationParameter, y);
+            StopForwardTimer(LayerType()+">"+ToString(ActivationFunction), isTraining);
+        }
+        public override void BackwardPropagation(List<Tensor> allX, Tensor y, Tensor dy, List<Tensor> dx)
+        {
+            Debug.Assert(dx.Count == 1);
+
+            if (!InputNeededForBackwardPropagation)
+            {
+                Debug.Assert(allX.Count == 0);
+                allX.Add(y);
+            }
+            else
+            {
+                Debug.Assert(allX.Count == 1);
+            }
+
+            if (PrevLayer.IsInputLayer)
+            {
+                //no need to compute dy if previous Layer is the input layer
+                return;
+            }
+            StartBackwardTimer(LayerType() + ">" + ToString(ActivationFunction));
+            //we compute dx
+            if (IsOutputLayer && Network.Sample.GetLoss() != EvaluationMetricEnum.Huber)
+            {
+                dy.CopyTo(dx[0]);
+            }
+            else
+            {
+                dx[0].ActivationBackward(ActivationFunction, _activationParameter, dy, allX[0], y);
+            }
+            StopBackwardTimer(LayerType() + ">" + ToString(ActivationFunction));
+        }
+        /// <summary>
+        /// true if the input feature map 'x' is needed to compute the backward propagation of current layer
+        /// </summary>
+        public override bool InputNeededForBackwardPropagation => ActivationFunction==cudnnActivationMode_t.CUDNN_ACTIVATION_SWISH||ActivationFunction == cudnnActivationMode_t.CUDNN_ACTIVATION_ELU;
+
+        #endregion
+
+        #region serialization
+        public override string Serialize()
+        {
+            return RootSerializer()
+                .Add(nameof(ActivationFunction), (int)ActivationFunction)
+                .Add(nameof(_activationParameter), _activationParameter)
+                .ToString();
+        }
+        public static ActivationLayer Deserialize(IDictionary<string, object> serialized, Network network)
+        {
+            return new ActivationLayer(
+                (cudnnActivationMode_t)serialized[nameof(ActivationFunction)],
+   
