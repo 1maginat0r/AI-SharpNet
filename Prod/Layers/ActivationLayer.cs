@@ -86,4 +86,52 @@ namespace SharpNet.Layers
         {
             return new ActivationLayer(
                 (cudnnActivationMode_t)serialized[nameof(ActivationFunction)],
-   
+                serialized.ContainsKey(nameof(_activationParameter)) ?(Tensor)serialized[nameof(_activationParameter)]:null,
+                network,
+                (string)serialized[nameof(LayerName)]);
+        }
+        public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+        #endregion
+
+        public override string LayerType()
+        {
+            switch (ActivationFunction)
+            {
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_LEAKY_RELU: return "LeakyReLU";
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_RELU: return "ReLU";
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX: return "Softmax";
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_WITH_HIERARCHY: return "Softmax_Hierarchy";
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_SWISH: return "Swish";
+                default: return ToString(ActivationFunction);
+            }
+        }
+        #region PyTorch support
+        public override void ToPytorchModule(List<string> constructorLines, List<string> forwardLines)
+        {
+            //special case : for cross entropy loss, we do need to use the softmax function in PyTorch torch.nn.Module
+            if (Network.Sample.GetLoss() == EvaluationMetricEnum.CategoricalCrossentropy && LayerIndex == (Layers.Count-1))
+            {
+                return;
+            }
+            constructorLines.Add("self." + LayerName + " = "+ ToPytorchConstructor());
+            UpdateForwardLines(forwardLines);
+        }
+        private string ToPytorchConstructor()
+        {
+            switch (ActivationFunction)
+            {
+                case cudnnActivationMode_t.CUDNN_ACTIVATION_RELU:
+                    return "torch.nn.ReLU()";
+                default:
+                    throw new NotImplementedException(ActivationFunction.ToString());
+            }
+        }
+
+        #endregion
+
+        private static string ToString(cudnnActivationMode_t activationFunction)
+        {
+            return activationFunction.ToString().Replace("CUDNN_ACTIVATION_", "");
+        }
+    }
+}
