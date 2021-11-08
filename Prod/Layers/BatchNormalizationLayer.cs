@@ -197,3 +197,96 @@ namespace SharpNet.Layers
             var result = new Dictionary<string, CpuTensor<float>>();
             result[ScaleDatasetPath] = _scale.ToCpuFloat();
             result[BiasDatasetPath] = _bias.ToCpuFloat();
+            result[RunningMeanDatasetPath] = _resultRunningMean.ToCpuFloat();
+            result[RunningVarianceDatasetPath] = _resultRunningVariance.ToCpuFloat();
+
+            if (LayerBatchNormalizationMode() != cudnnBatchNormMode_t.CUDNN_BATCHNORM_PER_ACTIVATION
+                && originFramework == NetworkSample.CompatibilityModeEnum.TensorFlow
+            )
+            {
+                Debug.Assert(_scale.Count == _scale.Shape[1]);
+                var tensorFlowShape = new[] { _scale.Shape[1]};
+                result[ScaleDatasetPath].ReshapeInPlace(tensorFlowShape);
+                result[BiasDatasetPath].ReshapeInPlace(tensorFlowShape);
+                result[RunningMeanDatasetPath].ReshapeInPlace(tensorFlowShape);
+                result[RunningVarianceDatasetPath].ReshapeInPlace(tensorFlowShape);
+            }
+
+            return result;
+        }
+
+
+        private string ScaleDatasetPath => DatasetNameToDatasetPath("gamma:0");
+        private string BiasDatasetPath => DatasetNameToDatasetPath("beta:0");
+        private string RunningMeanDatasetPath => DatasetNameToDatasetPath("moving_mean:0");
+        private string RunningVarianceDatasetPath => DatasetNameToDatasetPath("moving_variance:0");
+        #endregion
+
+        #region serialization
+        public override string Serialize()
+        {
+            return RootSerializer().Add(nameof(_epsilon), _epsilon).Add(nameof(_momentum), _momentum).ToString();
+        }
+        public static BatchNormalizationLayer Deserialize(IDictionary<string, object> serialized, Network network)
+        {
+            return new BatchNormalizationLayer(
+                (double)serialized[nameof(_momentum)],
+                (double)serialized[nameof(_epsilon)],
+                (bool)serialized[nameof(Trainable)],
+                network,
+                (string)serialized[nameof(LayerName)]);
+        }
+        public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+        #endregion
+        
+        public override string ToString()
+        {
+            var result = LayerName + ": " + ShapeChangeDescription();
+            result += " (" + TotalParams + " neurons)";
+            return result;
+        }
+       
+        protected override List<Tensor> EmbeddedTensors(bool includeOptimizeTensors)
+        {
+            var result = base.EmbeddedTensors(includeOptimizeTensors);
+            result.AddRange(new[] { _meanBuffer, _invertOfUnbiasedVolatilityBuffer });
+            result.RemoveAll(t => t == null);
+            return result;
+        }
+
+        protected override string ComputeLayerName()
+        {
+            return base.ComputeLayerName().Replace("batchnormalization", "batch_normalization");
+        }
+
+        //https://docs.nvidia.com/deeplearning/sdk/cudnn-archived/cudnn_701/cudnn-user-guide/index.html#cudnnBatchNormMode_t
+        private cudnnBatchNormMode_t LayerBatchNormalizationMode()
+        {
+            //if previous layer is a dense layer
+            if (PrevLayer != null && (PrevLayer.OutputShape(1).Length == 2 || PrevLayer.IsInputLayer))
+            {
+                //Normalization is performed per-activation. 
+                //This mode is intended to be used after non-convolutional network layers. 
+                //In this mode bnBias and bnScale tensor dimensions are (1, C, H, W)
+                return cudnnBatchNormMode_t.CUDNN_BATCHNORM_PER_ACTIVATION;
+            }
+            //Normalization is performed over N + spatial dimensions.
+            //This mode is intended for use after convolutional layers(where spatial invariance is desired).
+            //In this mode bnBias, bnScale tensor dimensions are (1, C, 1, 1)
+            return cudnnBatchNormMode_t.CUDNN_BATCHNORM_SPATIAL;
+        }
+        private int[] ScaleAndBiasShape()
+        {
+            var res = OutputShape(1);
+            if (LayerBatchNormalizationMode() == cudnnBatchNormMode_t.CUDNN_BATCHNORM_PER_ACTIVATION)
+            {
+                return res; //shape is (1, C, H, W) or (1, C)
+            }
+            for (int i = 2; i < res.Length; ++i)
+            {
+                res[i] = 1;
+            }
+            return res; //shape is (1, C, 1, 1)
+        }
+    }
+}
