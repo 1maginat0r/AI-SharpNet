@@ -54,4 +54,12 @@ namespace SharpNet.Layers
         public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
         #endregion
 
-        public ove
+        public override int[] OutputShape(int batchSize)
+        {
+            var result = PreviousLayers[0].OutputShape(batchSize);
+            // the number of channels is the sum of channels of all previous layers
+            result[1] = PreviousLayers.Select(l => l.OutputShape(1)[1]).Sum();
+            return result;
+        }
+    }
+}
