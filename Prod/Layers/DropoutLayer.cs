@@ -88,4 +88,7 @@ namespace SharpNet.Layers
             {
                 GetFloatTensor(ref _dropoutReservedSpaceForTraining, x.Shape);
             }
-            Debug.Assert(_dropoutReservedSpaceForTraining.UseGPU == x.UseG
+            Debug.Assert(_dropoutReservedSpaceForTraining.UseGPU == x.UseGPU);
+        }
+    }
+}
