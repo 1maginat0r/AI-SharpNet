@@ -57,4 +57,60 @@ public sealed class EmbeddingLayer : Layer
     ///         Dimension of the dense embedding
     ///     featureIndexInLastDimensionToUse:
     ///         index in last dimension of input tensor where to find the index of the feature to embed
-    ///     embeddingTen
+    ///     embeddingTensorIndex:
+    ///         index of the embedding tensor to use (in field 'EmbeddingTensors')
+    /// </summary>
+    private readonly List<(int vocabularySize, int embeddingDim, int indexInLastDimensionToUse, int embeddingTensorIndex)> EmbeddingDescriptions;
+
+    private readonly List<(int vocabularySize, int embeddingDim)> EmbeddingTensorShapes;
+
+
+    /// <summary>
+    /// regularization hyper parameter. 0 if no L2 regularization
+    /// </summary>
+    private readonly double LambdaL2Regularization;
+    /// <summary>
+    /// if value > 0 
+    ///     clip values of weights gradients in range [-ClipValueForGradients, ClipValueForGradients]
+    /// else
+    ///     do not clip values
+    /// </summary>
+    private readonly float ClipValueForGradients;
+    /// <summary>
+    /// true if we should divide the weight gradients by the time steps
+    /// </summary>
+    private readonly bool DivideGradientsByTimeSteps;
+    #endregion
+
+
+
+    public static List<(int vocabularySize, int embeddingDim, int indexInLastDimensionToUse, int embeddingTensorIndex)> ToEmbeddingLayerDescription(
+        int[] vocabularySizes,
+        int[] embeddingDims,
+        int[] indexesInLastDimensionToUse, 
+        int[] embeddingTensorIndex)
+    {
+        List<(int vocabularySize, int embeddingDim, int indexInLastDimensionToUse, int embeddingTensorIndex)> result = new();
+        if (vocabularySizes.Length != embeddingDims.Length || vocabularySizes.Length != indexesInLastDimensionToUse.Length)
+        {
+            throw new ArgumentException($"input are not the same length : {vocabularySizes.Length} vs {embeddingDims.Length} vs {indexesInLastDimensionToUse.Length}");
+        }
+        for (int i = 0; i < vocabularySizes.Length; i++)
+        {
+            result.Add((vocabularySizes[i], embeddingDims[i], indexesInLastDimensionToUse[i], embeddingTensorIndex[i]));
+        }
+        return result;
+    }
+
+    
+
+    #region constructor
+    public EmbeddingLayer(
+        IEnumerable<(int vocabularySize, int embeddingDim, int indexInLastDimensionToUse, int embeddingTensorIndex)> embeddingDescriptions,
+        double lambdaL2Regularization,
+        float clipValueForGradients,
+        bool divideGradientsByTimeSteps,
+        bool trainable, Network network, string layerName) : base(network, layerName)
+    {
+        EmbeddingDescriptions = embeddingDescriptions.OrderBy(t => t.indexInLastDimensionToUse).ToList();
+        EmbeddingTenso
