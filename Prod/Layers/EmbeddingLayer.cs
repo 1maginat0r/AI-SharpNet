@@ -113,4 +113,54 @@ public sealed class EmbeddingLayer : Layer
         bool trainable, Network network, string layerName) : base(network, layerName)
     {
         EmbeddingDescriptions = embeddingDescriptions.OrderBy(t => t.indexInLastDimensionToUse).ToList();
-        EmbeddingTenso
+        EmbeddingTensorShapes = ExtractEmbeddingTensorShapes(EmbeddingDescriptions);
+
+        if (EmbeddingDescriptions[0].indexInLastDimensionToUse < 0 && EmbeddingDescriptions.Count != 1)
+        {
+            throw new ArgumentException($"only 1 element is allowed if indexesInLastDimensionToUse = {EmbeddingDescriptions[0].indexInLastDimensionToUse}");
+        }
+        LambdaL2Regularization = lambdaL2Regularization;
+        ClipValueForGradients = clipValueForGradients;
+        DivideGradientsByTimeSteps = divideGradientsByTimeSteps;
+
+        Trainable = trainable;
+
+        //trainable params
+        int weightColumns = EmbeddingTensorShapes.Select(t=>t.vocabularySize*t.embeddingDim).Sum();
+        _weights = GetFloatTensor(new[] { 1, weightColumns });
+        _weightGradients = GetFloatTensor(_weights.Shape);
+
+        _optimizer = Sample.GetOptimizer(_weights.Shape, null, MemoryPool);
+        ResetParameters(false);
+    }
+
+    private static List<(int vocabularySize, int embeddingDim)> ExtractEmbeddingTensorShapes(List<(int vocabularySize, int embeddingDim, int indexInLastDimensionToUse, int embeddingTensorIndex)> embeddingDescriptions)
+    {
+        IDictionary<int, (int vocabularySize, int embeddingDim)> allEmbeddingTensors = new Dictionary<int, (int vocabularySize, int embeddingDim)>();
+        foreach (var c in embeddingDescriptions)
+        {
+            if (!allEmbeddingTensors.ContainsKey(c.embeddingTensorIndex))
+            {
+                allEmbeddingTensors[c.embeddingTensorIndex] = (c.vocabularySize, c.embeddingDim);
+            }
+            else
+            {
+                var observedTensor = allEmbeddingTensors[c.embeddingTensorIndex];
+                if (observedTensor.vocabularySize != c.vocabularySize || observedTensor.embeddingDim != c.embeddingDim)
+                {
+                    throw new ArgumentException($"embedding tensor {c.embeddingTensorIndex} has already been defined with different vocabularySize or embeddingDim");
+                }
+            }
+        }
+        return allEmbeddingTensors.OrderBy(t => t.Key).Select(t => t.Value).ToList();
+    }
+
+    #endregion
+
+    #region forward and backward propagation
+    public override void ForwardPropagation(List<Tensor> allX, Tensor y, bool isTraining)
+    {
+        Debug.Assert(allX.Count == 1);
+        var x = allX[0];
+        Debug.Assert(x.Shape[0] == y.Shape[0]); //same batchSize
+        Debug.Ass
