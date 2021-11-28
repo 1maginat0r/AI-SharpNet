@@ -163,4 +163,50 @@ public sealed class EmbeddingLayer : Layer
         Debug.Assert(allX.Count == 1);
         var x = allX[0];
         Debug.Assert(x.Shape[0] == y.Shape[0]); //same batchSize
-        Debug.Ass
+        Debug.Assert(y.Shape.Length != 3 || x.Shape[1] == y.Shape[1]); //same timeSteps
+        Debug.Assert(!ShouldEmbedEachElementOfLastDimension || x.Shape[1] == y.Shape[1]); //same timeSteps
+        int deltaForIndexesInLastDimensionToUse = 0;
+        var allEmbeddingTensors = Split(_weights);
+
+        var xOriginalShape = (int[])x.Shape.Clone();
+        var yOriginalShape = (int[])y.Shape.Clone();
+
+        // we'll ensure that in all cases:
+        //  the x shape is (batchSize, timeSteps, input_length)
+        //  the y shape is (batchSize, timeSteps, input_length+EmbeddingDim-1)
+        if (x.Shape.Length == 2)
+        {
+            if (ShouldEmbedEachElementOfLastDimension)
+            {
+                //x shape from (batchSize, timeSteps) to (batchSize, timeSteps, 1)
+                x.ReshapeInPlace(new [] { x.Shape[0], x.Shape[1], 1});
+            }
+            else
+            {
+                //x shape from (batchSize, input_length) to (batchSize, 1, input_length)
+                x.ReshapeInPlace(new [] { x.Shape[0], 1, x.Shape[1] });
+                //y shape from (batchSize, input_length+EmbeddingDim-1) to (batchSize, 1, input_length+EmbeddingDim-1)
+                y.ReshapeInPlace(new [] { y.Shape[0], 1, y.Shape[1] });
+            }
+        }
+
+        if (ShouldEmbedEachElementOfLastDimension)
+        {
+            Debug.Assert(allEmbeddingTensors.Count == 1);
+            y.WordEmbeddingForwardPropagation(x, allEmbeddingTensors[0], 0, 0, 0, 0);
+        }
+        else
+        {
+            for (var i = 0; i < EmbeddingDescriptions.Count; i++)
+            {
+                var embeddingTensor = allEmbeddingTensors[EmbeddingDescriptions[i].embeddingTensorIndex];
+                var xIndexInLastDimensionToUse = EmbeddingDescriptions[i].indexInLastDimensionToUse;
+                int copyCountBeforeIndex = (i == 0) ? xIndexInLastDimensionToUse : (xIndexInLastDimensionToUse - EmbeddingDescriptions[i-1].indexInLastDimensionToUse - 1);
+                int copyCountAfterIndex = (i == EmbeddingDescriptions.Count - 1) ? x.Shape[2] - xIndexInLastDimensionToUse - 1 : 0;
+                y.WordEmbeddingForwardPropagation(x, embeddingTensor, xIndexInLastDimensionToUse, deltaForIndexesInLastDimensionToUse + xIndexInLastDimensionToUse, copyCountBeforeIndex, copyCountAfterIndex);
+                deltaForIndexesInLastDimensionToUse += embeddingTensor.Shape[1] - 1;
+            }
+        }
+
+        x.ReshapeInPlace(xOriginalShape);
+       
