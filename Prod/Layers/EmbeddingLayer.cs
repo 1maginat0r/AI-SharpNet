@@ -209,4 +209,67 @@ public sealed class EmbeddingLayer : Layer
         }
 
         x.ReshapeInPlace(xOriginalShape);
-       
+        y.ReshapeInPlace(yOriginalShape);
+    }
+
+    private List<Tensor> Split(Tensor w)
+    {
+        var res = new List<Tensor>();
+        int nextIdxInWeights = 0;
+        foreach(var (vocabularySize, embeddingDim) in EmbeddingTensorShapes)
+        {
+            var shape = new[] { vocabularySize, embeddingDim};
+            res.Add(w.Slice(nextIdxInWeights, shape));
+            nextIdxInWeights += shape[0] * shape[1];
+        }
+        return res;
+    }
+    private bool ShouldEmbedEachElementOfLastDimension => EmbeddingDescriptions[0].indexInLastDimensionToUse == -1;
+
+    public override void BackwardPropagation(List<Tensor> allX, Tensor y_NotUsed, Tensor dy, List<Tensor> allDx)
+    {
+        Debug.Assert(y_NotUsed == null);
+        Debug.Assert(allX.Count == 1);
+        var x = allX[0];
+        Debug.Assert(allDx.Count == 1);
+        var dx = allDx[0]??GetFloatTensor(x.Shape);
+
+        //we compute dW
+        int deltaForIndexesInLastDimensionToUse = 0;
+        var allEmbeddingTensorsGradients = Split(_weightGradients);
+
+        
+
+
+        var xOriginalShape = (int[])x.Shape.Clone();
+        var dxOriginalShape = (int[])dx.Shape.Clone();
+        var dyOriginalShape = (int[])dy.Shape.Clone();
+
+        // we'll ensure that in all cases:
+        //  the x shape is (batchSize, timeSteps, input_length)
+        //  the y shape is (batchSize, timeSteps, input_length+EmbeddingDim-1)
+        if (x.Shape.Length == 2)
+        {
+            if (ShouldEmbedEachElementOfLastDimension)
+            {
+                //x shape from (batchSize, timeSteps) to (batchSize, timeSteps, 1)
+                x.ReshapeInPlace(new[] { x.Shape[0], x.Shape[1], 1 });
+                dx.ReshapeInPlace(x.Shape);
+            }
+            else
+            {
+                //x shape from (batchSize, input_length) to (batchSize, 1, input_length)
+                x.ReshapeInPlace(new[] { x.Shape[0], 1, x.Shape[1] });
+                dx.ReshapeInPlace(x.Shape);
+                //dy shape from (batchSize, input_length+EmbeddingDim-1) to (batchSize, 1, input_length+EmbeddingDim-1)
+                dy.ReshapeInPlace(new[] { dy.Shape[0], 1, dy.Shape[1] });
+            }
+        }
+
+        if (ShouldEmbedEachElementOfLastDimension)
+        {
+            Debug.Assert(allEmbeddingTensorsGradients.Count == 1);
+            allEmbeddingTensorsGradients[0].WordEmbeddingBackwardPropagation(x, dx, dy, 0, 0, 0, 0);
+        }
+        else
+        {
