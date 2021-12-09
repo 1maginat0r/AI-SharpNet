@@ -273,3 +273,64 @@ public sealed class EmbeddingLayer : Layer
         }
         else
         {
+            for (var i = 0; i < EmbeddingDescriptions.Count; i++)
+            {
+                var embeddingTensorsGradients = allEmbeddingTensorsGradients[EmbeddingDescriptions[i].embeddingTensorIndex];
+                var dxIndexInLastDimensionToUse = EmbeddingDescriptions[i].indexInLastDimensionToUse;
+                int copyCountBeforeIndex = (i == 0) ? dxIndexInLastDimensionToUse : (dxIndexInLastDimensionToUse - EmbeddingDescriptions[i - 1].indexInLastDimensionToUse - 1);
+                int copyCountAfterIndex = (i == EmbeddingDescriptions.Count - 1) ? dx.Shape[2] - dxIndexInLastDimensionToUse - 1 : 0;
+                embeddingTensorsGradients.WordEmbeddingBackwardPropagation(x, dx, dy, dxIndexInLastDimensionToUse, deltaForIndexesInLastDimensionToUse + dxIndexInLastDimensionToUse, copyCountBeforeIndex, copyCountAfterIndex);
+                deltaForIndexesInLastDimensionToUse += embeddingTensorsGradients.Shape[1] - 1;
+            }
+        }
+
+        x.ReshapeInPlace(xOriginalShape);
+        dx.ReshapeInPlace(dxOriginalShape);
+        dy.ReshapeInPlace(dyOriginalShape);
+
+        if (DivideGradientsByTimeSteps)
+        {
+            int timeSteps = x.Shape[1];
+            _weightGradients.Update_Multiplying_By_Alpha(1f/ timeSteps);
+        }
+
+        if (ClipValueForGradients > 1e-6)
+        {
+            _weightGradients.Clip(-ClipValueForGradients, ClipValueForGradients);
+        }
+
+        //L2 regularization on dW
+        if (UseL2Regularization)
+        {
+            int batchSize = dy.Shape[0];
+            var alpha = 2 * batchSize * (float)LambdaL2Regularization;
+            _weightGradients.Update_Adding_Alpha_X(alpha, _weights);
+        }
+
+        if (allDx[0] == null)
+        {
+            FreeFloatTensor(dx);
+        }
+
+    }
+    public override bool OutputNeededForBackwardPropagation => false;
+    public override bool InputNeededForBackwardPropagation => true;
+    #endregion
+
+    #region parameters and gradients
+    public override Tensor Weights => _weights;
+    public override Tensor WeightGradients => _weightGradients;
+    protected override Optimizer Optimizer => _optimizer;
+    public override List<Tuple<Tensor, string>> Parameters
+    {
+        get
+        {
+            var result = new List<Tuple<Tensor, string>>
+            {
+                Tuple.Create(_weights, WeightDatasetPath),
+            };
+            result.RemoveAll(t => t.Item1 == null);
+            return result;
+        }
+    }
+    public overrid
