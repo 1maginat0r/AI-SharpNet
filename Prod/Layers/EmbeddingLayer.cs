@@ -333,4 +333,59 @@ public sealed class EmbeddingLayer : Layer
             return result;
         }
     }
-    public overrid
+    public override void ResetParameters(bool resetAlsoOptimizerWeights = true)
+    {
+        //trainable params
+        _weights.UniformDistribution(Rand, -0.05, +0.05);
+
+        if (resetAlsoOptimizerWeights)
+        {
+            _optimizer.ZeroMemory();
+        }
+    }
+    public override void ReplaceParameters(List<Tensor> newParameters)
+    {
+        FreeFloatTensor(ref _weights);
+        _weights = newParameters[0];
+        Debug.Assert(newParameters.Count == 1);
+    }
+    public override IDictionary<string, CpuTensor<float>> GetParametersAsCpuFloatTensors(NetworkSample.CompatibilityModeEnum originFramework)
+    {
+        var result = new Dictionary<string, CpuTensor<float>>();
+        result.Add(WeightDatasetPath, _weights.ToCpuFloat());
+        return result;
+    }
+    public override void ReplaceGradients(List<Tensor> newGradients)
+    {
+        FreeFloatTensor(ref _weightGradients);
+        _weightGradients = newGradients[0];
+        Debug.Assert(newGradients.Count == 1);
+    }
+
+    private string WeightDatasetPath => DatasetNameToDatasetPath("kernel:0");
+    #endregion
+
+    #region serialization
+    public override string Serialize()
+    {
+        return RootSerializer()
+            .Add(nameof(VocabularySizes), VocabularySizes)
+            .Add(nameof(EmbeddingDims), EmbeddingDims)
+            .Add(nameof(IndexesInLastDimensionToUse), IndexesInLastDimensionToUse)
+            .Add(nameof(EmbeddingTensorIndex), EmbeddingTensorIndex)
+            .Add(nameof(LambdaL2Regularization), LambdaL2Regularization)
+            .Add(nameof(ClipValueForGradients), ClipValueForGradients)
+            .Add(nameof(DivideGradientsByTimeSteps), DivideGradientsByTimeSteps)
+            .ToString();
+    }
+
+    public int[] VocabularySizes => EmbeddingDescriptions.Select(t => t.vocabularySize).ToArray();
+    public int[] EmbeddingDims => EmbeddingDescriptions.Select(t => t.embeddingDim).ToArray();
+    public int[] IndexesInLastDimensionToUse => EmbeddingDescriptions.Select(t => t.indexInLastDimensionToUse).ToArray();
+    public int[] EmbeddingTensorIndex => EmbeddingDescriptions.Select(t => t.embeddingTensorIndex).ToArray();
+
+    public static EmbeddingLayer Deserialize(IDictionary<string, object> serialized, Network network)
+    {
+        int[] VocabularySizes = serialized.ContainsKey("VocabularySize")
+            ? new[] { (int)serialized["VocabularySize"] }
+            : (int
