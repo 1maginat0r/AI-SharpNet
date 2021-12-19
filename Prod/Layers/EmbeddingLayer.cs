@@ -388,4 +388,56 @@ public sealed class EmbeddingLayer : Layer
     {
         int[] VocabularySizes = serialized.ContainsKey("VocabularySize")
             ? new[] { (int)serialized["VocabularySize"] }
-            : (int
+            : (int[])serialized[nameof(VocabularySizes)];
+        int[] EmbeddingDims = serialized.ContainsKey("EmbeddingDim")
+            ? new[] { (int)serialized["EmbeddingDim"] }
+            : (int[])serialized[nameof(EmbeddingDims)];
+        int[] IndexesInLastDimensionToUse = serialized.ContainsKey("IndexInLastDimensionToUse")
+            ? new[] { (int)serialized["IndexInLastDimensionToUse"] }
+            : (int[])serialized[nameof(IndexesInLastDimensionToUse)];
+        int[] EmbeddingTensorIndex = serialized.ContainsKey("EmbeddingTensorIndex")
+            ? new[] { (int)serialized["EmbeddingTensorIndex"] }
+            : (int[])serialized[nameof(EmbeddingTensorIndex)];
+
+        return new EmbeddingLayer(
+            ToEmbeddingLayerDescription(VocabularySizes, EmbeddingDims, IndexesInLastDimensionToUse, EmbeddingTensorIndex),
+            (double)serialized[nameof(LambdaL2Regularization)],
+            (float)serialized[nameof(ClipValueForGradients)],
+            (bool)serialized[nameof(DivideGradientsByTimeSteps)],
+            (bool)serialized[nameof(Trainable)],
+            network,
+            (string)serialized[nameof(LayerName)]);
+    }
+    public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+    #endregion
+
+    public override int[] OutputShape(int batchSize)
+    {
+        var outputShape = Utils.CloneShapeWithNewCount(PrevLayer.OutputShape(batchSize), batchSize);
+        if (ShouldEmbedEachElementOfLastDimension)
+        {
+            Debug.Assert(IndexesInLastDimensionToUse.Length == 1);
+            //Debug.Assert(prevLayerOutputShape.Length == 2);
+            outputShape = outputShape.Append(EmbeddingDims[0]).ToArray();
+            return outputShape;
+        }
+        else
+        {
+            //Debug.Assert(prevLayerOutputShape.Length == 3);
+            outputShape[^1] += EmbeddingDims.Sum() - EmbeddingDims.Length;
+            return outputShape;
+        }
+    }
+    public override string ToString()
+    {
+        var result = LayerName + ": " + ShapeChangeDescription();
+        if (UseL2Regularization)
+        {
+            result += " with L2Regularization[lambdaValue=" + LambdaL2Regularization + "]";
+        }
+        result += " " + _weights + " (" + TotalParams + " neurons)";
+        return result;
+    }
+
+    private bool UseL2Regularization => LambdaL2Regularization > 0.0;
+}
