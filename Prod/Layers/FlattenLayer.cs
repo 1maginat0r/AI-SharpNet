@@ -64,4 +64,27 @@ public class FlattenLayer : Layer
 
 
     #region PyTorch support
-    public override void ToPytorchModule(List<string> constructorLines, List<string> forwardL
+    public override void ToPytorchModule(List<string> constructorLines, List<string> forwardLines)
+    {
+        var input_shape = PreviousLayers.Count == 0 ? new[] { -1, -1 } : PreviousLayers[0].OutputShape(666);
+        if (_flattenInputTensorOnLastDimension)
+        {
+            constructorLines.Add("self." + LayerName + " = torch.nn.Flatten(0, " + (input_shape.Length-2)+ ")");
+        }
+        else
+        {
+            constructorLines.Add("self." + LayerName + " = torch.nn.Flatten()");
+        }
+        UpdateForwardLines(forwardLines);
+    }
+
+    #endregion
+    public override int[] OutputShape(int batchSize)
+    {
+        var inputShape = PrevLayer.OutputShape(batchSize);
+        var count = Utils.Product(inputShape);
+        return _flattenInputTensorOnLastDimension 
+            ? new[] { count / inputShape[^1], inputShape[^1] } 
+            : new[] { inputShape[0], count / inputShape[0] };
+    }
+}
