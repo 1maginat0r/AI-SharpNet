@@ -176,4 +176,39 @@ public class MultiHeadAttentionLayer : Layer
     {
         Debug.Assert(allX.Count == 3);
 
-        var Q = allX[QUERIES_LAYER_INDEX]; // queries: (batch_size, query_timeSteps == input_seq_length, embedding_
+        var Q = allX[QUERIES_LAYER_INDEX]; // queries: (batch_size, query_timeSteps == input_seq_length, embedding_dim)
+        var V = allX[VALUES_LAYER_INDEX]; // values:  (batch_size, value_timeSteps, embedding_dim)
+        var K = allX[KEYS_LAYER_INDEX]; // keys:    (batch_size, value_timeSteps, embedding_dim)
+
+        if (!V.Shape.SequenceEqual(K.Shape))
+        {
+            throw new ArgumentException($"V.Shape and K.Shape must be equal, but are {Tensor.ShapeToString(V.Shape)} and {Tensor.ShapeToString(K.Shape)}");
+        }
+        if (!V.Shape.SequenceEqual(y.Shape))
+        {
+            throw new ArgumentException($"V.Shape and y.Shape must be equal, but are {Tensor.ShapeToString(V.Shape)} and {Tensor.ShapeToString(y.Shape)}");
+        }
+        if (Q.Shape[2] != V.Shape[2])
+        {
+            throw new ArgumentException($"queries.Shape[2] and values.Shape[2] must be equal (same embedding dim), but are {Q.Shape[2]} and {V.Shape[2]}");
+        }
+
+        var batch_size = K.Shape[0];
+        var query_time_steps = Q.Shape[1];
+        var key_value_time_steps = V.Shape[1];
+
+        var Q_K_V_heads_buffer = GetFloatTensor(new[] {Utils.Max(batch_size * query_time_steps*_num_heads * _key_dim, batch_size * key_value_time_steps, _num_heads * _key_dim, batch_size * key_value_time_steps*_num_heads * _value_dim) });
+
+        var Q_heads = Q_K_V_heads_buffer.Reshape(batch_size*query_time_steps, _num_heads*_key_dim);
+        DenseLayer.DenseForwardPropagation(Q_heads, Q, w_Q, w_Q_bias, flattenInputTensorOnLastDimension);
+        GetFloatTensor(ref Q_heads_T , new[] { batch_size, _num_heads, query_time_steps, _key_dim });
+        Q_heads.Reshape(batch_size, query_time_steps, _num_heads, _key_dim).TransposeSecondAndThirdDimension(Q_heads_T);
+        Q_heads_T.ReshapeInPlace(batch_size*_num_heads, query_time_steps, _key_dim);
+
+        var K_heads = Q_K_V_heads_buffer.Reshape(batch_size * key_value_time_steps, _num_heads * _key_dim);
+        DenseLayer.DenseForwardPropagation(K_heads, K, w_K, w_K_bias, flattenInputTensorOnLastDimension);
+        GetFloatTensor(ref K_heads_T, new[] { batch_size, _num_heads, key_value_time_steps, _key_dim });
+        K_heads.Reshape(batch_size, key_value_time_steps, _num_heads, _key_dim).TransposeSecondAndThirdDimension(K_heads_T);
+        K_heads_T.ReshapeInPlace(batch_size * _num_heads, key_value_time_steps, _key_dim);
+
+        var V_heads = Q_K_V_heads_buffer.Reshape(batch_size * key_value_time_steps, _num_heads * _value_dim
