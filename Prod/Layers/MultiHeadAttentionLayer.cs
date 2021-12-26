@@ -73,4 +73,61 @@ public class MultiHeadAttentionLayer : Layer
     //private Tensor attention_heads;     //(batch_size*_num_heads, value_time_steps, _value_dim)
     private Tensor weights_buffer;      //(batch_size, query_time_steps, value_time_steps)
     private Tensor Q_heads_T;           //(batch_size*_num_heads, query_time_steps, _key_dim)
-    private Tensor K_heads_T;           
+    private Tensor K_heads_T;           //(batch_size*_num_heads, value_time_steps, _key_dim)
+    private Tensor V_heads_T;           //(batch_size*_num_heads, value_time_steps, _value_dim)
+    private Tensor attention_heads_T;   //(batch_size, value_time_steps, _num_heads* _value_dim)
+
+
+    /// <summary>
+    /// shape of Weights for Q K V O tensors
+    /// </summary>
+    private readonly List<int[]> _shapes_w_Q_K_V_O;
+    /// <summary>
+    /// number of elements in Weights for Q K V O tensors
+    /// </summary>
+    private readonly List<int> _count_w_Q_K_V_O;
+
+    /// <summary>
+    /// shape of Weights Bias for Q K V O tensors
+    /// </summary>
+    private readonly List<int[]> _shapes_w_bias_Q_K_V_O;
+    /// <summary>
+    /// number of elements in Weights Bias for Q K V O tensors
+    /// </summary>
+    private readonly List<int> _count_w_bias_Q_K_V_O;
+
+    /// <summary>
+    /// no need to have 'embedding_dim' as a parameter: it is always equal to the last dimension of 'V' (value) Layer
+    /// </summary>
+    /// <param name="num_heads"></param>
+    /// <param name="key_dim"></param>
+    /// <param name="value_dim"></param>
+    /// <param name="use_bias_Q_V_K"></param>
+    /// <param name="use_bias_O"></param>
+    /// <param name="use_causal_mask"></param>
+    /// <param name="queriesLayerIndex"></param>
+    /// <param name="valuesLayerIndex"></param>
+    /// <param name="keysLayerIndex"></param>
+    /// <param name="network"></param>
+    /// <param name="layerName"></param>
+    public MultiHeadAttentionLayer(int num_heads, int key_dim, int value_dim, bool use_bias_Q_V_K, bool use_bias_O,
+        bool use_causal_mask, int queriesLayerIndex, int valuesLayerIndex, int keysLayerIndex,
+        Network network, string layerName = "") : base(network,
+        new[] { queriesLayerIndex, valuesLayerIndex, keysLayerIndex }, layerName)
+    {
+        _num_heads = num_heads;
+        _key_dim = key_dim;
+        _value_dim = value_dim;
+        _use_bias_Q_V_K = use_bias_Q_V_K;
+        _use_bias_O = use_bias_O;
+        var embedding_dim = network.Layers[valuesLayerIndex].OutputShape(1)[2];
+        _use_causal_mask = use_causal_mask;
+
+        _shapes_w_Q_K_V_O = new List<int[]>
+        {
+            new[] { embedding_dim, num_heads * key_dim },
+            new[] { embedding_dim, num_heads * key_dim },
+            new[] { embedding_dim, num_heads * value_dim },
+            new[] { num_heads * value_dim, embedding_dim }
+        };
+  
