@@ -130,4 +130,50 @@ public class MultiHeadAttentionLayer : Layer
             new[] { embedding_dim, num_heads * value_dim },
             new[] { num_heads * value_dim, embedding_dim }
         };
-  
+        _count_w_Q_K_V_O = _shapes_w_Q_K_V_O.Select(Utils.Product).ToList();
+
+        _shapes_w_bias_Q_K_V_O =new List<int[]>
+            {
+                _use_bias_Q_V_K? new[] { 1, num_heads * key_dim }:null,
+                _use_bias_Q_V_K? new[] { 1, num_heads * key_dim }:null,
+                _use_bias_Q_V_K? new[] { 1, num_heads * value_dim }:null,
+                _use_bias_O? new[] { 1, embedding_dim }:null,
+            };
+        _count_w_bias_Q_K_V_O = _shapes_w_bias_Q_K_V_O.Select(s => s==null?0:Utils.Product(s)).ToList();
+
+        //trainable params
+        _weights = GetFloatTensor(new[] { embedding_dim, 2 * num_heads * key_dim + 2 * num_heads * value_dim });
+        _weightGradients = GetFloatTensor(_weights.Shape);
+        _bias = _count_w_bias_Q_K_V_O.Sum() > 0 ? GetFloatTensor(new[] { 1, _count_w_bias_Q_K_V_O.Sum() }) : null;
+        _biasGradients = _bias == null ? null:GetFloatTensor(_bias.Shape);
+
+        _w_Q_optimizer = Sample.GetOptimizer(_shapes_w_Q_K_V_O[0], _shapes_w_bias_Q_K_V_O[0], MemoryPool);
+        _w_K_optimizer = Sample.GetOptimizer(_shapes_w_Q_K_V_O[1], _shapes_w_bias_Q_K_V_O[1], MemoryPool);
+        _w_V_optimizer = Sample.GetOptimizer(_shapes_w_Q_K_V_O[2], _shapes_w_bias_Q_K_V_O[2], MemoryPool);
+        _w_O_optimizer = Sample.GetOptimizer(_shapes_w_Q_K_V_O[3], _shapes_w_bias_Q_K_V_O[3], MemoryPool);
+
+        // ReSharper disable once VirtualMemberCallInConstructor
+        ResetParameters(false);
+    }
+
+
+    public override void UpdateWeights(int batchSize, double learningRate, double maxLearningRate)
+    {
+        Debug.Assert(Network.IsMaster);
+        if (Trainable)
+        {
+            _w_Q_optimizer.UpdateWeights(learningRate, maxLearningRate, batchSize, w_Q, w_Q_Gradients, w_Q_bias, w_Q_bias_Gradients);
+            _w_K_optimizer.UpdateWeights(learningRate, maxLearningRate, batchSize, w_K, w_K_Gradients, w_K_bias, w_K_bias_Gradients);
+            _w_V_optimizer.UpdateWeights(learningRate, maxLearningRate, batchSize, w_V, w_V_Gradients, w_V_bias, w_V_bias_Gradients);
+            _w_O_optimizer.UpdateWeights(learningRate, maxLearningRate, batchSize, w_O, w_O_Gradients, w_O_bias, w_O_bias_Gradients);
+        }
+    }
+
+
+    #region forward and backward propagation
+
+    public override void ForwardPropagation(List<Tensor> allX, Tensor y, bool isTraining)
+    {
+        Debug.Assert(allX.Count == 3);
+
+        var Q = allX[QUERIES_LAYER_INDEX]; // queries: (batch_size, query_timeSteps == input_seq_length, embedding_
