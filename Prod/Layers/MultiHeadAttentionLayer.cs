@@ -248,4 +248,35 @@ public class MultiHeadAttentionLayer : Layer
         var value_time_steps = dV.Shape[1];
         var Q = allX[QUERIES_LAYER_INDEX];
         var V = allX[VALUES_LAYER_INDEX];
-        var K = allX[KEYS_LAYER_
+        var K = allX[KEYS_LAYER_INDEX];
+        
+        var dQ_dK_dV_heads_buffer = GetFloatTensor(new[] { Math.Max(batch_size * query_time_steps * _num_heads * _key_dim, batch_size * value_time_steps * _num_heads * _value_dim) });
+
+        var d_attention_heads_T = dQ_dK_dV_heads_buffer.Reshape(attention_heads_T.Shape);
+        DenseLayer.DenseBackwardPropagation(d_attention_heads_T, w_O_Gradients, w_O_bias_Gradients,
+            attention_heads_T, dy, w_O,
+            Network.Sample, 0, false, flattenInputTensorOnLastDimension);
+
+        var d_attention_heads = GetFloatTensor(V_heads_T.Shape);
+        d_attention_heads_T.Reshape(batch_size, value_time_steps, _num_heads, _value_dim).TransposeSecondAndThirdDimension(d_attention_heads);
+        d_attention_heads.ReshapeInPlace(batch_size * _num_heads, value_time_steps, _value_dim);
+
+        var dQ_heads_T = GetFloatTensor(Q_heads_T.Shape);
+        var dK_heads_T = GetFloatTensor(K_heads_T.Shape);
+        var dV_heads_T = GetFloatTensor(V_heads_T.Shape);
+
+        ScaledDotProductAttentionLayer.ScaledDotProductAttentionBackwardPropagation( 
+            /* Out */ dQ_heads_T, /* Out */dV_heads_T, /* Out */ dK_heads_T, 
+            /* In */ Q_heads_T, /* In */ V_heads_T, /* In */ K_heads_T, /* In */ d_attention_heads, /* In */ ref weights_buffer,
+            Network.MemoryPool, use_scale);
+
+        dQ_heads_T.Reshape(batch_size, _num_heads, query_time_steps, _key_dim).TransposeSecondAndThirdDimension(dQ_dK_dV_heads_buffer  /* dQ_heads */);
+        DenseLayer.DenseBackwardPropagation(dQ, w_Q_Gradients, w_Q_bias_Gradients, Q, dQ_dK_dV_heads_buffer.Reshape(batch_size * query_time_steps, -1), w_Q, Network.Sample, 0, false, flattenInputTensorOnLastDimension);
+
+        dK_heads_T.Reshape(batch_size, _num_heads, query_time_steps, _key_dim).TransposeSecondAndThirdDimension(dQ_dK_dV_heads_buffer  /* dK_heads */);
+        DenseLayer.DenseBackwardPropagation(dK, w_K_Gradients, w_K_bias_Gradients, K, dQ_dK_dV_heads_buffer.Reshape(batch_size * query_time_steps, -1), w_K, Network.Sample, 0, false, flattenInputTensorOnLastDimension);
+
+        dV_heads_T.Reshape(batch_size, _num_heads, value_time_steps, _value_dim).TransposeSecondAndThirdDimension(dQ_dK_dV_heads_buffer /* dV_heads */);
+        DenseLayer.DenseBackwardPropagation(dV, w_V_Gradients, w_V_bias_Gradients, V, dQ_dK_dV_heads_buffer.Reshape(batch_size * value_time_steps, -1), w_V, Network.Sample, 0, false, flattenInputTensorOnLastDimension);
+
+        FreeFloatTensor(dQ_dK_
