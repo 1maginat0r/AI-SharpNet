@@ -211,4 +211,41 @@ public class MultiHeadAttentionLayer : Layer
         K_heads.Reshape(batch_size, key_value_time_steps, _num_heads, _key_dim).TransposeSecondAndThirdDimension(K_heads_T);
         K_heads_T.ReshapeInPlace(batch_size * _num_heads, key_value_time_steps, _key_dim);
 
-        var V_heads = Q_K_V_heads_buffer.Reshape(batch_size * key_value_time_steps, _num_heads * _value_dim
+        var V_heads = Q_K_V_heads_buffer.Reshape(batch_size * key_value_time_steps, _num_heads * _value_dim);
+        DenseLayer.DenseForwardPropagation(V_heads, V, w_V, w_V_bias, flattenInputTensorOnLastDimension);
+        GetFloatTensor(ref V_heads_T, new[] { batch_size, _num_heads, key_value_time_steps, _value_dim });
+        V_heads.Reshape(batch_size, key_value_time_steps, _num_heads, _value_dim).TransposeSecondAndThirdDimension(V_heads_T);
+        V_heads_T.ReshapeInPlace(batch_size * _num_heads, key_value_time_steps, _value_dim);
+
+        var attention_heads = Q_K_V_heads_buffer.Reshape(V_heads_T.Shape);
+        ScaledDotProductAttentionLayer.ScaledDotProductAttentionForwardPropagation(Q_heads_T, V_heads_T, K_heads_T, attention_heads, isTraining, ref weights_buffer, Network.MemoryPool, use_scale, _use_causal_mask);
+
+        GetFloatTensor(ref attention_heads_T, new[] { batch_size, key_value_time_steps, _num_heads, _value_dim });
+        attention_heads.Reshape(batch_size, _num_heads, key_value_time_steps, _value_dim).TransposeSecondAndThirdDimension(attention_heads_T);
+        attention_heads_T.ReshapeInPlace(batch_size, key_value_time_steps, _num_heads* _value_dim);
+        DenseLayer.DenseForwardPropagation(y, attention_heads_T, w_O, w_O_bias, flattenInputTensorOnLastDimension);
+
+        FreeFloatTensor(Q_K_V_heads_buffer);
+        if (!isTraining)
+        {
+            FreeFloatTensor(ref weights_buffer);
+            FreeFloatTensor(ref Q_heads_T);
+            FreeFloatTensor(ref K_heads_T);
+            FreeFloatTensor(ref V_heads_T);
+            FreeFloatTensor(ref attention_heads_T);
+        }
+    }
+
+    public override void BackwardPropagation(List<Tensor> allX, Tensor y_NotUsed, Tensor dy, List<Tensor> allDx)
+    {
+        ////dy:          (batch_size, value_timeSteps, value_embedding_dim)
+        var dQ = allDx[QUERIES_LAYER_INDEX];    // queries:    (batch_size, query_timeSteps == input_seq_length, embedding_dim)
+        var dV = allDx[VALUES_LAYER_INDEX];     // values:     (batch_size, value_timeSteps, embedding_dim)
+        var dK = allDx[KEYS_LAYER_INDEX];       // keys:       (batch_size, value_timeSteps, embedding_dim)
+        //Debug.Assert(weights_buffer != null);
+        var batch_size = dK.Shape[0];
+        var query_time_steps = dQ.Shape[1];
+        var value_time_steps = dV.Shape[1];
+        var Q = allX[QUERIES_LAYER_INDEX];
+        var V = allX[VALUES_LAYER_INDEX];
+        var K = allX[KEYS_LAYER_
