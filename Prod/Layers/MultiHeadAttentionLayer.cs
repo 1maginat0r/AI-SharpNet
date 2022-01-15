@@ -279,4 +279,62 @@ public class MultiHeadAttentionLayer : Layer
         dV_heads_T.Reshape(batch_size, _num_heads, value_time_steps, _value_dim).TransposeSecondAndThirdDimension(dQ_dK_dV_heads_buffer /* dV_heads */);
         DenseLayer.DenseBackwardPropagation(dV, w_V_Gradients, w_V_bias_Gradients, V, dQ_dK_dV_heads_buffer.Reshape(batch_size * value_time_steps, -1), w_V, Network.Sample, 0, false, flattenInputTensorOnLastDimension);
 
-        FreeFloatTensor(dQ_dK_
+        FreeFloatTensor(dQ_dK_dV_heads_buffer);
+        FreeFloatTensor(d_attention_heads);
+        FreeFloatTensor(dQ_heads_T);
+        FreeFloatTensor(dK_heads_T);
+        FreeFloatTensor(dV_heads_T);
+        FreeFloatTensor(ref weights_buffer);
+        FreeFloatTensor(ref Q_heads_T);
+        FreeFloatTensor(ref K_heads_T);
+        FreeFloatTensor(ref V_heads_T);
+        FreeFloatTensor(ref attention_heads_T);
+    }
+
+    
+
+    public override string LayerType() { return "multi_head_attention"; }
+    private Optimizer[] AllOptimizer => new[] { _w_Q_optimizer, _w_K_optimizer, _w_V_optimizer, _w_O_optimizer };
+
+
+    public override void ResetParameters(bool resetAlsoOptimizerWeights = true)
+    {
+        //trainable params
+        foreach (var w in new[] { w_Q, w_K, w_V, w_O })
+        {
+            w.GlorotUniform(Rand);
+        }
+        _bias?.ZeroMemory();
+        if (resetAlsoOptimizerWeights)
+        {
+            Array.ForEach(AllOptimizer, o => o.ZeroMemory());
+        }
+    }
+
+    public override bool OutputNeededForBackwardPropagation => false;
+    public override bool InputNeededForBackwardPropagation => true;
+    #endregion
+
+    #region serialization
+
+    public override string Serialize()
+    {
+        return RootSerializer()
+            .Add(nameof(_num_heads), _num_heads)
+            .Add(nameof(_key_dim), _key_dim)
+            .Add(nameof(_value_dim), _value_dim)
+            .Add(nameof(_use_bias_Q_V_K), _use_bias_Q_V_K)
+            .Add(nameof(_use_bias_O), _use_bias_O)
+            .Add(nameof(_use_causal_mask), _use_causal_mask)
+            .ToString();
+    }
+    public static MultiHeadAttentionLayer Deserialize(IDictionary<string, object> serialized, Network network)
+    {
+        var num_heads = (int)serialized[nameof(_num_heads)];
+        var key_dim = (int)serialized[nameof(_key_dim)];
+        var value_dim = (int)serialized[nameof(_value_dim)];
+        var use_bias_Q_V_K = (bool)serialized[nameof(_use_bias_Q_V_K)];
+        var use_bias_O = (bool)serialized[nameof(_use_bias_O)];
+        var use_causal_mask = (bool)serialized[nameof(_use_causal_mask)];
+        var previousLayerIndexes = (int[])serialized[nameof(PreviousLayerIndexes)];
+        return new MultiHeadAttentionLayer(num_heads, key_dim, value_dim, use_bias_Q_V_K, use_bias_O, use_causal_mask, previousLayerIndexes[0], previousLayerIndexes[1], previousLayerIndexes[2], network, (s
