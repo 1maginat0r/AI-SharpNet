@@ -337,4 +337,81 @@ public class MultiHeadAttentionLayer : Layer
         var use_bias_O = (bool)serialized[nameof(_use_bias_O)];
         var use_causal_mask = (bool)serialized[nameof(_use_causal_mask)];
         var previousLayerIndexes = (int[])serialized[nameof(PreviousLayerIndexes)];
-        return new MultiHeadAttentionLayer(num_heads, key_dim, value_dim, use_bias_Q_V_K, use_bias_O, use_causal_mask, previousLayerIndexes[0], previousLayerIndexes[1], previousLayerIndexes[2], network, (s
+        return new MultiHeadAttentionLayer(num_heads, key_dim, value_dim, use_bias_Q_V_K, use_bias_O, use_causal_mask, previousLayerIndexes[0], previousLayerIndexes[1], previousLayerIndexes[2], network, (string)serialized[nameof(LayerName)]);
+    }
+    public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+    #endregion
+
+
+    #region Multi GPU Support
+    public override void ReplaceParameters(List<Tensor> newParameters)
+    {
+        FreeFloatTensor(ref _weights);
+        _weights = newParameters[0];
+        if (_bias != null)
+        {
+            Debug.Assert(newParameters.Count == 2);
+            FreeFloatTensor(ref _bias);
+            _bias = newParameters[1];
+        }
+        else
+        {
+            Debug.Assert(newParameters.Count == 1);
+        }
+    }
+    public override void ReplaceGradients(List<Tensor> newGradients)
+    {
+        FreeFloatTensor(ref _weightGradients);
+        _weightGradients = newGradients[0];
+        if (_biasGradients != null)
+        {
+            Debug.Assert(newGradients.Count == 2);
+            FreeFloatTensor(ref _biasGradients);
+            _biasGradients = newGradients[1];
+        }
+        else
+        {
+            Debug.Assert(newGradients.Count == 1);
+        }
+    }
+    #endregion
+
+    private string WeightDatasetPath => DatasetNameToDatasetPath("kernel:0");
+    private string BiasDatasetPath => DatasetNameToDatasetPath("bias:0");
+
+    public override List<Tuple<Tensor, string>> Parameters
+    {
+        get
+        {
+            var result = new List<Tuple<Tensor, string>>
+            {
+                Tuple.Create(_weights, WeightDatasetPath),
+                Tuple.Create(_bias, BiasDatasetPath)
+            };
+            result.RemoveAll(t => t.Item1 == null);
+            return result;
+        }
+    }
+    protected override List<Tensor> EmbeddedTensors(bool includeOptimizeTensors)
+    {
+        var result = Parameters.Select(t => t.Item1).Concat(ParameterGradients).ToList();
+        result.AddRange(new[] { weights_buffer, Q_heads_T, K_heads_T, V_heads_T,  });
+        if (includeOptimizeTensors)
+        {
+            Array.ForEach(AllOptimizer, o => result.AddRange(o.EmbeddedTensors));
+        }
+        result.RemoveAll(t => t == null);
+        return result;
+    }
+
+    protected override Optimizer Optimizer => throw new ArgumentException("should never be called");
+
+    public override void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+        _isDisposed = true;
+        EmbeddedTensors(false).ForEach(FreeFloatTensor);
+        Array.F
