@@ -441,4 +441,9 @@ public class MultiHeadAttentionLayer : Layer
     private Tensor w_V_Gradients => _weightGradients.Slice(_count_w_Q_K_V_O[0] + _count_w_Q_K_V_O[1], _shapes_w_Q_K_V_O[2]); // (embedding_dim, num_heads*value_dim)
     private Tensor w_O_Gradients => _weightGradients.Slice(_count_w_Q_K_V_O[0] + _count_w_Q_K_V_O[1] + _count_w_Q_K_V_O[2], _shapes_w_Q_K_V_O[3]); // (num_heads*value_dim, embedding_dim)
     private Tensor w_Q_bias_Gradients => !_use_bias_Q_V_K ? null : _biasGradients?.Slice(0, _shapes_w_bias_Q_K_V_O[0]); // (1, num_heads*key_dim)
-    private Tensor w_K_bias_Gradients => !_use_bias_Q_V_K ? null : _biasGradients?.Slice(_count_w_bias_Q_K
+    private Tensor w_K_bias_Gradients => !_use_bias_Q_V_K ? null : _biasGradients?.Slice(_count_w_bias_Q_K_V_O[0], _shapes_w_bias_Q_K_V_O[1]); // (1, num_heads*key_dim)
+    private Tensor w_V_bias_Gradients => !_use_bias_Q_V_K ? null : _biasGradients?.Slice(_count_w_bias_Q_K_V_O[0] + _count_w_bias_Q_K_V_O[1], _shapes_w_bias_Q_K_V_O[2]); // (1, num_heads*value_dim)
+    private Tensor w_O_bias_Gradients => !_use_bias_O?null: _biasGradients?.Slice(_count_w_bias_Q_K_V_O[0] + _count_w_bias_Q_K_V_O[1] + _count_w_bias_Q_K_V_O[2], _shapes_w_bias_Q_K_V_O[3]); // (1, embedding_dim)
+
+
+}
