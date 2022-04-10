@@ -44,4 +44,59 @@ namespace SharpNet.Layers
             StopBackwardTimer(LayerType() + ">SameShape");
             if (dx2.SameShape(dy))
             {
-                StartBackwa
+                StartBackwardTimer(LayerType() + ">SameShape");
+                dx2.MultiplyTensor(dy, a);
+                StopBackwardTimer(LayerType() + ">SameShape");
+            }
+            else
+            {
+                StartBackwardTimer(LayerType() + ">DistinctShape");
+                dx2.MultiplyEachRowIntoSingleValue(dy, a);
+                StopBackwardTimer(LayerType() + ">DistinctShape");
+            }
+        }
+        public override bool OutputNeededForBackwardPropagation => false;
+        #endregion
+
+        #region serialization
+        public static MultiplyLayer Deserialize(IDictionary<string, object> serialized, Network network)
+        {
+            var previousLayerIndexes = (int[])serialized[nameof(PreviousLayerIndexes)];
+            return new MultiplyLayer(previousLayerIndexes[0], previousLayerIndexes[1], network, (string)serialized[nameof(LayerName)]);
+        }
+        public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+        #endregion
+
+
+
+
+        #region PyTorch support
+        //see : https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
+        public override void ToPytorchModule(List<string> constructorLines, List<string> forwardLines)
+        {
+            forwardLines.Add(GetPyTorchOutputVariableName() + " = " + PreviousLayerMainMatrix.GetPyTorchOutputVariableName() + " * " + PreviousLayerDiagonalMatrix.GetPyTorchOutputVariableName());
+        }
+
+        #endregion
+
+        public override int[] OutputShape(int batchSize)
+        {
+            var result1 = PreviousLayerMainMatrix.OutputShape(batchSize);
+            var result2 = PreviousLayerDiagonalMatrix.OutputShape(batchSize);
+            var result = (int[])result1.Clone();
+            result[1] = Math.Max(result1[1], result2[1]);
+            return result;
+        }
+
+        private Layer PreviousLayerMainMatrix => PreviousLayers[0];
+        private Layer PreviousLayerDiagonalMatrix => PreviousLayers[1];
+        //TODO add tests
+        /// <summary>
+        /// Check that the 2 layer shapes we want to multiply are valid:
+        /// </summary>
+        /// <param name="layerShape1"></param>
+        /// <param name="layerShape2"></param>
+        /// <returns></returns>
+        private static bool ValidLayerShapeToMultiply(int[] layerShape1, int[] layerShape2)
+        {
+            if (layerShape1 == null
