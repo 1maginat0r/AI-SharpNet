@@ -100,3 +100,28 @@ namespace SharpNet.Layers
         private static bool ValidLayerShapeToMultiply(int[] layerShape1, int[] layerShape2)
         {
             if (layerShape1 == null
+                || layerShape2 == null
+                || layerShape1.Length != layerShape2.Length
+                || layerShape1[0] != layerShape2[0] //must have same number of elements
+                //|| layerShape1[1] != layerShape2[1] //must have same number of channels
+            )
+            {
+                return false;
+            }
+
+            var layer1HasOnly1ForAllDimension = true;
+            var layer2HasOnly1ForAllDimension = true;
+            for (int i = 2; i < layerShape1.Length; ++i)
+            {
+                layer1HasOnly1ForAllDimension &= layerShape1[i] == 1;
+                layer2HasOnly1ForAllDimension &= layerShape2[i] == 1;
+            }
+
+            if (layer1HasOnly1ForAllDimension || layer2HasOnly1ForAllDimension)
+            {
+                return true;
+            }
+            return layerShape1.SequenceEqual(layerShape2);
+        }
+    }
+}
