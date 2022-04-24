@@ -137,4 +137,52 @@ namespace SharpNet.Layers
         }
         public static bool IsMaxPooling(cudnnPoolingMode_t poolingMode)
         {
-            return poolingMode == cudnnPoolingMode_t.CUD
+            return poolingMode == cudnnPoolingMode_t.CUDNN_POOLING_MAX ||
+                   poolingMode == cudnnPoolingMode_t.CUDNN_POOLING_MAX_DETERMINISTIC;
+        }
+        public override string ToString()
+        {
+            return LayerName +": " + ShapeChangeDescription() + " size=["+_poolingHeight+"x"+_poolingWidth+"] stride=["+_verticalStride+"x"+_horizontalStride+"]";
+        }
+        public override int[] OutputShape(int batchSize)
+        {
+            var xShape = PrevLayer.OutputShape(batchSize);
+            var yShape = PoolingOutputShape(xShape, _poolingHeight, _poolingWidth, _verticalStride, _horizontalStride);
+            Debug.Assert(yShape.Min() >= 1);
+            return yShape;
+        }
+        /// <summary>
+        /// Compute the pooling layer output shape given an input of shape 'inputShape'
+        /// </summary>
+        /// <param name="inputShape">
+        ///     (batchSize, x.C, heightInput, widthInput)   if 4D
+        ///     (batchSize, heightInput, widthInput)        if 3D
+        /// </param>
+        /// <param name="poolingHeight">the pooling size is (poolingHeight, poolingWidth)</param>
+        /// <param name="poolingWidth">the pooling size is (poolingHeight, poolingWidth)</param>
+        /// <param name="verticalStride">pooling vertical stride</param>
+        /// <param name="horizontalStride">pooling horizontal stride</param>
+        /// <returns>
+        /// the output shape:
+        ///     (batchSize, x.C, y.H, y.W)                  if 4D
+        ///     (batchSize, y.H, y.W)                       if 3D
+        /// </returns>
+        public static int[] PoolingOutputShape(int[] inputShape, int poolingHeight, int poolingWidth, int verticalStride, int horizontalStride)
+        {
+            Debug.Assert(inputShape.Length >= 3);
+
+            var outputShape = (int[]) inputShape.Clone();
+
+            //we compute the output height: it is the second from last element in outputShape array
+            outputShape[^2] = (inputShape[^2] - PoolingHeight(poolingHeight, inputShape)) / VerticalStride(verticalStride, inputShape) + 1;
+
+            //we compute the output width: it is the last element in outputShape array
+            outputShape[^1] = (inputShape[^1] - PoolingWidth(poolingWidth, inputShape)) / HorizontalStride(horizontalStride, inputShape) + 1;
+
+            return outputShape;
+        }
+
+
+
+        #region PyTorch support
+        public override void ToPytorchModule(List<string> 
