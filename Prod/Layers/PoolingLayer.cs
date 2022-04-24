@@ -90,4 +90,51 @@ namespace SharpNet.Layers
             var x4D =   x.Shape.Length == 4 ? x  :  x.Reshape(Tensor.ToPooling4D(x.Shape));
             var dx4D = dx.Shape.Length == 4 ? dx : dx.Reshape(Tensor.ToPooling4D(dx.Shape));
             var y4D =   y.Shape.Length == 4 ? y  :  y.Reshape(Tensor.ToPooling4D(y.Shape));
-            var dy4D = dy.
+            var dy4D = dy.Shape.Length == 4 ? dy : dy.Reshape(Tensor.ToPooling4D(dy.Shape));
+
+            Debug.Assert(x4D.Dimension == y4D.Dimension);
+            Debug.Assert(x4D.Dimension == 4);
+            var x4DShape = x4D.Shape;
+            dy4D.PoolingGradient(y4D, x4D, dx4D, _poolingMode, PoolingHeight(_poolingHeight, x4DShape), PoolingWidth(_poolingWidth, x4DShape), VerticalStride(_verticalStride, x4DShape), HorizontalStride(_horizontalStride, x4DShape));
+        }
+        #endregion
+
+        #region serialization
+        public override string Serialize()
+        {
+            return RootSerializer()
+                .Add(nameof(_poolingMode), (int)_poolingMode)
+                .Add(nameof(_poolingHeight), _poolingHeight)
+                .Add(nameof(_poolingWidth), _poolingWidth)
+                .Add(nameof(_verticalStride), _verticalStride)
+                .Add(nameof(_horizontalStride), _horizontalStride)
+                .ToString();
+        }
+        public static PoolingLayer Deserialize(IDictionary<string, object> serialized, Network network)
+        {
+            var previousLayerIndexes = (int[])serialized[nameof(PreviousLayerIndexes)];
+
+            var verticalStride = serialized.ContainsKey("_poolingStride")?serialized["_poolingStride"]:serialized[nameof(_verticalStride)];
+            var horizontalStride = serialized.ContainsKey("_poolingStride")?serialized["_poolingStride"]:serialized[nameof(_horizontalStride)];
+
+            return new PoolingLayer(
+                (cudnnPoolingMode_t) (int) serialized[nameof(_poolingMode)],
+                (int) serialized[nameof(_poolingHeight)],
+                (int) serialized[nameof(_poolingWidth)],
+                (int)verticalStride,
+                (int)horizontalStride,
+                previousLayerIndexes[0],
+                network,
+                (string) serialized[nameof(LayerName)]);
+        }
+        public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+        #endregion
+
+        public override string LayerType() { return IsMaxPooling(_poolingMode) ? "MaxPooling" : "AveragePooling"; }
+        protected override string ComputeLayerName()
+        {
+            return base.ComputeLayerName().Replace("pooling", "_pooling2d_");
+        }
+        public static bool IsMaxPooling(cudnnPoolingMode_t poolingMode)
+        {
+            return poolingMode == cudnnPoolingMode_t.CUD
