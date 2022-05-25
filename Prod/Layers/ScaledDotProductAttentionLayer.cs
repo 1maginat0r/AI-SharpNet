@@ -100,4 +100,52 @@ public class ScaledDotProductAttentionLayer : Layer
         //dy:          (batch_size, value_timeSteps, value_embedding_dim)
         var dQ = allDx[QUERIES_LAYER_INDEX];    // queries:    (batch_size, query_timeSteps == input_seq_length, embedding_dim)
         var dV = allDx[VALUES_LAYER_INDEX];     // values:     (batch_size, value_timeSteps, embedding_dim)
-        var dK = allDx[KEYS_LAYER_INDEX];       /
+        var dK = allDx[KEYS_LAYER_INDEX];       // keys:       (batch_size, value_timeSteps, embedding_dim)
+        var Q = allX[QUERIES_LAYER_INDEX];
+        var V = allX[VALUES_LAYER_INDEX];
+        var K = allX[KEYS_LAYER_INDEX];
+        ScaledDotProductAttentionBackwardPropagation(dQ, dV, dK, Q, V, K, dy, ref _weights_buffer, Network.MemoryPool, _use_scale);
+    }
+
+    
+    public static void ScaledDotProductAttentionBackwardPropagation(/* Out */ Tensor dQ, /* Out */ Tensor dV, /* Out */ Tensor dK, /* In */ Tensor Q, /* In */ Tensor V, /* In */ Tensor K, /* In */ Tensor dy, /* In */ ref Tensor weights_buffer, TensorMemoryPool memoryPool, bool use_scale)
+    {
+        Debug.Assert(weights_buffer != null);
+        //dy:          (batch_size, value_timeSteps, value_embedding_dim)
+        var embedding_dim = dV.Shape[2];
+
+        dV.BatchMatrixMultiplication(weights_buffer, true, dy, false, 1.0f, 0.0f);
+
+        float scaling = (use_scale) ? (1.0f / MathF.Sqrt(embedding_dim)) : 1.0f;
+
+        var scores_gradients_buffer = memoryPool.GetFloatTensor(weights_buffer.Shape);       // (batch_size, query_time_steps, value_time_steps)
+        //1st step: we store in 'scores_gradients_buffer' the weights_gradients_buffer
+        scores_gradients_buffer.BatchMatrixMultiplication(dy, false, V, true, scaling, 0.0f);
+        //2nd step: we store in 'scores_gradients_buffer' the proba distribution (scores)
+        scores_gradients_buffer.ActivationBackward(cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX_LAST_DIMENSION, null, scores_gradients_buffer /* dy*/, null /*x*/, weights_buffer /*y*/);
+
+        dQ.BatchMatrixMultiplication(scores_gradients_buffer, false, K, false, 1, 0.0f);
+        dK.BatchMatrixMultiplication(scores_gradients_buffer, true, Q, false, 1, 0.0f);
+
+        memoryPool.FreeFloatTensor(scores_gradients_buffer);
+        memoryPool.FreeFloatTensor(ref weights_buffer);
+    }
+
+  
+    private Layer ValueLayer => PreviousLayers[VALUES_LAYER_INDEX];
+    public override bool OutputNeededForBackwardPropagation => false;
+    public override bool InputNeededForBackwardPropagation => true;
+    #endregion
+
+    #region serialization
+
+    public override string Serialize()
+    {
+        return RootSerializer()
+            .Add(nameof(_use_scale), _use_scale)
+            .Add(nameof(_use_causal_mask), _use_causal_mask)
+            .ToString();
+    }
+    public static ScaledDotProductAttentionLayer Deserialize(IDictionary<string, object> serialized, Network network)
+    {
+        va
