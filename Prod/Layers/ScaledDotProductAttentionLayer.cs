@@ -148,4 +148,24 @@ public class ScaledDotProductAttentionLayer : Layer
     }
     public static ScaledDotProductAttentionLayer Deserialize(IDictionary<string, object> serialized, Network network)
     {
-        va
+        var useScale = (bool)serialized[nameof(_use_scale)];
+        var useCausalMask = (bool)serialized[nameof(_use_causal_mask)];
+        var previousLayerIndexes = (int[])serialized[nameof(PreviousLayerIndexes)];
+        return new ScaledDotProductAttentionLayer(useScale, useCausalMask, previousLayerIndexes[0], previousLayerIndexes[1], previousLayerIndexes[2], network, (string)serialized[nameof(LayerName)]);
+    }
+    public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+    #endregion
+
+    protected override List<Tensor> EmbeddedTensors(bool includeOptimizeTensors)
+    {
+        var result = base.EmbeddedTensors(includeOptimizeTensors);
+        result.AddRange(new[] { _weights_buffer});
+        result.RemoveAll(t => t == null);
+        return result;
+    }
+    
+    public override int[] OutputShape(int batchSize)
+    {
+        return ValueLayer.OutputShape(batchSize);
+    }
+}
