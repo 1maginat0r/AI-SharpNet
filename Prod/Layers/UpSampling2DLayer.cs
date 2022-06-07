@@ -38,3 +38,38 @@ namespace SharpNet.Layers
             Debug.Assert(allDx.Count == 1);
             var dx = allDx[0];
             dx.DownSampling2D(dy, _rowFactor, _colFactor);
+        }
+        public override bool OutputNeededForBackwardPropagation => false;
+        public override bool InputNeededForBackwardPropagation => false;
+        #endregion
+
+        #region serialization
+        public override string Serialize()
+        {
+            return RootSerializer()
+                .Add(nameof(_rowFactor), _rowFactor)
+                .Add(nameof(_colFactor), _colFactor)
+                .Add(nameof(_interpolation), (int)_interpolation)
+                .ToString();
+        }
+        public static UpSampling2DLayer Deserialize(IDictionary<string, object> serialized, Network network)
+        {
+            return new UpSampling2DLayer(
+                (int)serialized[nameof(_rowFactor)],
+                (int)serialized[nameof(_colFactor)],
+                (InterpolationEnum)serialized[nameof(_interpolation)],
+                network,
+                (string)serialized[nameof(LayerName)]);
+        }
+        public override void AddToOtherNetwork(Network otherNetwork) { AddToOtherNetwork(otherNetwork, Deserialize); }
+        #endregion
+
+        public override int[] OutputShape(int batchSize)
+        {
+            var result = (int[])PrevLayer.OutputShape(batchSize).Clone();
+            result[2] *= _rowFactor;
+            result[3] *= _colFactor;
+            return result;
+        }
+    }
+}
