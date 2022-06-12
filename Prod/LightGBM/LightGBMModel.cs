@@ -125,4 +125,52 @@ namespace SharpNet.LightGBM
                 tmpLightGBMSample.Save(tmpLightGBMSamplePath);
                 Utils.Launch(WorkingDirectory, ExePath, "config=" + tmpLightGBMSamplePath, Log, false);
 
-                featureImportance_df = LoadFeatureImportance(contribPath, columns,
+                featureImportance_df = LoadFeatureImportance(contribPath, columns, datasetSample);
+                Utils.TryDelete(tmpLightGBMSamplePath);
+                Utils.TryDelete(contribPath);
+                Log.Info($"Feature importance for {datasetType} Dataset has been computed in {sw.ElapsedMilliseconds}ms");
+            }
+            catch (Exception e)
+            {
+                Log.Error($"fail to compute feature importance for {datasetType} Dataset: {e}");
+            }
+            return featureImportance_df;
+        }
+
+
+        private static DataFrame LoadFeatureImportance(string featureImportancePath, string[] columns, AbstractDatasetSample datasetSample)
+        {
+            int num_class = datasetSample.NumClass;
+            var entireFeatureImportance = new float[num_class* (columns.Length+1)];
+
+            Log.Info($"Loading LightGBM Feature Importance file {featureImportancePath}...");
+            var stringsEnumerable = File.ReadAllLines(featureImportancePath);
+
+            Log.Info($"Parsing file content...");
+            object lockLoadFeatureImportance = new();
+            void ProcessLine(int lineIdx)
+            {
+                float[] elements = stringsEnumerable[lineIdx].Split('\t').Select(s=> MathF.Abs(float.Parse(s))).ToArray();
+                if (entireFeatureImportance != null && elements.Length != entireFeatureImportance.Length)
+                {
+                    throw new ArgumentException($"found line with {elements.Length} elements but expecting {entireFeatureImportance.Length}");
+                }
+                lock (lockLoadFeatureImportance)
+                {
+                    for (int i = 0; i < elements.Length; ++i)
+                    {
+                        entireFeatureImportance[i % entireFeatureImportance.Length] += elements[i];
+                    }
+                }
+            }
+            Parallel.For(0, stringsEnumerable.Length, ProcessLine);
+
+            var featureImportance = new float[columns.Length + 1];
+            for (int i = 0; i < entireFeatureImportance.Length;++i)
+            {
+                featureImportance[i % featureImportance.Length] += entireFeatureImportance[i];
+            }
+            featureImportance = featureImportance.Take(columns.Length).ToArray();
+            var totalFeatureImportance = Math.Max(featureImportance.Sum(),0.01f);
+            featureImportance = featureImportance.Select(i => (100f * i / totalFeatureImportance)).ToArray();
+            var featureName_df = DataFrame.
