@@ -53,4 +53,31 @@ namespace SharpNet.LightGBM
             var train_XYDatasetPath_InModelFormat = trainDataset.to_csv_in_directory(DatasetPath, addTargetColumnAsFirstColumn, includeIdColumns, overwriteIfExists);
             var validation_XYDatasetPath_InModelFormat = validationDatasetIfAny?.to_csv_in_directory(DatasetPath, addTargetColumnAsFirstColumn, includeIdColumns, overwriteIfExists);
             LightGbmSample.UpdateForDataset(trainDataset);
-            //we s
+            //we save in 'tmpLightGBMSamplePath' the model sample used for training
+            var tmpLightGBMSamplePath = LightGbmSample.ToPath(TempPath, ModelName);
+            var tmpLightGBMSample = (LightGBMSample)LightGbmSample.Clone();
+            tmpLightGBMSample.Set(new Dictionary<string, object> {
+                {"task", LightGBMSample.task_enum.train},
+                {"data", train_XYDatasetPath_InModelFormat},
+                {"valid", validation_XYDatasetPath_InModelFormat??""},
+                {"output_model", ModelPath},
+                {"input_model", ""},
+                {"prediction_result", ""},
+                {"header", true},
+                {"save_binary", false},
+                //this is needed to retrieve the train and validation metrics
+                {nameof(LightGbmSample.verbosity), "1"}, 
+                //this is need to retrieve the train metric
+                {nameof(LightGbmSample.is_provide_training_metric), true},
+            });
+
+            tmpLightGBMSample.Save(tmpLightGBMSamplePath);
+            LogForModel($"Training model '{ModelName}' with training dataset '{Path.GetFileNameWithoutExtension(train_XYDatasetPath_InModelFormat)}" + (string.IsNullOrEmpty(validation_XYDatasetPath_InModelFormat) ? "" : $" and validation dataset {Path.GetFileNameWithoutExtension(validation_XYDatasetPath_InModelFormat)}'"));
+            var linesFromLog = Utils.Launch(WorkingDirectory, ExePath, "config=" + tmpLightGBMSamplePath, Log, true);
+            var (trainLossIfAvailable, validationLossIfAvailable, trainRankingMetricIfAvailable, validationRankingMetricIfAvailable) = tmpLightGBMSample.ExtractScores(linesFromLog);
+            //(IScore trainLossIfAvailable, IScore validationLossIfAvailable, IScore trainRankingMetricIfAvailable, IScore validationRankingMetricIfAvailable) = (null, null, null, null);
+
+            Utils.TryDelete(tmpLightGBMSamplePath);
+
+            LogForModel($"Model '{ModelName}' trained with dataset '{Path.GetFileNameWithoutExtension(train_XYDatasetPath_InModelFormat)}' in {sw.Elapsed.TotalSeconds}s (trainScore = {trainLossIfAvailable} / validationScore = {validationLossIfAvailable} / trainMetric = {trainRankingMetricIfAvailable} / validationMetric = {validationRankingMetricIfAvailable})");
+            return (null, null, train_XYDatasetPath_InModelFormat, null, null, validation_XYDatasetPath_InModelFormat, trainLossIfAvailable, validationLossIfAvailable, tra
