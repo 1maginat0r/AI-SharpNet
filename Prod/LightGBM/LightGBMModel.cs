@@ -173,4 +173,47 @@ namespace SharpNet.LightGBM
             featureImportance = featureImportance.Take(columns.Length).ToArray();
             var totalFeatureImportance = Math.Max(featureImportance.Sum(),0.01f);
             featureImportance = featureImportance.Select(i => (100f * i / totalFeatureImportance)).ToArray();
-            var featureName_df = DataFrame.
+            var featureName_df = DataFrame.New(columns, new[] { "Feature" });
+            var featureImportance_df = DataFrame.New(featureImportance, new[] { "Importance" });
+
+            var finalDf = DataFrame.MergeHorizontally(featureName_df, featureImportance_df);
+
+            if (num_class >= 2) //Multi class Classification
+            {
+                //we'll display 1 extra column for each class to predict
+                for (int numClass = 0; numClass < num_class; numClass++)
+                {
+                    var featureImportanceNumClass = new float[columns.Length];
+                    for (int i = 0; i < columns.Length;++i)
+                    {
+                        featureImportanceNumClass[i] = entireFeatureImportance[numClass * (columns.Length + 1)+i];
+                    }
+                    featureImportanceNumClass = featureImportanceNumClass.Select(i=>(100f*i / totalFeatureImportance)).ToArray();
+                    var numClass_df = DataFrame.New(featureImportanceNumClass, new[] { "class"+numClass});
+                    finalDf = DataFrame.MergeHorizontally(finalDf, numClass_df);
+                }
+            }
+            finalDf = finalDf.sort_values("Importance", ascending: false);
+
+            return finalDf;
+        }
+        public override (DataFrame,string)  PredictWithPath(DataSet dataset, bool removeAllTemporaryFilesAtEnd)
+        {
+            if (!File.Exists(ModelPath))
+            {
+                throw new Exception($"missing model {ModelPath} for inference");
+            }
+            const bool addTargetColumnAsFirstColumn = false;
+            const bool includeIdColumns = false;
+            const bool overwriteIfExists = false;
+            string datasetPath = dataset.to_csv_in_directory(DatasetPath, addTargetColumnAsFirstColumn, includeIdColumns, overwriteIfExists);
+            var predictionResultPath = Path.Combine(TempPath, ModelName + "_predict_" + Path.GetFileNameWithoutExtension(datasetPath) + ".txt");
+
+            //we save in 'tmpLightGbmSamplePath' the model sample used for prediction
+            var tmpLightGBMSamplePath = predictionResultPath.Replace(".txt", ".conf");
+            var tmpLightGBMSample = (LightGBMSample)LightGbmSample.Clone();
+            tmpLightGBMSample.Set(new Dictionary<string, object> {
+                {"task", LightGBMSample.task_enum.predict},
+                {"data", datasetPath},
+                {"input_model", ModelPath},
+                {"prediction_result", predictionRes
