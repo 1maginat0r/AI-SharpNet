@@ -80,4 +80,49 @@ namespace SharpNet.LightGBM
             Utils.TryDelete(tmpLightGBMSamplePath);
 
             LogForModel($"Model '{ModelName}' trained with dataset '{Path.GetFileNameWithoutExtension(train_XYDatasetPath_InModelFormat)}' in {sw.Elapsed.TotalSeconds}s (trainScore = {trainLossIfAvailable} / validationScore = {validationLossIfAvailable} / trainMetric = {trainRankingMetricIfAvailable} / validationMetric = {validationRankingMetricIfAvailable})");
-            return (null, null, train_XYDatasetPath_InModelFormat, null, null, validation_XYDatasetPath_InModelFormat, trainLossIfAvailable, validationLossIfAvailable, tra
+            return (null, null, train_XYDatasetPath_InModelFormat, null, null, validation_XYDatasetPath_InModelFormat, trainLossIfAvailable, validationLossIfAvailable, trainRankingMetricIfAvailable, validationRankingMetricIfAvailable);
+        }
+
+      
+
+        public override DataFrame ComputeFeatureImportance(AbstractDatasetSample datasetSample, AbstractDatasetSample.DatasetType datasetType)
+        {
+            var sw = Stopwatch.StartNew();
+            DataFrame featureImportance_df = null;
+            Log.Info($"Computing feature importance for {datasetType} Dataset...");
+            try
+            {
+                if (!File.Exists(ModelPath))
+                {
+                    Log.Error($"missing model {ModelPath} for computing Feature Importance");
+                    return null;
+                }
+                var datasetPath = datasetSample.ExtractDatasetPath_InModelFormat(datasetType);
+                if (string.IsNullOrEmpty(datasetPath) || !File.Exists(datasetPath))
+                {
+                    Log.Error($"missing {datasetType} Dataset {datasetPath} for computing Feature Importance");
+                    return null;
+                }
+                var columns = Utils.ReadCsv(datasetPath).First();
+                columns = Utils.Without(columns, datasetSample.IdColumn).ToArray();
+                columns = Utils.Without(columns, "y").ToArray();
+                columns = Utils.Without(columns, datasetSample.TargetLabels).ToArray();
+
+                var contribPath = Path.Combine(TempPath, ModelName + "_contrib_" + Path.GetFileNameWithoutExtension(datasetPath) + ".txt");
+                //we save in 'tmpLightGbmSamplePath' the model sample used for computing Feature Importance
+                var tmpLightGBMSamplePath = contribPath.Replace(".txt", ".conf");
+                var tmpLightGBMSample = (LightGBMSample)LightGbmSample.Clone();
+                tmpLightGBMSample.Set(new Dictionary<string, object>
+                {
+                    { "task", LightGBMSample.task_enum.predict },
+                    { "data", datasetPath },
+                    { "input_model", ModelPath },
+                    { "predict_contrib", true },
+                    { "prediction_result", contribPath },
+                    { "header", true }
+                });
+                tmpLightGBMSample.Use_All_Available_Cores();
+                tmpLightGBMSample.Save(tmpLightGBMSamplePath);
+                Utils.Launch(WorkingDirectory, ExePath, "config=" + tmpLightGBMSamplePath, Log, false);
+
+                featureImportance_df = LoadFeatureImportance(contribPath, columns,
