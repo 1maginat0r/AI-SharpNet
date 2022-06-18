@@ -216,4 +216,44 @@ namespace SharpNet.LightGBM
                 {"task", LightGBMSample.task_enum.predict},
                 {"data", datasetPath},
                 {"input_model", ModelPath},
-                {"prediction_result", predictionRes
+                {"prediction_result", predictionResultPath},
+                {"header", true}
+            });
+            tmpLightGBMSample.Save(tmpLightGBMSamplePath);
+
+            Utils.Launch(WorkingDirectory, ExePath, "config=" + tmpLightGBMSamplePath, Log, false);
+
+            var predictionsDf = LoadProbaFile(predictionResultPath, false, false, null, dataset);
+            Utils.TryDelete(tmpLightGBMSamplePath);
+            Utils.TryDelete(predictionResultPath);
+            if (removeAllTemporaryFilesAtEnd)
+            {
+                Utils.TryDelete(datasetPath);
+                datasetPath = "";
+            }
+            return (predictionsDf, datasetPath);
+        }
+        public override List<string> Save(string workingDirectory, string modelName)
+        {
+            //No need to save model : it is already saved
+            return LightGbmSample.Save(workingDirectory, modelName);
+        }
+        public override List<string> AllFiles()
+        {
+            return new List<string> { ModelPath };
+        }
+        //public static LightGBMModel LoadTrainedLightGBMModel(string workingDirectory, string modelName)
+        //{
+        //    var sample = ISample.LoadSample<LightGBMSample>(workingDirectory, modelName);
+        //    return new LightGBMModel(sample, workingDirectory, modelName);
+        //}
+
+        private static string ExePath => Path.Combine(Utils.ChallengesPath, "bin", "lightgbm.exe");
+
+        /// <summary>
+        /// path of a trained model.
+        /// null if no trained model is available
+        /// </summary>
+        private string ModelPath => Path.Combine(WorkingDirectory, ModelName + ".txt");
+    }
+}
