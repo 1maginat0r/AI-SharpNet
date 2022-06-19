@@ -220,4 +220,57 @@ public class LightGBMSample : AbstractModelSample
         {
             trainRankingMetricIfAvailable = new Score((float)trainMetricValue, ToEvaluationMetricEnum(lossAndMetrics[1]));
         }
-        
+        var validationMetricValue = (extractedScoresFromLogs.Length >= 4) ? extractedScoresFromLogs[3] : double.NaN;
+        Score validationRankingMetricIfAvailable = null;
+        if (!double.IsNaN(validationMetricValue) && lossAndMetrics.Count >= 2)
+        {
+            validationRankingMetricIfAvailable = new Score((float)validationMetricValue, ToEvaluationMetricEnum(lossAndMetrics[1]));
+        }
+        return (trainLossIfAvailable, validationLossIfAvailable, trainRankingMetricIfAvailable, validationRankingMetricIfAvailable);
+    }
+
+    #region Core Parameters
+
+    #region CLI specific
+
+    /// <summary>
+    /// path of config file
+    /// aliases: config_file
+    /// </summary>
+    public string config;
+
+    /// <summary>
+    ///  train: for training, aliases: training
+    ///  predict: for prediction, aliases: prediction, test
+    ///  convert_model: for converting model file into if-else format, see more information in Convert Parameters
+    ///  refit: for refitting existing models with new data, aliases: refit_tree
+    ///         save_binary, load train(and validation) data then save dataset to binary file.Typical usage: save_binary first, then run multiple train tasks in parallel using the saved binary file
+    /// aliases: task_type
+    /// </summary>
+    public enum task_enum { train, predict, convert_model, refit, DEFAULT_VALUE = AbstractSample.DEFAULT_VALUE } ;
+    // ReSharper disable once MemberCanBePrivate.Global
+    public task_enum task = task_enum.DEFAULT_VALUE;
+
+    //path of training data, LightGBM will train from this data
+    //aliases: train, train_data, train_data_file, data_filename
+    public string data;
+
+    //path(s) of validation/test data, LightGBM will output metrics for these data
+    //support multiple validation data, separated by ,
+    //aliases: test, valid_data, valid_data_file, test_data, test_data_file, valid_filenames
+    public string valid;
+    #endregion
+
+
+   
+
+    public enum objective_enum { regression, regression_l1, huber, fair, poisson, quantile, mape, gamma, tweedie, binary, multiclass, multiclassova, cross_entropy, cross_entropy_lambda, lambdarank, rank_xendcg, DEFAULT_VALUE = AbstractSample.DEFAULT_VALUE } 
+    //aliases: objective_type, app, application, loss
+    // ReSharper disable once MemberCanBePrivate.Global
+    public objective_enum objective = objective_enum.DEFAULT_VALUE;
+
+    /// <summary>
+    /// true if we face a classification problem
+    /// </summary>
+    public bool IsClassification => 
+        object
