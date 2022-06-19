@@ -89,4 +89,90 @@ public class LightGBMSample : AbstractModelSample
             case EvaluationMetricEnum.BinaryCrossentropy: return  "binary" ;
             case EvaluationMetricEnum.CategoricalCrossentropy: return "cross_entropy";
             case EvaluationMetricEnum.Accuracy: return  "accuracy";
-      
+            default:
+                throw new NotImplementedException($"can't manage metric {metric}");
+        }
+    }
+
+    protected override List<EvaluationMetricEnum> GetAllEvaluationMetrics()
+    {
+        if (string.IsNullOrEmpty(metric))
+        {
+            return new List<EvaluationMetricEnum> { EvaluationMetricEnum.DEFAULT_VALUE };
+        }
+        return metric.Split(',').Select(ToEvaluationMetricEnum).ToList();
+    }
+
+
+    public override bool FixErrors()
+    {
+        if (boosting == boosting_enum.rf)
+        {
+            if (bagging_freq <= 0 || bagging_fraction >= 1.0f || bagging_fraction <= 0.0f)
+            {
+                return false;
+            }
+        }
+        if (boosting != boosting_enum.dart)
+        {
+            drop_rate = DEFAULT_VALUE;
+            max_drop = DEFAULT_VALUE;
+            skip_drop = DEFAULT_VALUE;
+            xgboost_dart_mode = false;
+            uniform_drop = false;
+            drop_seed = DEFAULT_VALUE;
+        }
+
+        if (path_smooth > 0 && min_data_in_leaf<2)
+        {
+            min_data_in_leaf = 2;
+        }
+
+        //if (objective == objective_enum.DEFAULT_VALUE)
+        //{
+        //    throw new ArgumentException("objective must always be set");
+        //}
+
+        if (IsMultiClassClassificationProblem())
+        {
+            if (num_class < 2)
+            {
+                throw new ArgumentException($"{nameof(num_class)} must be set for multi class problem (was:{num_class})");
+            }
+        }
+        else
+        {
+            if (num_class != DEFAULT_VALUE)
+            {
+                throw new ArgumentException($"{nameof(num_class)} should be set only for multi class problem (was: {num_class})");
+            }
+        }
+
+        if (bagging_freq <= 0)
+        {
+            //bagging is disabled
+            //bagging_fraction must be equal to 1.0 (100%)
+            if (bagging_fraction < 1)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            //bagging is enabled
+            //bagging_fraction must be stricly less then 1.0 (100%)
+            if (bagging_fraction >= 1)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public override void Use_All_Available_Cores()
+    {
+        num_threads = Utils.CoreCount;
+    }
+    public void UpdateForDataset(DataSet dataset)
+    {
+        var c
