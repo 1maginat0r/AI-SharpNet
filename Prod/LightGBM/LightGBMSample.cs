@@ -175,4 +175,49 @@ public class LightGBMSample : AbstractModelSample
     }
     public void UpdateForDataset(DataSet dataset)
     {
-        var c
+        var categoricalFeatures = dataset.ColumnNames.Where(dataset.IsCategoricalColumn).ToList();
+        if (!string.IsNullOrEmpty(dataset.IdColumn))
+        {
+            categoricalFeatures.Remove(dataset.IdColumn);
+        }
+        //if (dataset.GetDatasetSample() != null)
+        //{
+        //    foreach (var column in dataset.GetDatasetSample().TargetLabels)
+        //    {
+        //        categoricalFeatures.Remove(column);
+        //    }
+        //}
+        categorical_feature = (categoricalFeatures.Count >= 1) ? ("name:" + string.Join(',', categoricalFeatures)) : "";
+    }
+
+    public (IScore trainLossIfAvailable, IScore validationLossIfAvailable, IScore trainRankingMetricIfAvailable, IScore validationRankingMetricIfAvailable) ExtractScores(IEnumerable<string> linesFromLog)
+    {
+        //the first element will always be the loss, the following will be the ranking metrics
+        var lossAndMetrics = new List<string> { ToStringMetric(GetLoss()) };
+        var allMetrics = (metric ?? "").Split(',');
+        if (allMetrics.Length >= 1 && allMetrics[0].Length >= 1 && !lossAndMetrics.Contains(allMetrics[0]))
+        {
+            lossAndMetrics.Add(allMetrics[0]);
+        }
+        List<string> tokenAndMandatoryTokenAfterToken = new();
+        foreach (var m in lossAndMetrics)
+        {
+            tokenAndMandatoryTokenAfterToken.Add("training");
+            tokenAndMandatoryTokenAfterToken.Add(m);
+            tokenAndMandatoryTokenAfterToken.Add("valid_1");
+            tokenAndMandatoryTokenAfterToken.Add(m);
+        }
+        var extractedScoresFromLogs = Utils.ExtractValuesFromOutputLog(linesFromLog, 2, tokenAndMandatoryTokenAfterToken.ToArray());
+
+        var trainLossValue = extractedScoresFromLogs[0];
+        var trainLossIfAvailable = double.IsNaN(trainLossValue) ? null : new Score((float)trainLossValue, GetLoss());
+        var validationLossValue = extractedScoresFromLogs[1];
+        var validationLossIfAvailable = double.IsNaN(validationLossValue) ? null : new Score((float)validationLossValue, GetLoss());
+
+        var trainMetricValue = (extractedScoresFromLogs.Length >= 3) ? extractedScoresFromLogs[2] : double.NaN;
+        Score trainRankingMetricIfAvailable = null;
+        if (!double.IsNaN(trainMetricValue) && lossAndMetrics.Count>=2)
+        {
+            trainRankingMetricIfAvailable = new Score((float)trainMetricValue, ToEvaluationMetricEnum(lossAndMetrics[1]));
+        }
+        
