@@ -273,4 +273,43 @@ public class LightGBMSample : AbstractModelSample
     /// true if we face a classification problem
     /// </summary>
     public bool IsClassification => 
-        object
+        objective == objective_enum.binary
+        || objective == objective_enum.multiclass
+        || objective == objective_enum.multiclassova;
+
+    public enum boosting_enum { gbdt, rf, dart, goss, DEFAULT_VALUE = AbstractSample.DEFAULT_VALUE } 
+    //gbdt:  traditional Gradient Boosting Decision Tree, aliases: gbrt
+    //rf:    Random Forest, aliases: random_forest
+    //dart:  Dropouts meet Multiple Additive Regression Trees
+    //goss:  Gradient-based One-Side Sampling
+    //Note: internally, LightGBM uses gbdt mode for the first 1 / learning_rate iterations
+    public boosting_enum boosting = boosting_enum.DEFAULT_VALUE;
+
+    //number of boosting iterations
+    //Note: internally, LightGBM constructs num_class* num_boost_round trees for multi-class classification problems
+    //aliases: num_iteration, n_iter, num_tree, num_trees, num_round, num_rounds, nrounds, num_boost_round, n_estimators, max_iter
+    //constraints: num_iterations >= 0
+    public int num_iterations = DEFAULT_VALUE;
+
+    //shrinkage rate
+    //in dart, it also affects on normalization weights of dropped trees
+    //aliases: shrinkage_rate, eta, 
+    //constraints: learning_rate > 0.0
+    public double learning_rate = DEFAULT_VALUE;
+
+    //max number of leaves in one tree
+    //aliases: num_leaf, max_leaves, max_leaf, max_leaf_nodes
+    //constraints: 1 < num_leaves <= 131072
+    //default: 31
+    public int num_leaves = DEFAULT_VALUE;
+
+    //used only in train, prediction and refit tasks or in correspondent functions of language-specific packages
+    //number of threads for LightGBM
+    //0 means default number of threads in OpenMP
+    //for the best speed, set this to the number of real CPU cores, not the number of threads (most CPUs use hyper-threading to generate 2 threads per CPU core)
+    //do not set it too large if your dataset is small (for instance, do not use 64 threads for a dataset with 10,000 rows)
+    //be aware a task manager or any similar CPU monitoring tool might report that cores not being fully utilized.
+    //This is normal for distributed learning, do not use all CPU cores because this will cause poor performance for the network communication
+    //    Note: please don’t change this during training, especially when running multiple jobs simultaneously by external packages, otherwise it may cause undesirable errors
+    //aliases: num_thread, nthread, nthreads, n_jobs
+    public int num_threads = DEFAULT
