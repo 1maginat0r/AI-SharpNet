@@ -312,4 +312,44 @@ public class LightGBMSample : AbstractModelSample
     //This is normal for distributed learning, do not use all CPU cores because this will cause poor performance for the network communication
     //    Note: please don’t change this during training, especially when running multiple jobs simultaneously by external packages, otherwise it may cause undesirable errors
     //aliases: num_thread, nthread, nthreads, n_jobs
-    public int num_threads = DEFAULT
+    public int num_threads = DEFAULT_VALUE;
+
+    //device for the tree learning, you can use GPU to achieve the faster learning
+    //Note: it is recommended to use the smaller max_bin(e.g. 63) to get the better speed up
+    //Note: for the faster speed, GPU uses 32-bit float point to sum up by default, so this may affect the accuracy for some tasks.You can set gpu_use_dp= true to enable 64-bit float point, but it will slow down the training
+    //Note: refer to Installation Guide to build LightGBM with GPU support
+    //aliases: device
+    public enum device_type_enum {cpu,gpu, DEFAULT_VALUE = AbstractSample.DEFAULT_VALUE}
+    public device_type_enum device_type = device_type_enum.DEFAULT_VALUE;
+
+
+    //this seed is used to generate other seeds, e.g. data_random_seed, feature_fraction_seed, etc.
+    //by default, this seed is unused in favor of default values of other seeds
+    //this seed has lower priority in comparison with other seeds, which means that it will be overridden, if you set other seeds explicitly
+    //aliases: random_seed, seed 
+    public int random_state = DEFAULT_VALUE;
+
+    //used only with cpu device type
+    //setting this to true should ensure the stable results when using the same data and the same parameters (and different num_threads)
+    //when you use the different seeds, different LightGBM versions, the binaries compiled by different compilers, or in different systems, the results are expected to be different
+    //you can raise issues in LightGBM GitHub repo when you meet the unstable results
+    //Note: setting this to true may slow down the training
+    //Note: to avoid potential instability due to numerical issues, please set force_col_wise=true or force_row_wise=true when setting deterministic=true
+    public bool deterministic = false;
+
+    //public enum tree_learner_enum { serial, feature, data, voting }
+    ////serial:   single machine tree learner
+    ////feature:  feature parallel tree learner, aliases: feature_parallel
+    ////data:     data parallel tree learner, aliases: data_parallel
+    ////voting:   voting parallel tree learner, aliases: voting_parallel
+    ////refer to Distributed Learning Guide to get more details
+    ////aliases: tree, tree_type, tree_learner_type
+    //public tree_learner_enum tree_learner = tree_learner_enum.serial;
+
+    #endregion
+
+    #region Learning Control Parameters
+
+    #region CLI specific
+    //filename of input model
+    //
