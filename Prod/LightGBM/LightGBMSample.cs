@@ -352,4 +352,52 @@ public class LightGBMSample : AbstractModelSample
 
     #region CLI specific
     //filename of input model
-    //
+    //for prediction task, this model will be applied to prediction data
+    //for train task, training will be continued from this model
+    //aliases: model_input, model_in
+    public string input_model;
+
+    //filename of output model in training
+    //aliases: model_output, model_out
+    public string output_model;
+
+    //the feature importance type in the saved model file
+    //0: count-based feature importance (numbers of splits are counted);
+    //1: gain-based feature importance (values of gain are counted)
+    public int saved_feature_importance_type = DEFAULT_VALUE;
+
+    //frequency of saving model file snapshot
+    //set this to positive value to enable this function. For example, the model file will be snapshotted at each iteration if snapshot_freq=1
+    //aliases: save_period
+    public int snapshot_freq = DEFAULT_VALUE;
+    #endregion
+
+    //used only with cpu device type
+    //set this to true to force col-wise histogram building
+    //enabling this is recommended when:
+    //  the number of columns is large, or the total number of bins is large
+    //  num_threads is large, e.g. > 20
+    //  you want to reduce memory cost
+    //Note: when both force_col_wise and force_row_wise are false, LightGBM will firstly try them both,
+    //and then use the faster one.
+    //To remove the overhead of testing set the faster one to true manually
+    //Note: this parameter cannot be used at the same time with force_row_wise, choose only one of them
+    public bool force_col_wise = false;
+
+    //used only with cpu device type
+    //set this to true to force row-wise histogram building
+    //enabling this is recommended when:
+    //  the number of data points is large, and the total number of bins is relatively small
+    //  num_threads is relatively small, e.g. <= 16
+    //  you want to use small bagging_fraction or goss boosting to speed up
+    //Note: setting this to true will double the memory cost for Dataset object.
+    //If you have not enough memory, you can try setting force_col_wise=true
+    //Note: when both force_col_wise and force_row_wise are false, LightGBM will firstly try them both,
+    //and then use the faster one.
+    //To remove the overhead of testing set the faster one to true manually
+    //Note: this parameter cannot be used at the same time with force_col_wise, choose only one of them
+    public bool force_row_wise = false;
+
+    //max cache size in MB for historical histogram
+    //< 0 means no limit
+    public double histo
