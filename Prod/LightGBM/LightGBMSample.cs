@@ -400,4 +400,47 @@ public class LightGBMSample : AbstractModelSample
 
     //max cache size in MB for historical histogram
     //< 0 means no limit
-    public double histo
+    public double histogram_pool_size = DEFAULT_VALUE;
+
+    //limit the max depth for tree model.
+    //This is used to deal with over-fitting when #data is small.
+    //Tree still grows leaf-wise
+    //<= 0 means no limit
+    public int max_depth = DEFAULT_VALUE;
+
+    //minimal number of data in one leaf. Can be used to deal with over-fitting
+    //aliases: min_data_per_leaf, min_data, min_child_samples, min_samples_leaf, constraints: min_data_in_leaf >= 0
+    //Note: this is an approximation based on the Hessian, so occasionally you may observe splits
+    //      which produce leaf nodes that have less than this many observations
+    // default: 20
+    public int min_data_in_leaf = DEFAULT_VALUE;
+
+    // minimal sum hessian in one leaf.Like min_data_in_leaf, it can be used to deal with over-fitting
+    // aliases:     min_sum_hessian_per_leaf, min_sum_hessian, min_hessian, min_child_weight,
+    // constraints: min_sum_hessian_in_leaf >= 0.0
+    public double min_sum_hessian_in_leaf = DEFAULT_VALUE;
+
+    //like feature_fraction, but this will randomly select part of data without resampling
+    //can be used to speed up training
+    //can be used to deal with over-fitting
+    //Note: to enable bagging, bagging_freq should be set to a non zero value as well
+    // aliases: sub_row, subsample, bagging
+    // constraints: 0.0 < bagging_fraction <= 1.0
+    public double bagging_fraction = DEFAULT_VALUE;
+
+    // aliases: pos_sub_row, pos_subsample, pos_bagging
+    // constraints: 0.0 < pos_bagging_fraction <= 1.0
+    //used only in binary application
+    //used for imbalanced binary classification problem, will randomly sample #pos_samples * pos_bagging_fraction positive samples in bagging
+    //should be used together with neg_bagging_fraction
+    //set this to 1.0 to disable
+    //Note: to enable this, you need to set bagging_freq and neg_bagging_fraction as well
+    //Note: if both pos_bagging_fraction and neg_bagging_fraction are set to 1.0, balanced bagging is disabled
+    //Note: if balanced bagging is enabled, bagging_fraction will be ignored
+    public double pos_bagging_fraction = DEFAULT_VALUE;
+
+    //used only in binary application
+    //used for imbalanced binary classification problem, will randomly sample #neg_samples * neg_bagging_fraction negative samples in bagging
+    //should be used together with pos_bagging_fraction
+    //set this to 1.0 to disable
+    //Note: to enable t
