@@ -548,4 +548,62 @@ public class LightGBMSample : AbstractModelSample
     //set this to true, if you want to use xgboost dart mode
     public bool xgboost_dart_mode = false;
 
-    //set this to true, if 
+    //set this to true, if you want to use uniform drop
+    public bool uniform_drop = false;
+
+    //random seed to choose dropping models
+    public int drop_seed = DEFAULT_VALUE;
+    #endregion
+
+
+    //used only in goss
+    //the retain ratio of large gradient data
+    //constraints: 0.0 <= top_rate <= 1.0
+    public double top_rate = DEFAULT_VALUE;
+
+    // used only in goss
+    // the retain ratio of small gradient data
+    // constraints: 0.0 <= other_rate <= 1.0
+    public double other_rate = DEFAULT_VALUE;
+
+    // minimal number of data per categorical group
+    // constraints: min_data_per_group > 0
+    public int min_data_per_group = DEFAULT_VALUE;
+
+    //used for the categorical features
+    //limit number of split points considered for categorical features. See the documentation on how LightGBM finds optimal splits for categorical features for more details
+    //can be used to speed up training
+    // constraints: max_cat_threshold > 0
+    public int max_cat_threshold = DEFAULT_VALUE;
+
+    // used for the categorical features
+    // L2 regularization in categorical split
+    // constraints: cat_l2 >= 0.0
+    public double cat_l2 = DEFAULT_VALUE;
+
+    // used for the categorical features
+    // this can reduce the effect of noises in categorical features, especially for categories with few data
+    // constraints: cat_smooth >= 0.0
+    public double cat_smooth = DEFAULT_VALUE;
+
+    //when number of categories of one feature smaller than or equal to max_cat_to_onehot, 
+    //one-vs-other split algorithm will be used
+    //constraints: max_cat_to_onehot > 0
+    public int max_cat_to_onehot = DEFAULT_VALUE;
+
+    //// used only in voting tree learner, refer to Voting parallel
+    //// set this to larger value for more accurate result, but it will slow down the training speed
+    //// aliases: topk
+    //// constraints: top_k > 0
+    //public int top_k = DEFAULT_VALUE;
+
+    ////used for constraints of monotonic features
+    ////1 means increasing, -1 means decreasing, 0 means non-constraint
+    ////you need to specify all features in order. For example, mc=-1,0,1 means decreasing for 1st feature, non-constraint for 2nd feature and increasing for the 3rd feature
+    ////aliases: mc, monotone_constraint, monotonic_cst
+    //public int[] monotone_constraints = null;
+
+    //used only if monotone_constraints is set
+    //monotone constraints method
+    //basic, the most basic monotone constraints method. It does not slow the library at all, but over-constrains the predictions
+    //intermediate, a more advanced metho
