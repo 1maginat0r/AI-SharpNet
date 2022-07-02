@@ -443,4 +443,44 @@ public class LightGBMSample : AbstractModelSample
     //used for imbalanced binary classification problem, will randomly sample #neg_samples * neg_bagging_fraction negative samples in bagging
     //should be used together with pos_bagging_fraction
     //set this to 1.0 to disable
-    //Note: to enable t
+    //Note: to enable this, you need to set bagging_freq and pos_bagging_fraction as well
+    //Note: if both pos_bagging_fraction and neg_bagging_fraction are set to 1.0, balanced bagging is disabled
+    //Note: if balanced bagging is enabled, bagging_fraction will be ignored
+    // aliases: neg_sub_row, neg_subsample, neg_bagging, constraints: 0.0 < neg_bagging_fraction <= 1.0
+    public double neg_bagging_fraction = DEFAULT_VALUE;
+
+    //frequency for bagging
+    //0 means disable bagging; k means perform bagging at every k iteration.
+    //Every k-th iteration, LightGBM will randomly select bagging_fraction * 100 % of the data to use for the next k iterations
+    //Note: to enable bagging, bagging_fraction should be set to value smaller than 1.0 as well
+    //aliases: subsample_freq
+    public int bagging_freq = DEFAULT_VALUE;
+
+    //random seed for bagging
+    //aliases: bagging_fraction_seed
+    public int bagging_seed = DEFAULT_VALUE;
+
+    //LightGBM will randomly select a subset of features on each iteration (tree) if feature_fraction is smaller than 1.0.
+    //For example, if you set it to 0.8, LightGBM will select 80% of features before training each tree
+    //can be used to speed up training
+    //can be used to deal with over-fitting
+    //aliases:      sub_feature, feature_fraction 
+    //constraints:  0.0 < feature_fraction <= 1.0
+    public double colsample_bytree= DEFAULT_VALUE;
+
+    //LightGBM will randomly select a subset of features on each tree node if feature_fraction_bynode is smaller than 1.0.
+    //For example, if you set it to 0.8, LightGBM will select 80% of features at each tree node
+    //can be used to deal with over-fitting
+    //Note: unlike feature_fraction, this cannot speed up training
+    //Note: if both feature_fraction and feature_fraction_bynode are smaller than 1.0, the final fraction of each node is feature_fraction * feature_fraction_bynode
+    // aliases: sub_feature_bynode, feature_fraction_bynode  
+    // constraints: 0.0 < feature_fraction_bynode <= 1.0
+    public double colsample_bynode = DEFAULT_VALUE;
+
+    //random seed for feature_fraction
+    public int feature_fraction_seed = DEFAULT_VALUE;
+
+    //use extremely randomized trees
+    //if set to true, when evaluating node splits LightGBM will check only one randomly-chosen threshold for each feature
+    //can be used to speed up training
+    //can be used to deal wi
