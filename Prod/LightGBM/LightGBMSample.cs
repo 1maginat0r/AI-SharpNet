@@ -483,4 +483,69 @@ public class LightGBMSample : AbstractModelSample
     //use extremely randomized trees
     //if set to true, when evaluating node splits LightGBM will check only one randomly-chosen threshold for each feature
     //can be used to speed up training
-    //can be used to deal wi
+    //can be used to deal with over-fitting
+    // aliases: extra_tree
+    public bool extra_trees = false;
+
+    //random seed for selecting thresholds when extra_trees is true
+    public int extra_seed = DEFAULT_VALUE;
+
+    //will stop training if one metric of one validation data doesn’t improve in last early_stopping_round rounds
+    //<= 0 means disable
+    //can be used to speed up training
+    // aliases: early_stopping_rounds, early_stopping, n_iter_no_change
+    public int early_stopping_round = DEFAULT_VALUE;
+
+    //LightGBM allows you to provide multiple evaluation metrics.
+    //Set this to true, if you want to use only the first metric for early stopping
+    public bool first_metric_only = false;
+
+    //used to limit the max output of tree leaves
+    //<= 0 means no constraint
+    //the final max output of leaves is learning_rate * max_delta_step
+    //aliases: max_tree_output, max_leaf_output
+    public double max_delta_step = DEFAULT_VALUE;
+
+    // L1 regularization
+    // aliases: reg_alpha, l1_regularization
+    // constraints: lambda_l1 >= 0.0
+    public double lambda_l1 = DEFAULT_VALUE;
+
+    //L2 regularization
+    // aliases: reg_lambda, lambda, l2_regularization
+    // constraints: lambda_l2 >= 0.0
+    public double lambda_l2 = DEFAULT_VALUE;
+
+
+    //linear tree regularization, corresponds to the parameter lambda in Eq. 3 of Gradient Boosting with Piece-Wise Linear Regression Trees
+    //constraints: linear_lambda >= 0.0
+    public double linear_lambda = DEFAULT_VALUE;
+
+    //the minimal gain to perform split
+    //can be used to speed up training
+    // aliases: min_split_gain
+    // constraints: min_gain_to_split >= 0.0
+    public double min_gain_to_split = DEFAULT_VALUE;
+
+    #region used only in dart
+    // dropout rate: a fraction of previous trees to drop during the dropout
+    // used only in dart
+    // aliases: rate_drop
+    // constraints: 0.0 <= drop_rate <= 1.0
+    // default: 0.1
+    public double drop_rate = DEFAULT_VALUE;
+
+    //max number of dropped trees during one boosting iteration
+    //<=0 means no limit
+    // default: 50
+    public int max_drop = DEFAULT_VALUE;
+
+    //probability of skipping the dropout procedure during a boosting iteration
+    //constraints: 0.0 <= skip_drop <= 1.0 
+    // default: 0.50
+    public double skip_drop = DEFAULT_VALUE;
+
+    //set this to true, if you want to use xgboost dart mode
+    public bool xgboost_dart_mode = false;
+
+    //set this to true, if 
