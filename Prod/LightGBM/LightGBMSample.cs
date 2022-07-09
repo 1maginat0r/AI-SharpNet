@@ -637,4 +637,51 @@ public class LightGBMSample : AbstractModelSample
     //public double refit_decay_rate = 0.9;
 
     #region cost-effective gradient boosting
-    //cost-effective gradient boosting mul
+    //cost-effective gradient boosting multiplier for all penalties
+    //constraints: cegb_tradeoff >= 0.0
+    public double cegb_tradeoff = DEFAULT_VALUE;
+
+    //cost-effective gradient-boosting penalty for splitting a node
+    //constraints: cegb_penalty_split >= 0.0
+    public double cegb_penalty_split = DEFAULT_VALUE;
+
+    //cost-effective gradient boosting penalty for using a feature
+    //applied per data point
+    //default = 0,0,...,0
+    public double[] cegb_penalty_feature_lazy = null;
+
+    //cost-effective gradient boosting penalty for using a feature
+    //applied once per forest
+    //default = 0,0,...,0
+    public double[] cegb_penalty_feature_coupled = null;
+    #endregion
+
+    //controls smoothing applied to tree nodes
+    //helps prevent overfitting on leaves with few samples
+    //if set to zero, no smoothing is applied
+    //if path_smooth > 0 then min_data_in_leaf must be at least 2
+    //larger values give stronger regularization
+    //the weight of each node is (n / path_smooth) * w + w_p / (n / path_smooth + 1), where
+    //  n is the number of samples in the node,
+    //  w is the optimal node weight to minimise the loss (approximately -sum_gradients / sum_hessians),
+    //  w_p is the weight of the parent node
+    //note that the parent output w_p itself has smoothing applied, unless it is the root node,
+    //so that the smoothing effect accumulates with the tree depth
+    //constraints: path_smooth >=  0.0
+    public double path_smooth = DEFAULT_VALUE;
+
+    ////controls which features can appear in the same branch
+    ////by default interaction constraints are disabled, to enable them you can specify:
+    ////  for CLI, lists separated by commas, e.g. [0,1,2],[2,3]
+    ////  for Python-package, list of lists, e.g. [[0, 1, 2], [2, 3]]
+    ////  for R-package, list of character or numeric vectors, e.g. list(c("var1", "var2", "var3"), c("var3", "var4")) or list(c(1L, 2L, 3L), c(3L, 4L)). Numeric vectors should use 1-based indexing, where 1L is the first feature, 2L is the second feature, etc
+    ////any two features can only appear in the same branch only if there exists a constraint containing both features
+    //public string interaction_constraints = "";
+
+    //controls the level of LightGBM’s verbosity
+    //< 0: Fatal, = 0: Error (Warning), = 1: Info, > 1: Debug
+    //aliases: verbose
+    public int verbosity = DEFAULT_VALUE;
+    #endregion
+
+    #region IO Pa
