@@ -684,4 +684,54 @@ public class LightGBMSample : AbstractModelSample
     public int verbosity = DEFAULT_VALUE;
     #endregion
 
-    #region IO Pa
+    #region IO Parameters / Dataset Parameters
+
+    #region CLI specific
+    //if true, LightGBM will save the dataset (including validation data) to a binary file. This speed ups the data loading for the next time
+    //Note: init_score is not saved in binary file
+    //Note: can be used only in CLI version; for language-specific packages you can use the correspondent function
+    //aliases: is_save_binary, is_save_binary_file
+    public bool save_binary = false;
+    #endregion
+
+    //max number of bins that feature values will be bucketed in
+    //small number of bins may reduce training accuracy but may increase general power (deal with over-fitting)
+    //LightGBM will auto compress memory according to max_bin. 
+    //For example, LightGBM will use uint8_t for feature value if max_bin=255
+    // aliases: max_bins
+    // constraints: max_bin > 1
+    // default: 255
+    public int max_bin = DEFAULT_VALUE;
+
+    //max number of bins for each feature
+    //if not specified, will use max_bin for all features
+    //public int[] max_bin_by_feature = null;
+
+    //minimal number of data inside one bin
+    //use this to avoid one-data-one-bin (potential over-fitting)
+    //constraints: min_data_in_bin > 0
+    //default: 3
+    public int min_data_in_bin = DEFAULT_VALUE;
+
+    //number of data that sampled to construct feature discrete bins
+    //setting this to larger value will give better training result, but may increase data loading time
+    //set this to larger value if data is very sparse
+    //Note: don’t set this to small values, otherwise, you may encounter unexpected errors and poor accuracy        //aliases: subsample_for_bin
+    // constraints: bin_construct_sample_cnt > 0
+    public int bin_construct_sample_cnt = DEFAULT_VALUE;
+
+    //random seed for sampling data to construct histogram bins
+    //aliases: data_seed
+    public int data_random_seed = DEFAULT_VALUE;
+
+    //used to enable/disable sparse optimization
+    //aliases: is_sparse, enable_sparse, sparse
+    public bool is_enable_sparse = true;
+
+    //set this to false to disable Exclusive Feature Bundling (EFB), which is described in LightGBM: A Highly Efficient Gradient Boosting Decision Tree
+    //Note: disabling this may cause the slow training speed for sparse datasets
+    //aliases: is_enable_bundle, bundle
+    public bool enable_bundle = true;
+
+    // set this to false to disable the special handle of missing value
+    public bool use
