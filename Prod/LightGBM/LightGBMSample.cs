@@ -606,4 +606,35 @@ public class LightGBMSample : AbstractModelSample
     //used only if monotone_constraints is set
     //monotone constraints method
     //basic, the most basic monotone constraints method. It does not slow the library at all, but over-constrains the predictions
-    //intermediate, a more advanced metho
+    //intermediate, a more advanced method, which may slow the library very slightly. However, this method is much less constraining than the basic method and should significantly improve the results
+    //advanced, an even more advanced method, which may slow the library. However, this method is even less constraining than the intermediate method and should again significantly improve the results
+    // options: basic, intermediate, advanced, aliases: monotone_constraining_method, mc_method
+    //enum monotone_constraints_method = basic; 
+
+    ////used only if monotone_constraints is set
+    ////monotone penalty: a penalization parameter X forbids any monotone splits on the first X (rounded down) level(s) of the tree. The penalty applied to monotone splits on a given depth is a continuous, increasing function the penalization parameter
+    //// if 0.0 (the default), no penalization is applied
+    //// aliases: monotone_splits_penalty, ms_penalty, mc_penalty, 
+    //// constraints: monotone_penalty >= 0.0
+    //public double monotone_penalty = DEFAULT_VALUE;
+
+    ////used to control feature’s split gain, will use gain[i] = max(0, feature_contri[i]) * gain[i] to replace the split gain of i-th feature
+    ////you need to specify all features in order
+    ////aliases: feature_contrib, fc, fp, feature_penalty
+    //public double[] feature_contri = null;
+
+    ////path to a .json file that specifies splits to force at the top of every decision tree before best-first learning commences
+    ////.json file can be arbitrarily nested, and each split contains feature, threshold fields, as well as left and right fields representing subsplits
+    ////categorical splits are forced in a one-hot fashion, with left representing the split containing the feature value and right representing other values
+    ////Note: the forced split logic will be ignored, if the split makes gain worse
+    ////see this file as an example
+    //// aliases: fs, forced_splits_filename, forced_splits_file, forced_splits
+    //public string forcedsplits_filename;
+
+    ////decay rate of refit task, will use leaf_output = refit_decay_rate * old_leaf_output + (1.0 - refit_decay_rate) * new_leaf_output to refit trees
+    ////used only in refit task in CLI version or as argument in refit function in language-specific package
+    ////constraints: 0.0 <= refit_decay_rate <= 1.0
+    //public double refit_decay_rate = 0.9;
+
+    #region cost-effective gradient boosting
+    //cost-effective gradient boosting mul
