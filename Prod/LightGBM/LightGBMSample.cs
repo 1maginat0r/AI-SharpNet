@@ -734,4 +734,45 @@ public class LightGBMSample : AbstractModelSample
     public bool enable_bundle = true;
 
     // set this to false to disable the special handle of missing value
-    public bool use
+    public bool use_missing = true;
+
+    //set this to true to treat all zero as missing values (including the unshown values in LibSVM / sparse matrices)
+    //set this to false to use na for representing missing values
+    public bool zero_as_missing = false;
+
+    //set this to true (the default) to tell LightGBM to ignore the features that are unsplittable based on min_data_in_leaf
+    //as dataset object is initialized only once and cannot be changed after that, you may need to set this to false when searching parameters with min_data_in_leaf, otherwise features are filtered by min_data_in_leaf firstly if you don’t reconstruct dataset object
+    //Note: setting this to false may slow down the training
+    public bool feature_pre_filter = true;
+
+    //used for distributed learning (excluding the feature_parallel mode)
+    //true if training data are pre-partitioned, and different machines use different partitions
+    //aliases: is_pre_partition
+    public bool pre_partition = false;
+
+    //set this to true if data file is too big to fit in memory
+    //by default, LightGBM will map data file to memory and load features from memory. This will provide faster data loading speed, but may cause run out of memory error when the data file is very big
+    //Note: works only in case of loading data directly from text file
+    //aliases: two_round_loading, use_two_round_loading
+    public bool two_round = false;
+
+    //set this to true if input data has header
+    //Note: works only in case of loading data directly from text file
+    // aliases: has_header
+    public bool header = false;
+
+    //used to specify the label column
+    //use number for index, e.g. label=0 means column_0 is the label
+    //add a prefix name: for column name, e.g. label=name:is_click
+    //if omitted, the first column in the training data is used as the label
+    //Note: works only in case of loading data directly from text file
+    // aliases: label
+    public string label_column;
+
+    //used to specify the weight column
+    //use number for index, e.g. weight=0 means column_0 is the weight
+    //add a prefix name: for column name, e.g. weight=name:weight
+    //Note: works only in case of loading data directly from text file
+    //Note: index starts from 0 and it doesn’t count the label column when passing type is int, e.g. when label is column_0, and weight is column_1, the correct parameter is weight=0
+    //aliases: weight
+    public stri
