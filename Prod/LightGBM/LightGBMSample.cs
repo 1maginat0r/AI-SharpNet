@@ -775,4 +775,37 @@ public class LightGBMSample : AbstractModelSample
     //Note: works only in case of loading data directly from text file
     //Note: index starts from 0 and it doesn’t count the label column when passing type is int, e.g. when label is column_0, and weight is column_1, the correct parameter is weight=0
     //aliases: weight
-    public stri
+    public string weight_column;
+
+    //used to specify the query/group id column
+    //use number for index, e.g. query=0 means column_0 is the query id
+    //add a prefix name: for column name, e.g. query=name:query_id
+    //Note: works only in case of loading data directly from text file
+    //Note: data should be grouped by query_id, for more information, see Query Data
+    //Note: index starts from 0 and it doesn’t count the label column when passing type is int, e.g. when label is column_0 and query_id is column_1, the correct parameter is query=0
+    //aliases: group, group_id, query_column, query, query_id
+    public string group_column;
+
+    //used to specify some ignoring columns in training
+    //use number for index, e.g. ignore_column=0,1,2 means column_0, column_1 and column_2 will be ignored
+    //add a prefix name: for column name, e.g. ignore_column=name:c1,c2,c3 means c1, c2 and c3 will be ignored
+    //Note: works only in case of loading data directly from text file
+    //Note: index starts from 0 and it doesn’t count the label column when passing type is int
+    //Note: despite the fact that specified columns will be completely ignored during the training, they still should have a valid format allowing LightGBM to load file successfully
+    //aliases: ignore_feature, blacklist
+    public string ignore_column;
+
+    //used to specify categorical features
+    //use number for index, e.g. categorical_feature=0,1,2 means column_0, column_1 and column_2 are categorical features
+    //add a prefix name: for column name, e.g. categorical_feature=name:c1,c2,c3 means c1, c2 and c3 are categorical features
+    //Note: only supports categorical with int type (not applicable for data represented as pandas DataFrame in Python-package)
+    //Note: index starts from 0 and it doesn’t count the label column when passing type is int
+    //Note: all values should be less than Int32.MaxValue (2147483647)
+    //Note: using large values could be memory consuming. Tree decision rule works best when categorical features are presented by consecutive integers starting from zero
+    //Note: all negative values will be treated as missing values
+    //Note: the output cannot be monotonically constrained with respect to a categorical feature
+    //aliases: cat_feature, categorical_column, cat_column, categorical_features
+    public string categorical_feature;
+
+    ////path to a .json file that specifies bin upper bounds for some or all features
+    ////.jso
