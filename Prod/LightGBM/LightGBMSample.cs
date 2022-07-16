@@ -808,4 +808,48 @@ public class LightGBMSample : AbstractModelSample
     public string categorical_feature;
 
     ////path to a .json file that specifies bin upper bounds for some or all features
-    ////.jso
+    ////.json file should contain an array of objects, each containing the word feature (integer feature index) and bin_upper_bound (array of thresholds for binning)
+    ////see this file as an example
+    //public string forcedbins_filename;
+
+    ////use precise floating point number parsing for text parser (e.g. CSV, TSV, LibSVM input)
+    ////Note: setting this to true may lead to much slower text parsing
+    //public bool precise_float_parser = false;
+
+    ////path to a .json file that specifies customized parser initialized configuration
+    ////see lightgbm-transform for usage examples
+    ////Note: lightgbm-transform is not maintained by LightGBM’s maintainers. 
+    ////B.ug reports or feature requests should go to issues page
+    //public string parser_config_file;
+
+    //fit piecewise linear gradient boosting tree
+    //tree splits are chosen in the usual way, but the model at each leaf is linear instead of constant
+    //the linear model at each leaf includes all the numerical features in that leaf’s branch
+    //categorical features are used for splits as normal but are not used in the linear models
+    //missing values should not be encoded as 0. Use np.nan for Python, NA for the CLI, and NA, NA_real_, or NA_integer_ for R
+    //it is recommended to rescale data before training so that features have similar mean and standard deviation
+    //Note: only works with CPU and serial tree learner
+    //Note: regression_l1 objective is not supported with linear tree boosting
+    //Note: setting linear_tree=true significantly increases the memory use of LightGBM
+    //Note: if you specify monotone_constraints, constraints will be enforced when choosing the split points, but not when fitting the linear models on leaves
+    //aliases: linear_trees    
+    //public bool linear_tree = false;
+
+    #endregion
+
+    #region Prediction tasks specific
+
+    //used to specify from which iteration to start the prediction
+    //<= 0 means from the first iteration    
+    public int start_iteration_predict = DEFAULT_VALUE;
+
+    //used to specify how many trained iterations will be used in prediction
+    //<= 0 means no limit
+    public int num_iteration_predict = DEFAULT_VALUE;
+
+    //set this to true to predict only the raw scores
+    //set this to false to predict transformed scores
+    //aliases: is_predict_raw_score, predict_rawscore, raw_score
+    public bool predict_raw_score = false;
+
+    //set this to true to p
