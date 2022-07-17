@@ -891,4 +891,52 @@ public class LightGBMSample : AbstractModelSample
     //#region IO Parameters / Convert Parameters
 
     ////used only in convert_model task
-    
+    ////only cpp is supported yet; for conversion model to other languages consider using m2cgen utility
+    ////if convert_model_language is set and task=train, the model will be also converted
+    ////Note: can be used only in CLI version    
+    //public string convert_model_language;
+
+    ////used only in convert_model task
+    ////output filename of converted model
+    ////Note: can be used only in CLI version
+    ////aliases: convert_model_file
+    //public string convert_model;
+
+    //#endregion
+
+    #region Objective Parameters
+
+    //used only in rank_xendcg objective
+    //random seed for objectives, if random process is needed
+    public int objective_seed = DEFAULT_VALUE;
+
+    // used only in multi-class classification application
+    // aliases: num_classes
+    // constraints: num_class > 0
+    public int num_class = DEFAULT_VALUE;
+
+    //used only in binary and multiclassova applications
+    //set this to true if training data are unbalanced
+    //Note: while enabling this should increase the overall performance metric of your model, it will also result in poor estimates of the individual class probabilities
+    //Note: this parameter cannot be used at the same time with scale_pos_weight, choose only one of them    // aliases: unbalance, unbalanced_sets
+    public bool is_unbalance = false;
+
+    //used only in binary and multiclassova applications
+    //weight of labels with positive class
+    //Note: while enabling this should increase the overall performance metric of your model, it will also result in poor estimates of the individual class probabilities
+    //Note: this parameter cannot be used at the same time with is_unbalance, choose only one of them
+    // constraints: scale_pos_weight > 0.0
+    public double scale_pos_weight = DEFAULT_VALUE;
+
+    //used only in binary and multiclassova classification and in lambdarank applications
+    //parameter for the sigmoid function
+    // constraints: sigmoid > 0.0
+    public double sigmoid = DEFAULT_VALUE;
+
+    //used only in regression, binary, multiclassova and cross-entropy applications
+    //adjusts initial score to the mean of labels for faster convergence
+    public bool boost_from_average = true;
+
+    //used only in regression application
+    //used to fit sqrt(label) instead of original values and prediction result will be also automatically converted to prediction^2
+    //might be use
