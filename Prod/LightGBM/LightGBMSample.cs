@@ -852,4 +852,43 @@ public class LightGBMSample : AbstractModelSample
     //aliases: is_predict_raw_score, predict_rawscore, raw_score
     public bool predict_raw_score = false;
 
-    //set this to true to p
+    //set this to true to predict with leaf index of all trees
+    //aliases: is_predict_leaf_index, leaf_index
+    public bool predict_leaf_index = false;
+
+    //set this to true to estimate SHAP values, which represent how each feature contributes to each prediction
+    //produces #features + 1 values where the last value is the expected value of the model output over the training data
+    //Note: if you want to get more explanation for your model’s predictions using SHAP values like SHAP interaction values, you can install shap package
+    //Note: unlike the shap package, with predict_contrib we return a matrix with an extra column, where the last column is the expected value
+    //Note: this feature is not implemented for linear trees
+    // aliases: is_predict_contrib, contrib
+    public bool predict_contrib = false;
+
+    //control whether or not LightGBM raises an error when you try to predict on data with a different number of features than the training data
+    //if false (the default), a fatal error will be raised if the number of features in the dataset you predict on differs from the number seen during training
+    //if true, LightGBM will attempt to predict on whatever data you provide. This is dangerous because you might get incorrect predictions, but you could use it in situations where it is difficult or expensive to generate some features and you are very confident that they were never chosen for splits in the model
+    //Note: be very careful setting this parameter to true
+    public bool predict_disable_shape_check = false;
+
+    //used only in classification and ranking applications
+    //used only for predicting normal or raw scores
+    //if true, will use early-stopping to speed up the prediction. May affect the accuracy
+    //Note: cannot be used with rf boosting type or custom objective function
+    public bool pred_early_stop = false;
+
+    //the frequency of checking early-stopping prediction
+    public int pred_early_stop_freq = DEFAULT_VALUE;
+
+    //the threshold of margin in early-stopping prediction
+    public double pred_early_stop_margin = DEFAULT_VALUE;
+
+    //filename of prediction result
+    //Note: can be used only in CLI version
+    //aliases: predict_result, output_result , predict_name, prediction_name, pred_name, name_pred
+    public string prediction_result;
+    #endregion
+
+    //#region IO Parameters / Convert Parameters
+
+    ////used only in convert_model task
+    
