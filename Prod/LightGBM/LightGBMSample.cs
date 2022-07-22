@@ -939,4 +939,54 @@ public class LightGBMSample : AbstractModelSample
 
     //used only in regression application
     //used to fit sqrt(label) instead of original values and prediction result will be also automatically converted to prediction^2
-    //might be use
+    //might be useful in case of large-range labels
+    public bool reg_sqrt = false;
+
+    // used only in huber and quantile regression applications
+    // parameter for Huber loss and Quantile regression
+    // constraints: alpha > 0.0
+    public double alpha = DEFAULT_VALUE;
+
+    //used only in fair regression application
+    //parameter for Fair loss
+    // constraints: fair_c > 0.0
+    public double fair_c = DEFAULT_VALUE;
+
+    //used only in poisson regression application
+    //parameter for Poisson regression to safeguard optimization
+    //constraints: poisson_max_delta_step > 0.0
+    public double poisson_max_delta_step = DEFAULT_VALUE;
+
+    //used only in tweedie regression application
+    //used to control the variance of the tweedie distribution
+    //set this closer to 2 to shift towards a Gamma distribution
+    //set this closer to 1 to shift towards a Poisson distribution
+    // constraints: 1.0 <= tweedie_variance_power < 2.0
+    public double tweedie_variance_power = DEFAULT_VALUE;
+
+    //used only in lambdarank application
+    //controls the number of top-results to focus on during training, refer to “truncation level” in the Sec. 3 of LambdaMART paper
+    //this parameter is closely related to the desirable cutoff k in the metric NDCG@k that we aim at optimizing the ranker for. The optimal setting for this parameter is likely to be slightly higher than k (e.g., k + 3) to include more pairs of documents to train on, 
+    //but perhaps not too high to avoid deviating too much from the desired target metric NDCG@k
+    // constraints: lambdarank_truncation_level > 0
+    //public int lambdarank_truncation_level = DEFAULT_VALUE;
+
+    //used only in lambdarank application
+    //set this to true to normalize the lambdas for different queries, and improve the performance for unbalanced data
+    //set this to false to enforce the original lambdarank algorithm
+    //public bool lambdarank_norm = true;
+
+    //used only in lambdarank application
+    //relevant gain for labels. For example, the gain of label 2 is 3 in case of default label gains
+    //separate by ,
+    //default = 0,1,3,7,15,31,63,...,2^30-1
+    //public double[] label_gain = null; 
+    #endregion
+
+    #region Metric Parameters
+
+    //metric(s) to be evaluated on the evaluation set(s)
+    // see: https://lightgbm.readthedocs.io/en/latest/Parameters.html#metric
+    //support multiple metrics, separated by ,
+    //type = multi-enum
+    //aliases: metrics, met
