@@ -989,4 +989,55 @@ public class LightGBMSample : AbstractModelSample
     // see: https://lightgbm.readthedocs.io/en/latest/Parameters.html#metric
     //support multiple metrics, separated by ,
     //type = multi-enum
-    //aliases: metrics, met
+    //aliases: metrics, metric_types
+    public string metric;
+
+    #region CLI specific
+    //frequency for metric output
+    //aliases: output_freq
+    //constraints: metric_freq > 0
+    public int metric_freq = 1;
+
+    //set this to true to output metric result over training dataset
+    //aliases: training_metric, is_training_metric, train_metric
+    public bool is_provide_training_metric = false;
+    #endregion
+
+    //used only with ndcg and map metrics
+    //NDCG and MAP evaluation positions, separated by ,
+    //aliases: ndcg_eval_at, ndcg_at, map_eval_at, map_at
+    //public string eval_at; 
+
+    //used only with multi_error metric
+    //threshold for top-k multi-error metric
+    //the error on each sample is 0 if the true class is among the top multi_error_top_k predictions, and 1 otherwise
+    //more precisely, the error on a sample is 0 if there are at least num_classes - multi_error_top_k predictions strictly less than the prediction on the true class
+    //when multi_error_top_k=1 this is equivalent to the usual multi-error metric
+    // constraints: multi_error_top_k > 0
+    public int multi_error_top_k = DEFAULT_VALUE;
+
+    //used only with auc_mu metric
+    //list representing flattened matrix (in row-major order) giving loss weights for classification errors
+    //list should have n * n elements, where n is the number of classes
+    //the matrix co-ordinate [i, j] should correspond to the i * n + j-th element of the list
+    //if not specified, will use equal weights for all classes
+    //public double[] auc_mu_weights = null;
+    #endregion
+
+    //#region Network Parameters
+    ////the number of machines for distributed learning application
+    ////this parameter is needed to be set in both socket and mpi versions
+    //// aliases: num_machine, constraints: num_machines > 0
+    //public int num_machines = DEFAULT_VALUE;
+
+    ////TCP listen port for local machines
+    ////Note: don’t forget to allow this port in firewall settings before training
+    //// aliases: local_port, port, constraints: local_listen_port > 0
+    //public int local_listen_port = DEFAULT_VALUE;
+
+    //// socket time-out in minutes
+    //// constraints: time_out > 0
+    //public int time_out = DEFAULT_VALUE;
+
+    ////path of file that lists machines for this distributed learning application
+    ////each line contains one 
