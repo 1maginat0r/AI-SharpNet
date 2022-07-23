@@ -1040,4 +1040,65 @@ public class LightGBMSample : AbstractModelSample
     //public int time_out = DEFAULT_VALUE;
 
     ////path of file that lists machines for this distributed learning application
-    ////each line contains one 
+    ////each line contains one IP and one port for one machine. The format is ip port (space as a separator)
+    ////Note: can be used only in CLI version
+    //// aliases: machine_list_file, machine_list, mlist
+    //public string machine_list_filename;
+
+    ////list of machines in the following format: ip1:port1,ip2:port2
+    //// aliases: workers, nodes
+    //public string machines;
+    //#endregion
+
+    #region GPU Parameters
+
+    //OpenCL platform ID. Usually each GPU vendor exposes one OpenCL platform
+    //-1 means the system-wide default platform
+    //Note: refer to GPU Targets for more details
+    public int gpu_platform_id = DEFAULT_VALUE;
+
+    //OpenCL device ID in the specified platform. Each GPU in the selected platform has a unique device ID
+    //-1 means the default device in the selected platform
+    //Note: refer to GPU Targets for more details    
+    public int gpu_device_id = DEFAULT_VALUE;
+
+    //set this to true to use double precision math on GPU (by default single precision is used)
+    //Note: can be used only in OpenCL implementation, in CUDA implementation only double precision is currently supported
+    public bool gpu_use_dp = false;
+
+    //number of GPUs
+    //Note: can be used only in CUDA implementation
+    // constraints: num_gpu > 0
+    public int num_gpu = DEFAULT_VALUE;
+
+    #endregion
+
+    /// <summary>
+    /// The default Search Space for CatBoost Model
+    /// </summary>
+    /// <returns></returns>
+    // ReSharper disable once UnusedMember.Global
+    public static Dictionary<string, object> DefaultSearchSpace(int num_iterations)
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+            //uncomment appropriate one
+            ////for regression:
+            //{"objective", "regression"},      
+
+            ////for binary classification:
+            //{"objective", "binary"},          
+
+            ////for multi class classification:
+            //{"objective", "multiclass"},      
+            //{"num_class", number_of_class },
+
+            //high priority
+            { "bagging_fraction", new[]{0.8f, 0.9f, 1.0f} },
+            { "bagging_freq", new[]{0, 1} },
+            { "boosting", new []{"gbdt", "dart"}},
+            { "colsample_bytree",HyperparameterSearchSpace.Range(0.3f, 1.0f)},
+            //{ "early_stopping_round", num_iterations/10 },
+            { "lambda_l1",HyperparameterSearchSpace.Range(0f, 2f)},
+            { "learning_rate",HyperparameterSearchSpace.Range(0.005f, 0.2f)},
+            {
