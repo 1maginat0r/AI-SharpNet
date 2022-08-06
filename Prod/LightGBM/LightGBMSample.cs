@@ -1101,4 +1101,56 @@ public class LightGBMSample : AbstractModelSample
             //{ "early_stopping_round", num_iterations/10 },
             { "lambda_l1",HyperparameterSearchSpace.Range(0f, 2f)},
             { "learning_rate",HyperparameterSearchSpace.Range(0.005f, 0.2f)},
-            {
+            { "max_depth", new[]{10, 20, 50, 100, 255} },
+            { "min_data_in_leaf", new[]{20, 50 /*,100*/} },
+            { "num_iterations", num_iterations },
+            { "num_leaves", HyperparameterSearchSpace.Range(3, 50) },
+            { "num_threads", 1},
+            { "verbosity", "0" },
+
+            //medium priority
+            { "drop_rate", new[]{0.05, 0.1, 0.2}},                               //specific to dart mode
+            { "lambda_l2",HyperparameterSearchSpace.Range(0f, 2f)},
+            { "min_data_in_bin", new[]{3, 10, 100, 150}  },
+            { "max_bin", HyperparameterSearchSpace.Range(10, 255) },
+            { "max_drop", new[]{40, 50, 60}},                                   //specific to dart mode
+            { "skip_drop",HyperparameterSearchSpace.Range(0.1f, 0.6f)},  //specific to dart mode
+
+            //low priority
+            { "extra_trees", new[] { true , false } }, //low priority 
+            //{ "colsample_bynode",AbstractHyperparameterSearchSpace.Range(0.5f, 1.0f)}, //very low priority
+            { "path_smooth", HyperparameterSearchSpace.Range(0f, 1f) }, //low priority
+            { "min_sum_hessian_in_leaf", HyperparameterSearchSpace.Range(1e-3f, 1.0f) },
+
+        };
+
+        return searchSpace;
+    }
+
+    public override Model NewModel(AbstractDatasetSample datasetSample, string workingDirectory, string modelName)
+    {
+        return new LightGBMModel(this, workingDirectory, modelName);
+    }
+
+    private bool IsMultiClassClassificationProblem()
+    {
+        switch (objective)
+        {
+            case objective_enum.multiclass:
+            case objective_enum.multiclassova:
+                return true;
+            default:
+                return false;
+        }
+    }
+    private static readonly HashSet<string> _categoricalHyperparameters = new()
+    {
+        "saved_feature_importance_type",
+        "verbosity",
+        "task",
+        "objective",
+        "boosting",
+        "device_type",
+        "tree_learner",
+    };
+}
