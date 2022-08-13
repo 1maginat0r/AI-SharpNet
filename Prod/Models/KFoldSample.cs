@@ -49,4 +49,13 @@ public class KFoldSample : AbstractModelSample
     {
         return new List<EvaluationMetricEnum> { GetRankingEvaluationMetric() };
     }
-    public override 
+    public override void Use_All_Available_Cores()
+    {
+        Should_Use_All_Available_Cores = true;
+    }
+
+    public override Model NewModel(AbstractDatasetSample datasetSample, string workingDirectory, string modelName)
+    {
+        return new KFoldModel(this, workingDirectory, modelName, datasetSample);
+    }
+}
