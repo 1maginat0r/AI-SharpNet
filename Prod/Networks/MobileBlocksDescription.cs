@@ -75,4 +75,17 @@ namespace SharpNet.Networks
 
         public static int RoundFilters(int outputFilters, float widthCoefficient, int depthDivisor)
         {
-            float tmpFilters = outputFilters* widthCoeff
+            float tmpFilters = outputFilters* widthCoefficient;
+            // ReSharper disable once PossibleLossOfFraction
+            float newFilters = ((int)((tmpFilters + depthDivisor / 2) / depthDivisor)) * depthDivisor;
+            newFilters = Math.Max(depthDivisor, newFilters);
+            //Make sure that round down does not go down by more than 10%.
+            if (newFilters < 0.9 * tmpFilters)
+            {
+                newFilters += depthDivisor;
+            }
+            return (int)newFilters;
+        }
+
+    }
+}
