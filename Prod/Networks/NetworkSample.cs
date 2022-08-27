@@ -74,4 +74,63 @@ namespace SharpNet.Networks
         public enum LearningRateSchedulerEnum { Cifar10ResNet, Cifar10DenseNet, OneCycle, CyclicCosineAnnealing, Cifar10WideResNet, Linear, Constant }
 
         public LearningRateSchedulerEnum LearningRateSchedulerType = LearningRateSchedulerEnum.Constant;
-        public
+        public int CyclicCosineAnnealing_nbEpochsInFirstRun = 10;
+
+        public int CyclicCosineAnnealing_nbEpochInNextRunMultiplier = 2;
+        /// <summary>
+        /// for one cycle policy: by how much we have to divide the max learning rate to reach the min learning rate
+        /// </summary>
+        public int OneCycle_DividerForMinLearningRate = 10;
+        public double OneCycle_PercentInAnnealing = 0.2;
+
+
+        public int Linear_DividerForMinLearningRate = 100;
+
+        /// <summary>
+        /// the minimum value for the learning rate (default value:  1e-6)
+        /// </summary>
+        public double CyclicCosineAnnealing_MinLearningRate = 1e-6;
+
+        public bool DisableReduceLROnPlateau;
+        public bool DivideBy10OnPlateau = true; // 'true' : validated on 19-apr-2019: +20 bps
+        public bool LinearLearningRate;
+        #endregion
+        #endregion
+
+
+        public double MinimumRankingScoreToSaveModel = double.NaN;
+
+
+        /// <summary>
+        /// if set:
+        ///  we'll only save the model after the epoch that gives the better results:
+        ///     better ranking score in validation dataset (if a validation dataset is provided)
+        ///     better ranking score in training dataset (if no validation dataset is provided)
+        /// </summary>
+        public bool use_best_model = true;
+
+        public override IScore GetMinimumRankingScoreToSaveModel()
+        {
+            if (double.IsNaN(MinimumRankingScoreToSaveModel))
+            {
+                return null;
+            }
+            return new Score((float)MinimumRankingScoreToSaveModel, GetRankingEvaluationMetric());
+
+        }
+
+
+        /// <summary>
+        /// all resources (CPU or GPU) available for the current network
+        /// values superior or equal to 0 means GPU resources (device)
+        /// values strictly less then 0 mean CPU resources (host)
+        /// 
+        /// if ResourceIds.Count == 1
+        ///     if masterNetworkIfAny == null:
+        ///         all computation will be done in a single network (using resource ResourceIds[0])
+        ///     else:
+        ///         we are in a slave network (using resource ResourceIds[0]) doing part of the parallel computation
+        ///         the master network is 'masterNetworkIfAny'.
+        /// else: (ResourceIds.Count >= 2)
+        ///     we are the master network (using resource ResourceIds[0]) doing part of the parallel computation
+        ///     sla
