@@ -133,4 +133,65 @@ namespace SharpNet.Networks
         ///         the master network is 'masterNetworkIfAny'.
         /// else: (ResourceIds.Count >= 2)
         ///     we are the master network (using resource ResourceIds[0]) doing part of the parallel computation
-        ///     sla
+        ///     slaves network will use resourceId ResourceIds[1:]
+        /// 
+        /// for each resourceId in this list:
+        ///     if resourceId strictly less then 0:
+        ///         use CPU resource (no GPU usage)
+        ///     else:
+        ///         run the network on the GPU with device Id = resourceId
+        /// </summary>
+        public List<int> ResourceIds = new() { 0 };
+        public void SetResourceId(int resourceId)
+        {
+            if (resourceId == int.MaxValue)
+            {
+                //use multi GPU
+                ResourceIds = Enumerable.Range(0, GetDeviceCount()).ToList();
+            }
+            else
+            {
+                //single resource
+                ResourceIds = new List<int> { resourceId };
+            }
+        }
+
+        public int NumEpochs;
+        public int BatchSize;
+        public override EvaluationMetricEnum GetLoss() => LossFunction;
+        public override EvaluationMetricEnum GetRankingEvaluationMetric()
+        {
+            var metrics = GetAllEvaluationMetrics();
+            return metrics.Count != 0 ? metrics[0] : EvaluationMetricEnum.DEFAULT_VALUE;
+        }
+
+        protected override List<EvaluationMetricEnum> GetAllEvaluationMetrics()
+        {
+            return EvaluationMetrics;
+        }
+        public EvaluationMetricEnum LossFunction = EvaluationMetricEnum.DEFAULT_VALUE;
+
+
+        public float MseOfLog_Epsilon = 0.0008f;
+        public float Huber_Delta = 1.0f;
+
+        /// <summary>
+        /// the percent of elements in the True (y==1) class
+        /// the goal is to recalibrate the loss if one class (y==1 or y==0) is over-represented
+        /// </summary>
+        public float BCEWithFocalLoss_PercentageInTrueClass = 0.5f;
+        public float BCEWithFocalLoss_Gamma = 0;
+
+        public List<EvaluationMetricEnum> EvaluationMetrics = new();
+
+        public CompatibilityModeEnum CompatibilityMode = CompatibilityModeEnum.SharpNet;
+        public string DataSetName;
+        /// <summary>
+        /// if true
+        ///     we'll always use the full test data set to compute the loss and accuracy of this test data set
+        /// else
+        ///     we'll use the full test data set for some specific epochs (the first, the last, etc.)
+        ///     and a small part of this test data set for other epochs:
+        ///         DataSet.PercentageToUseForLossAndAccuracyFastEstimate
+        /// </summary>
+        public bool AlwaysUseFullTestDataSetF
