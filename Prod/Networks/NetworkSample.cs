@@ -194,4 +194,53 @@ namespace SharpNet.Networks
         ///     and a small part of this test data set for other epochs:
         ///         DataSet.PercentageToUseForLossAndAccuracyFastEstimate
         /// </summary>
-        public bool AlwaysUseFullTestDataSetF
+        public bool AlwaysUseFullTestDataSetForLossAndAccuracy = true;
+      
+        /// <summary>
+        /// true if we want to display statistics about the weights tensors.
+        /// Used only for debugging 
+        /// </summary>
+        public bool DisplayTensorContentStats = false;
+
+        public bool SaveNetworkStatsAfterEachEpoch = false;
+        /// <summary>
+        /// Interval in minutes for saving the network
+        /// If less than 0
+        ///     => this option will be disabled
+        /// If == 0
+        ///     => the network will be saved after each iteration
+        /// </summary>
+        public int AutoSaveIntervalInMinutes = 3*60;
+        /// <summary>
+        /// number of consecutive epochs with a degradation of the validation loss to
+        /// stop training the network.
+        /// A value less or equal then 0 means no early stopping
+        /// </summary>
+        public int EarlyStoppingRounds = 0;
+        /// <summary>
+        /// name of the the first layer for which we want ot freeze the weights
+        /// if 'FirstLayerNameToFreeze' is valid and 'LastLayerNameToFreeze' is empty
+        ///     we'll freeze all layers in the network from 'FirstLayerNameToFreeze' to the last network layer
+        /// if both 'FirstLayerNameToFreeze' and 'LastLayerNameToFreeze' are valid
+        ///     we'll freeze all layers in the network between 'FirstLayerNameToFreeze' and 'LastLayerNameToFreeze'
+        /// if 'FirstLayerNameToFreeze' is empty and 'LastLayerNameToFreeze' is valid
+        ///     we'll freeze all layers from the start of the network to layer 'LastLayerNameToFreeze'
+        /// if both 'FirstLayerNameToFreeze' and 'LastLayerNameToFreeze' are empty
+        ///     no layers will be freezed
+        /// </summary>
+        public string FirstLayerNameToFreeze = "";
+        /// <summary>
+        /// name of the the last layer for which we want to freeze the weights
+        /// </summary>
+        public string LastLayerNameToFreeze = "";
+
+        #region logging
+        public static string DefaultWorkingDirectory => Utils.ChallengesPath;
+        public static string DefaultDataDirectory => Path.Combine(DefaultWorkingDirectory, "Data");
+        #endregion
+
+        #region Learning Rate Scheduler
+        public NetworkSample WithCyclicCosineAnnealingLearningRateScheduler(int nbEpochsInFirstRun, int nbEpochInNextRunMultiplier, double minLearningRate = 0.0)
+        {
+            DisableReduceLROnPlateau = true;
+            LearningRateSchedulerType = Learni
