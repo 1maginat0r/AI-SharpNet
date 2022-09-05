@@ -243,4 +243,50 @@ namespace SharpNet.Networks
         public NetworkSample WithCyclicCosineAnnealingLearningRateScheduler(int nbEpochsInFirstRun, int nbEpochInNextRunMultiplier, double minLearningRate = 0.0)
         {
             DisableReduceLROnPlateau = true;
-            LearningRateSchedulerType = Learni
+            LearningRateSchedulerType = LearningRateSchedulerEnum.CyclicCosineAnnealing;
+            CyclicCosineAnnealing_nbEpochsInFirstRun = nbEpochsInFirstRun;
+            CyclicCosineAnnealing_nbEpochInNextRunMultiplier = nbEpochInNextRunMultiplier;
+            CyclicCosineAnnealing_MinLearningRate = minLearningRate;
+            return this;
+        }
+        public NetworkSample WithLinearLearningRateScheduler(int dividerForMinLearningRate)
+        {
+            DisableReduceLROnPlateau = true;
+            LearningRateSchedulerType = LearningRateSchedulerEnum.Linear;
+            Linear_DividerForMinLearningRate = dividerForMinLearningRate;
+            return this;
+        }
+        public NetworkSample WithOneCycleLearningRateScheduler(int dividerForMinLearningRate, double percentInAnnealing)
+        {
+            LearningRateSchedulerType = LearningRateSchedulerEnum.OneCycle;
+            DisableReduceLROnPlateau = true;
+            OneCycle_DividerForMinLearningRate = dividerForMinLearningRate;
+            OneCycle_PercentInAnnealing = percentInAnnealing;
+            return this;
+        }
+        public NetworkSample WithCifar10ResNetLearningRateScheduler(bool disableReduceLROnPlateau, bool divideBy10OnPlateau, bool linearLearningRate)
+        {
+            LearningRateSchedulerType = LearningRateSchedulerEnum.Cifar10ResNet;
+            DisableReduceLROnPlateau = disableReduceLROnPlateau;
+            DivideBy10OnPlateau = divideBy10OnPlateau;
+            LinearLearningRate = linearLearningRate;
+            return this;
+        }
+        public NetworkSample WithCifar10WideResNetLearningRateScheduler(bool disableReduceLROnPlateau, bool divideBy10OnPlateau, bool linearLearningRate)
+        {
+            LearningRateSchedulerType = LearningRateSchedulerEnum.Cifar10WideResNet;
+            DisableReduceLROnPlateau = disableReduceLROnPlateau;
+            DivideBy10OnPlateau = divideBy10OnPlateau;
+            LinearLearningRate = linearLearningRate;
+            return this;
+        }
+        public NetworkSample WithCifar10DenseNetLearningRateScheduler(bool disableReduceLROnPlateau, bool divideBy10OnPlateau, bool linearLearningRate)
+        {
+            LearningRateSchedulerType = LearningRateSchedulerEnum.Cifar10DenseNet;
+            DisableReduceLROnPlateau = disableReduceLROnPlateau;
+            DivideBy10OnPlateau = divideBy10OnPlateau;
+            LinearLearningRate = linearLearningRate;
+            return this;
+        }
+
+       
