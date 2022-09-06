@@ -289,4 +289,44 @@ namespace SharpNet.Networks
             return this;
         }
 
-       
+        public NetworkSample WithConstantLearningRateScheduler(double learningRate)
+        {
+            LearningRateSchedulerType = LearningRateSchedulerEnum.Constant;
+            DisableReduceLROnPlateau = true;
+            LinearLearningRate = false;
+            InitialLearningRate = learningRate;
+            return this;
+        }
+
+        public ReduceLROnPlateau ReduceLROnPlateau()
+        {
+            if (DisableReduceLROnPlateau)
+            {
+                return null;
+            }
+            var factorForReduceLrOnPlateau = DivideBy10OnPlateau ? 0.1 : Math.Sqrt(0.1);
+            return new ReduceLROnPlateau(factorForReduceLrOnPlateau, 5, 5);
+        }
+
+
+        public ILearningRateComputer GetLearningRateComputer()
+        {
+            return new LearningRateComputer(GetLearningRateScheduler(), ReduceLROnPlateau(), MinimumLearningRate);
+        }
+
+        private ILearningRateScheduler GetLearningRateScheduler()
+        {
+            switch (LearningRateSchedulerType)
+            {
+                case LearningRateSchedulerEnum.OneCycle:
+                    return new OneCycleLearningRateScheduler(InitialLearningRate, OneCycle_DividerForMinLearningRate, OneCycle_PercentInAnnealing, NumEpochs);
+                case LearningRateSchedulerEnum.CyclicCosineAnnealing:
+                    return new CyclicCosineAnnealingLearningRateScheduler(CyclicCosineAnnealing_MinLearningRate, InitialLearningRate, CyclicCosineAnnealing_nbEpochsInFirstRun, CyclicCosineAnnealing_nbEpochInNextRunMultiplier, NumEpochs);
+                case LearningRateSchedulerEnum.Cifar10DenseNet:
+                    return LearningRateScheduler.ConstantByInterval(1, InitialLearningRate, 150, InitialLearningRate / 10, 225, InitialLearningRate / 100);
+                case LearningRateSchedulerEnum.Cifar10ResNet:
+                    return LinearLearningRate
+                        ? LearningRateScheduler.InterpolateByInterval(1, InitialLearningRate, 80, InitialLearningRate / 10, 120, InitialLearningRate / 100, 200, InitialLearningRate / 100)
+                        : LearningRateScheduler.ConstantByInterval(1, InitialLearningRate, 80, InitialLearningRate / 10, 120, InitialLearningRate / 100, 200, InitialLearningRate / 100);
+                case LearningRateSchedulerEnum.Cifar10WideResNet:
+                    return LearningRateScheduler.ConstantByInterval(1, InitialLearningRate, 60, Initial
