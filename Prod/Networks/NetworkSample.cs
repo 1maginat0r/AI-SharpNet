@@ -329,4 +329,56 @@ namespace SharpNet.Networks
                         ? LearningRateScheduler.InterpolateByInterval(1, InitialLearningRate, 80, InitialLearningRate / 10, 120, InitialLearningRate / 100, 200, InitialLearningRate / 100)
                         : LearningRateScheduler.ConstantByInterval(1, InitialLearningRate, 80, InitialLearningRate / 10, 120, InitialLearningRate / 100, 200, InitialLearningRate / 100);
                 case LearningRateSchedulerEnum.Cifar10WideResNet:
-                    return LearningRateScheduler.ConstantByInterval(1, InitialLearningRate, 60, Initial
+                    return LearningRateScheduler.ConstantByInterval(1, InitialLearningRate, 60, InitialLearningRate / 5, 120, InitialLearningRate / 25, 160, InitialLearningRate / 125);
+                case LearningRateSchedulerEnum.Linear:
+                    return LearningRateScheduler.Linear(InitialLearningRate, NumEpochs, InitialLearningRate / Linear_DividerForMinLearningRate);
+                case LearningRateSchedulerEnum.Constant:
+                    return LearningRateScheduler.Constant(InitialLearningRate);
+                default:
+                    throw new Exception("unknown LearningRateSchedulerType: " + LearningRateSchedulerType);
+            }
+        }
+        #endregion
+
+        public override void Use_All_Available_Cores()
+        {
+            if (GetDeviceCount() == 0)
+            {
+                SetResourceId(-1); //we'll use all available CPU
+            }
+            else
+            {
+                SetResourceId(int.MaxValue); //we'll use all available GPU
+            }
+        }
+
+
+        public override bool FixErrors()
+        {
+            switch (OptimizerType)
+            {
+                case Optimizer.OptimizationEnum.AdamW:
+                    WithAdamW(AdamW_L2Regularization, Adam_beta1, Adam_beta2, Adam_epsilon);
+                    //lambdaL2Regularization = SGD_momentum = 0;
+                    //SGD_usenesterov = false;
+                    break;
+                case Optimizer.OptimizationEnum.SGD:
+                    WithSGD(SGD_momentum, SGD_usenesterov);
+                    //AdamW_L2Regularization = Adam_beta1 = Adam_beta2 = Adam_epsilon = 0;
+                    break;
+                case Optimizer.OptimizationEnum.Adam:
+                    WithAdam(Adam_beta1, Adam_beta2, Adam_epsilon);
+                    //AdamW_L2Regularization = SGD_momentum = 0;
+                    //SGD_usenesterov = false;
+                    break;
+                case Optimizer.OptimizationEnum.VanillaSGD:
+                case Optimizer.OptimizationEnum.VanillaSGDOrtho:
+                    //SGD_momentum = AdamW_L2Regularization = Adam_beta1 = Adam_beta2 = Adam_epsilon = 0;
+                    //SGD_usenesterov = false;
+                    break; // no extra configuration needed
+            }
+
+            switch (LearningRateSchedulerType)
+            {
+                case LearningRateSchedulerEnum.CyclicCosineAnnealing:
+                    WithCyclicCosineAnnealingLearningRateScheduler(CyclicCosineAnnealing_nbEpochsInFirstRun, CyclicCosineAnnealing_nbEpochInNextRunMultiplier, CyclicCos
