@@ -381,4 +381,55 @@ namespace SharpNet.Networks
             switch (LearningRateSchedulerType)
             {
                 case LearningRateSchedulerEnum.CyclicCosineAnnealing:
-                    WithCyclicCosineAnnealingLearningRateScheduler(CyclicCosineAnnealing_nbEpochsInFirstRun, CyclicCosineAnnealing_nbEpochInNextRunMultiplier, CyclicCos
+                    WithCyclicCosineAnnealingLearningRateScheduler(CyclicCosineAnnealing_nbEpochsInFirstRun, CyclicCosineAnnealing_nbEpochInNextRunMultiplier, CyclicCosineAnnealing_MinLearningRate);
+                    break;
+                case LearningRateSchedulerEnum.OneCycle:
+                    WithOneCycleLearningRateScheduler(OneCycle_DividerForMinLearningRate, OneCycle_PercentInAnnealing);
+                    break;
+                case LearningRateSchedulerEnum.Linear:
+                    WithLinearLearningRateScheduler(Linear_DividerForMinLearningRate);
+                    break;
+            }
+
+            if (!MustUseGPU)
+            {
+                //this is the only supported mode on CPU
+                ConvolutionAlgoPreference = ConvolutionAlgoPreference.FASTEST_DETERMINIST;
+            }
+
+            if (DataAugmentationType == ImageDataGenerator.DataAugmentationEnum.NO_AUGMENTATION)
+            {
+                ZoomRange = RotationRangeInDegrees = AlphaCutMix = AlphaMixup = CutoutPatchPercentage = RowsCutoutPatchPercentage = ColumnsCutoutPatchPercentage = FillModeConstantVal = AlphaMixup = AlphaCutMix = WidthShiftRangeInPercentage = HeightShiftRangeInPercentage = 0;
+                HorizontalFlip = VerticalFlip = Rotate180Degrees= Rotate90Degrees = false;
+            }
+
+            if (AlphaMixup>0 && AlphaCutMix>0)
+            {
+                // Mixup and CutMix can not be used at the same time: we need to disable one of them
+                if (Utils.RandomCoinFlip())
+                {
+                    AlphaMixup = 0; //We disable Mixup
+                }
+                else
+                {
+                    AlphaCutMix = 0; //We disable CutMix
+                }
+            }
+
+            if (LossFunction != EvaluationMetricEnum.BCEWithFocalLoss)
+            {
+                BCEWithFocalLoss_PercentageInTrueClass = 0.5f; //balanced dataset
+                BCEWithFocalLoss_Gamma = 0f;
+            }
+
+            if (CutoutPatchPercentage <= 0) { CutoutCount = 0; }
+            if (CutoutPatchPercentage > 0) { CutoutCount = Math.Max(CutoutCount, 1); }
+
+            if (ColumnsCutoutPatchPercentage <= 0) { ColumnsCutoutCount = 0; }
+            if (ColumnsCutoutPatchPercentage > 0) { ColumnsCutoutCount = Math.Max(ColumnsCutoutCount, 1); }
+
+            if (RowsCutoutPatchPercentage <= 0) { RowsCutoutCount = 0; }
+            if (RowsCutoutPatchPercentage > 0) { RowsCutoutCount = Math.Max(RowsCutoutCount, 1); }
+
+            if (LossFunction == EvaluationMetricEnum.DEFAULT_VALUE)
+     
