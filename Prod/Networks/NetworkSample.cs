@@ -499,4 +499,54 @@ namespace SharpNet.Networks
 
         public virtual void BuildLayers(Network nn, AbstractDatasetSample datasetSample)
         {
-            ISampl
+            ISample.Log.Warn($"{nameof(BuildLayers)} is not overriden and will do nothing");
+        }
+
+        public enum POOLING_BEFORE_DENSE_LAYER
+        {
+            /* we'll use an Average Pooling layer of size [2 x 2] before the Dense layer*/
+            AveragePooling_2,
+            /* we'll use an Average Pooling layer of size [8 x 8] before the Dense layer*/
+            AveragePooling_8,
+
+            /* We'll use a Global Average Pooling (= GAP) layer just before the last Dense (= fully connected) Layer
+            This GAP layer will transform the input feature map of shape (n,c,h,w)
+            to an output feature map of shape (n,c,1,1),
+            so that this output feature map is independent of the the size of the input */
+            GlobalAveragePooling,
+
+            /* we'll use a Global Average Pooling layer concatenated with a Global Max Pooling layer before the Dense Layer
+            This will transform the input feature map of shape (n,c,h,w)
+            to an output feature map of shape (n, 2*c, 1, 1),
+            so that this output feature map is independent of the the size of the input */
+            GlobalAveragePooling_And_GlobalMaxPooling,
+
+            /* We'll use a Global Max Pooling layer just before the last Dense (= fully connected) Layer
+            This will transform the input feature map of shape (n,c,h,w)
+            to an output feature map of shape (n,c,1,1),
+            so that this output feature map is independent of the the size of the input */
+            GlobalMaxPooling,
+
+            /* no pooling */
+            NONE
+        };
+
+        public Network BuildNetworkWithoutLayers(string workingDirectory, string modelName)
+        {
+            var network = new Network(this, null, workingDirectory, modelName, false); //!D
+            return network;
+        }
+
+        //private static NetworkSample ValueOfNetworkSample(string workingDirectory, string modelName)
+        //{
+        //    return new NetworkSample(new ISample[]
+        //    {
+        //        ISample.LoadSample<NetworkSample>(workingDirectory, ISample.SampleName(modelName, 0)),
+        //        ISample.LoadSample<DataAugmentationSample>(workingDirectory, ISample.SampleName(modelName, 1)),
+        //    });
+        //}
+
+
+
+        public NetworkSample WithSGD(double momentum = 0.9, bool useNesterov = true)
+        {
