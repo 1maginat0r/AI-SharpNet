@@ -664,3 +664,66 @@ namespace SharpNet.Networks
         /// If less or equal to 0 , Rows Cutout will be disabled
         /// </summary>
         public double RowsCutoutPatchPercentage = 0.0;
+        /// <summary>
+        /// number of distinct 'rows cutout' to perform in the same image
+        /// if RowsCutoutPatchPercentage is less or equal to 0 , Rows Cutout will be disabled (and RowsCutoutCount will be set to)
+        /// </summary>
+        public int RowsCutoutCount = 1;
+
+
+
+        #region time series
+
+
+
+        // ReSharper disable once UnusedMember.Global
+        public string TimeSeriesDescription()
+        {
+            string res = "_";
+            res += "_" + AugmentedFeaturesPercentage.ToString(CultureInfo.InvariantCulture).Replace(".", "_");
+
+            if (UseContinuousFeatureInEachTimeStep)
+            {
+                res += "_Continuous";
+            }
+            if (SameAugmentedFeaturesForEachTimeStep)
+            {
+                res += "_SameFeaturesByTimeStep";
+            }
+            return res;
+        }
+
+        public bool UseContinuousFeatureInEachTimeStep = false;
+
+        /// <summary>
+        /// % of the number of features to be 'augmented'
+        /// Ex: 0.2 means 20% of the features will be 'augmented'
+        /// </summary>
+        public double AugmentedFeaturesPercentage = 0.03;
+
+        public bool SameAugmentedFeaturesForEachTimeStep = false;
+
+        /// <summary>
+        /// When TimeSeriesType = TimeSeriesAugmentationType.ADD_NOISE
+        /// the % of noise to add to the feature in % of the feature volatility
+        /// </summary>
+        public double NoiseInPercentageOfVolatility = 0.1;
+        #endregion
+
+        /// <summary>
+        /// The alpha coefficient used to compute lambda in CutMix
+        /// If less or equal to 0 , CutMix will be disabled
+        /// Alpha will be used as an input of the beta law to compute lambda
+        /// (so a value of AlphaCutMix = 1.0 will use a uniform random distribution in [0,1] for lambda)
+        /// lambda is the % of the original to keep (1-lambda will be taken from another element and mixed with current)
+        /// the % of the max(width,height) of the CutMix mask to apply to the input picture (see: https://arxiv.org/pdf/1905.04899.pdf)
+        /// </summary>
+        public double AlphaCutMix = 0.0;
+
+        public double AlphaRowsCutMix = 0.0;
+        public double AlphaColumnsCutMix = 0.0;
+
+
+        /// <summary>
+        /// The alpha coefficient used to compute lambda in Mixup
+        /// A value less or equal to 0.0 wil disable Mixup (see: https://arxiv.org/pdf/17
