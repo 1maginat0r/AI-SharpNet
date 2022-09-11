@@ -432,4 +432,71 @@ namespace SharpNet.Networks
             if (RowsCutoutPatchPercentage > 0) { RowsCutoutCount = Math.Max(RowsCutoutCount, 1); }
 
             if (LossFunction == EvaluationMetricEnum.DEFAULT_VALUE)
-     
+            {
+                return false;
+            }
+            if (EvaluationMetrics.Count == 0)
+            {
+                EvaluationMetrics = new List<EvaluationMetricEnum> { GetLoss() };
+            }
+
+            return true;
+        }
+
+        // ReSharper disable once MemberCanBeMadeStatic.Global
+        public int TypeSize => 4;
+        public override bool MustUseGPU => ResourceIds.Max() >= 0;
+        public override void SetTaskId(int taskId)
+        {
+            if (MustUseGPU)
+            {
+                ResourceIds = new List<int> { taskId };
+            }
+            else
+            {
+                //CPU
+                ResourceIds = new List<int> { -1 };
+            }
+        }
+
+        public NetworkSample WithAdam(double _beta1 = 0.9, double _beta2 = 0.999, double _epsilon = 1e-8)
+        {
+            Debug.Assert(_beta1 >= 0);
+            Debug.Assert(_beta1 <= 1.0);
+            Debug.Assert(_beta2 >= 0);
+            Debug.Assert(_beta2 <= 1.0);
+            AdamW_L2Regularization = 0.0;
+            Adam_beta1 = _beta1;
+            Adam_beta2 = _beta2;
+            Adam_epsilon = _epsilon;
+            OptimizerType = Optimizer.OptimizationEnum.Adam;
+            return this;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="adamW_L2Regularization">also known as weight decay</param>
+        /// <param name="beta1"></param>
+        /// <param name="beta2"></param>
+        /// <param name="epsilon"></param>
+        /// <returns></returns>
+        public NetworkSample WithAdamW(double adamW_L2Regularization = 0.01, double beta1 = 0.9, double beta2 = 0.999, double epsilon = 1e-8)
+        {
+            Debug.Assert(beta1 >= 0);
+            Debug.Assert(beta1 <= 1.0);
+            Debug.Assert(beta2 >= 0);
+            Debug.Assert(beta2 <= 1.0);
+            Debug.Assert(adamW_L2Regularization>1e-6);
+            AdamW_L2Regularization = adamW_L2Regularization;
+            lambdaL2Regularization = 0; //L2 regularization is not compatible with AdamW
+            Adam_beta1 = beta1;
+            Adam_beta2 = beta2;
+            Adam_epsilon = epsilon;
+            OptimizerType = Optimizer.OptimizationEnum.AdamW;
+            return this;
+        }
+
+        public virtual void BuildLayers(Network nn, AbstractDatasetSample datasetSample)
+        {
+            ISampl
