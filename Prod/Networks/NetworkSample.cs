@@ -607,4 +607,60 @@ namespace SharpNet.Networks
         /// <summary>
         /// randomly shift images vertically
         /// </summary>
-        public double H
+        public double HeightShiftRangeInPercentage = 0.0;
+        /// <summary>
+        /// randomly flip images horizontally
+        /// </summary>
+        public bool HorizontalFlip = false;
+        /// <summary>
+        /// randomly flip images vertically
+        /// </summary>
+        public bool VerticalFlip = false;
+        /// <summary>
+        /// randomly rotate the image by 180°
+        /// </summary>
+        public bool Rotate180Degrees = false;
+        /// <summary>
+        /// randomly rotate the image by 90°
+        /// </summary>
+        public bool Rotate90Degrees = false;
+
+        /// <summary>
+        /// set mode for filling points outside the input boundaries
+        /// </summary>
+        public ImageDataGenerator.FillModeEnum FillMode = ImageDataGenerator.FillModeEnum.Nearest;
+
+        /// <summary>
+        ///value used for fill_mode
+        /// </summary>
+        public double FillModeConstantVal = 0.0;
+
+        /// <summary>
+        /// The cutout to use in maximum % of the longest length ( = Max(height, width) )
+        /// ( = % of the max(width,height) of the zero mask to apply to the input picture) (see: https://arxiv.org/pdf/1708.04552.pdf)
+        /// recommended size : 16/32=0.5 (= 16x16) for CIFAR-10 / 8/32=0.25 (= 8x8) for CIFAR-100 / 20/32 (= 20x20) for SVHN / 32/96 (= 32x32) for STL-10
+        /// If less or equal to 0 , Cutout will be disabled
+        /// </summary>
+        public double CutoutPatchPercentage = 0.0;
+        /// <summary>
+        /// number of distinct 'cutout' to perform in the same image
+        /// if CutoutPatchPercentage is less or equal to 0 , Cutout will be disabled (and CutoutCount will be set to 0
+        /// </summary>
+        public int CutoutCount = 1;
+
+        /// <summary>
+        /// The columns cutout to use in maximum % of the number of columns
+        /// If less or equal to 0 , Columns Cutout will be disabled
+        /// </summary>
+        public double ColumnsCutoutPatchPercentage = 0.0;
+        /// <summary>
+        /// number of distinct 'column cutout' to perform in the same image
+        /// if ColumnsCutoutPatchPercentage is less or equal to 0 , Column Cutout will be disabled (and ColumnsCutoutCount will be set to 0)
+        /// </summary>
+        public int ColumnsCutoutCount = 1;
+
+        /// <summary>
+        /// The rows cutout to use in maximum % of the number of rows
+        /// If less or equal to 0 , Rows Cutout will be disabled
+        /// </summary>
+        public double RowsCutoutPatchPercentage = 0.0;
