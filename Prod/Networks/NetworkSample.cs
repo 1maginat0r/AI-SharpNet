@@ -550,3 +550,61 @@ namespace SharpNet.Networks
 
         public NetworkSample WithSGD(double momentum = 0.9, bool useNesterov = true)
         {
+            Debug.Assert(momentum >= 0);
+            Debug.Assert(momentum <= 1.0);
+            SGD_momentum = momentum;
+            SGD_usenesterov = useNesterov;
+            OptimizerType = Optimizer.OptimizationEnum.SGD;
+            return this;
+        }
+
+        public Optimizer GetOptimizer(int[] weightShape, int[] biasShape, TensorMemoryPool memoryPool)
+        {
+            switch (OptimizerType)
+            {
+                case Optimizer.OptimizationEnum.Adam:
+                    if (Math.Abs(AdamW_L2Regularization) > 1e-6)
+                    {
+                        throw new Exception("Invalid AdamW_L2Regularization (" + AdamW_L2Regularization + ") for Adam: should be 0");
+                    }
+                    return new Adam(memoryPool, Adam_beta1, Adam_beta2, Adam_epsilon, 0.0, weightShape, biasShape);
+                case Optimizer.OptimizationEnum.AdamW:
+                    if (Math.Abs(lambdaL2Regularization) > 1e-6)
+                    {
+                        throw new Exception("Can't use both AdamW and L2 Regularization");
+                    }
+                    if (AdamW_L2Regularization < 1e-6)
+                    {
+                        throw new Exception("Invalid AdamW_L2Regularization (" + AdamW_L2Regularization + ") for AdamW: should be > 0");
+                    }
+                    return new Adam(memoryPool, Adam_beta1, Adam_beta2, Adam_epsilon, AdamW_L2Regularization, weightShape, biasShape);
+                case Optimizer.OptimizationEnum.SGD:
+                    return new Sgd(memoryPool, SGD_momentum, SGD_usenesterov, weightShape, biasShape);
+                case Optimizer.OptimizationEnum.VanillaSGDOrtho:
+                    return new VanillaSgdOrtho(memoryPool, weightShape);
+                case Optimizer.OptimizationEnum.VanillaSGD:
+                default:
+                    return VanillaSgd.Instance;
+            }
+        }
+
+
+        public enum CompatibilityModeEnum
+        {
+            SharpNet,
+            TensorFlow,
+            PyTorch
+        }
+
+        
+        #region DataAugmentation
+
+        public ImageDataGenerator.DataAugmentationEnum DataAugmentationType = ImageDataGenerator.DataAugmentationEnum.NO_AUGMENTATION;
+        /// <summary>
+        ///randomly shift images horizontally
+        /// </summary>
+        public double WidthShiftRangeInPercentage = 0.0;
+        /// <summary>
+        /// randomly shift images vertically
+        /// </summary>
+        public double H
