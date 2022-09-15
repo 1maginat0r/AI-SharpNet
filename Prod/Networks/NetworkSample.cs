@@ -790,4 +790,51 @@ namespace SharpNet.Networks
         /// </summary>
         public int RandAugment_N = 0;
         /// <summary>
-        /// The magnitude of operations for the Ra
+        /// The magnitude of operations for the RandAugment
+        /// Only used when DataAugmentationType = DataAugmentationEnum.RAND_AUGMENT
+        /// </summary>
+        public int RandAugment_M = 0;
+
+        // ReSharper disable once UnusedMember.Global
+        public void WithRandAugment(int N, int M)
+        {
+            DataAugmentationType = ImageDataGenerator.DataAugmentationEnum.RAND_AUGMENT;
+            RandAugment_N = N;
+            RandAugment_M = M;
+        }
+        public bool UseDataAugmentation => DataAugmentationType != ImageDataGenerator.DataAugmentationEnum.NO_AUGMENTATION;
+        
+        //public static DataAugmentationSample ValueOf(string workingDirectory, string sampleName)
+        //{
+        //    return ISample.LoadSample<DataAugmentationSample>(workingDirectory, sampleName);
+        //}
+        #endregion
+
+        public override Model NewModel(AbstractDatasetSample datasetSample, string workingDirectory, string modelName)
+        {
+            return new Network(this, datasetSample, workingDirectory, modelName, true);
+        }
+
+
+        public cudnnActivationMode_t GetActivationForLastLayer(int numClass)
+        {
+            if (GetObjective() == Objective_enum.Regression)
+            {
+                return cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID;
+            }
+            if (numClass == 1)
+            {
+                return cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID;
+            }
+            return cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX;
+        }
+
+        #region IMetricConfig interface
+        public override float Get_MseOfLog_Epsilon() => MseOfLog_Epsilon;
+        public override float Get_Huber_Delta() => Huber_Delta;
+        public override float Get_BCEWithFocalLoss_PercentageInTrueClass() => BCEWithFocalLoss_PercentageInTrueClass;
+        public override float Get_BCEWithFocalLoss_Gamma() => BCEWithFocalLoss_Gamma;
+        #endregion
+
+    }
+}
