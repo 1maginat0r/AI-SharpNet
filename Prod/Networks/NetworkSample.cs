@@ -726,4 +726,68 @@ namespace SharpNet.Networks
 
         /// <summary>
         /// The alpha coefficient used to compute lambda in Mixup
-        /// A value less or equal to 0.0 wil disable Mixup (see: https://arxiv.org/pdf/17
+        /// A value less or equal to 0.0 wil disable Mixup (see: https://arxiv.org/pdf/1710.09412.pdf)
+        /// A value of 1.0 will use a uniform random distribution in [0,1] for lambda
+        /// </summary>
+        public double AlphaMixup = 0.0;
+
+        /// <summary>
+        /// rotation range in degrees, in [0,180] range.
+        /// The actual rotation will be a random number in [-_rotationRangeInDegrees,+_rotationRangeInDegrees]
+        /// </summary>
+        public double RotationRangeInDegrees = 0.0;
+
+        /// <summary>
+        /// Range for random zoom. [lower, upper] = [1 - _zoomRange, 1 + _zoomRange].
+        /// </summary>
+        public double ZoomRange = 0.0;
+
+        /// <summary>
+        /// Probability to apply Equalize operation
+        /// </summary>
+        public double EqualizeOperationProbability = 0.0;
+
+        /// <summary>
+        /// Probability to apply AutoContrast operation
+        /// </summary>
+        public double AutoContrastOperationProbability = 0.0;
+
+        /// <summary>
+        /// Probability to apply Invert operation
+        /// </summary>
+        public double InvertOperationProbability = 0.0;
+
+        /// <summary>
+        /// Probability to apply Brightness operation
+        /// </summary>
+        public double BrightnessOperationProbability = 0.0;
+        /// <summary>
+        /// The enhancement factor used for Brightness operation (between [0.1,1.9]
+        /// </summary>
+        public double BrightnessOperationEnhancementFactor = 0.0;
+
+        /// <summary>
+        /// Probability to apply Color operation
+        /// </summary>
+        public double ColorOperationProbability = 0.0;
+        /// <summary>
+        /// The enhancement factor used for Color operation (between [0.1,1.9]
+        /// </summary>
+        public double ColorOperationEnhancementFactor = 0.0;
+
+        /// <summary>
+        /// Probability to apply Contrast operation
+        /// </summary>
+        public double ContrastOperationProbability = 0.0;
+        /// <summary>
+        /// The enhancement factor used for Contrast operation (between [0.1,1.9]
+        /// </summary>
+        public double ContrastOperationEnhancementFactor = 0.0;
+
+        /// <summary>
+        /// The number of operations for the RandAugment
+        /// Only used when DataAugmentationType = DataAugmentationEnum.RAND_AUGMENT
+        /// </summary>
+        public int RandAugment_N = 0;
+        /// <summary>
+        /// The magnitude of operations for the Ra
