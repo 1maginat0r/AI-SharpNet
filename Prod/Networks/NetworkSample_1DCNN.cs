@@ -178,4 +178,15 @@ public class NetworkSample_1DCNN : NetworkSample
             //{"leaky_relu", new[]{true, false}},
             { "dropout_top", new[] { 0, 0.1, 0.2 } },
             { "dropout_mid", new[] { 0, 0.3, 0.5 } },
-            { "dropout_bottom", new[] { 0, 0.2, 0.4 } 
+            { "dropout_bottom", new[] { 0, 0.2, 0.4 } },
+            { nameof(NetworkSample.BatchSize), new[] { 256, 512, 1024, 2048 } },
+            { nameof(NetworkSample.NumEpochs), new[] { 15 } },
+
+            //Dataset specific
+            { "KFold", 2 },
+            //{nameof(AbstractDatasetSample.PercentageInTraining), new[]{0.8}},
+        };
+        return searchSpace;
+    }
+
+}
