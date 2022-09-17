@@ -122,4 +122,60 @@ public class NetworkSample_1DCNN : NetworkSample
         {
             nn.BatchNorm(batchNorm_momentum, 1e-5);
             nn.Dropout(dropout_bottom);
-            n
+            nn.Dense(datasetSample.NumClass, lambdaL2Regularization, false);
+            if (weight_norm) { nn.BatchNorm(batchNorm_momentum, 1e-5); }
+        }
+        nn.Activation(nn.NetworkSample.GetActivationForLastLayer(datasetSample.NumClass));
+    }
+
+    public override bool FixErrors()
+    {
+        if (!base.FixErrors())
+        {
+            return false;
+        }
+        if (!two_stage)
+        {
+            Use_ConcatenateLayer = false;
+            Use_AddLayer = false;
+        }
+        if (Use_AddLayer)
+        {
+            Use_ConcatenateLayer = false;
+        }
+        return true;
+    }
+
+
+
+    /// <summary>
+    /// The default Search Space for this Model
+    /// </summary>
+    /// <returns></returns>
+    // ReSharper disable once UnusedMember.Global
+    [SuppressMessage("ReSharper", "ArrangeStaticMemberQualifier")]
+    public static Dictionary<string, object> DefaultSearchSpace()
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+            //uncomment appropriate one
+            //{nameof(NetworkSample.LossFunction), "Rmse"},                     //for Regression Tasks: Rmse, Mse, Mae, etc.
+            //{nameof(NetworkSample.LossFunction), "BinaryCrossentropy"},       //for binary classification
+            //{nameof(NetworkSample.LossFunction), "CategoricalCrossentropy"},  //for multi class classification
+
+            // Optimizer 
+            { nameof(NetworkSample.OptimizerType), new[] { "AdamW", "SGD", "Adam" /*, "VanillaSGD", "VanillaSGDOrtho"*/ } },
+            { nameof(NetworkSample.AdamW_L2Regularization), new[] { 1e-5, 1e-4, 1e-3, 1e-2, 1e-1 } },
+            { nameof(NetworkSample.SGD_usenesterov), new[] { true, false } },
+            { nameof(NetworkSample.lambdaL2Regularization), new[] { 0, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1 } },
+
+            // Learning Rate
+            { nameof(NetworkSample.InitialLearningRate), HyperparameterSearchSpace.Range(1e-5f, 1f, HyperparameterSearchSpace.range_type.normal) },
+            // Learning Rate Scheduler
+            { nameof(NetworkSample.LearningRateSchedulerType), new[] { "CyclicCosineAnnealing", "OneCycle", "Linear" } },
+            { "EmbeddingDim", new[] { 0, 4, 8, 12 } },
+            //{"weight_norm", new[]{true, false}},
+            //{"leaky_relu", new[]{true, false}},
+            { "dropout_top", new[] { 0, 0.1, 0.2 } },
+            { "dropout_mid", new[] { 0, 0.3, 0.5 } },
+            { "dropout_bottom", new[] { 0, 0.2, 0.4 } 
