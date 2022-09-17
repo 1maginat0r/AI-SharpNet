@@ -71,4 +71,55 @@ public class NetworkSample_1DCNN : NetworkSample
         int AdaptiveAvgPool1d_Stride = (AdaptiveAvgPool1d_input_size / cha_po_1);
         int AdaptiveAvgPool1d_Kernel_size = AdaptiveAvgPool1d_input_size - (cha_po_1 - 1) * AdaptiveAvgPool1d_Stride;
         //Padding = 0
-        nn.AvgPooling(1, AdaptiveAvgPool1d_Kernel_size, 1, AdaptiveAvgPool1d_Stride); //nn.Adapti
+        nn.AvgPooling(1, AdaptiveAvgPool1d_Kernel_size, 1, AdaptiveAvgPool1d_Stride); //nn.AdaptiveAvgPool1d(output_size = cha_po_1);
+        if (weight_norm) { nn.BatchNorm(batchNorm_momentum, 1e-5); }
+        nn.Dropout(dropout_top);
+
+        nn.Conv1D(channel_2, 3, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true); //nn.Conv1d(channel_2, channel_2, kernel_size = 3, stride = 1, padding = 1, bias = True);
+        nn.BatchNorm(batchNorm_momentum, 1e-5); //_norm();
+        nn.Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU);
+
+        if (two_stage)
+        {
+            int previousLayerIndex1 = nn.LastLayerIndex;
+
+            //conv2 
+            nn.BatchNorm(batchNorm_momentum, 1e-5);
+            nn.Dropout(dropout_mid);
+            nn.Conv1D(channel_2, 3, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true); //nn.Conv1d(channel_2, channel_2, kernel_size = 3, stride = 1, padding = 1, bias = True);
+            if (weight_norm) { nn.BatchNorm(batchNorm_momentum, 1e-5); }
+            nn.Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU);
+            nn.BatchNorm(batchNorm_momentum, 1e-5);
+            nn.Dropout(dropout_bottom);
+            nn.Conv1D(channel_3, 5, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true); //nn.Conv1d(channel_2, channel_3, kernel_size = 5, stride = 1, padding = 2, bias = True);
+            if (weight_norm) { nn.BatchNorm(batchNorm_momentum, 1e-5); }
+            nn.Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU); // * x
+            int previousLayerIndex2 = nn.LastLayerIndex;
+            if (Use_ConcatenateLayer)
+            {
+                nn.ConcatenateLayer(previousLayerIndex1, previousLayerIndex2);
+            }
+            else if (Use_AddLayer)
+            {
+                nn.AddLayer(previousLayerIndex1, previousLayerIndex2);
+            }
+
+        }
+
+        nn.MaxPooling(1, 2, 1, 2); //MaxPool1d(kernel_size = 4, stride = 2, padding = 1);
+
+        nn.Flatten();
+
+        if (leaky_relu)
+        {
+            nn.BatchNorm(batchNorm_momentum, 1e-5);
+            nn.Dropout(dropout_bottom);
+            nn.Dense(datasetSample.NumClass, lambdaL2Regularization, false);
+            if (weight_norm) { nn.BatchNorm(batchNorm_momentum, 1e-5); }
+            nn.Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_LEAKY_RELU); // * x
+        }
+        else
+        {
+            nn.BatchNorm(batchNorm_momentum, 1e-5);
+            nn.Dropout(dropout_bottom);
+            n
