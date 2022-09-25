@@ -95,4 +95,57 @@ public static class MyNameIsGrootUtils
     public static void Run()
     {
         Utils.ConfigureGlobalLog4netProperties(WorkingDirectory, "log");
-        Utils.ConfigureThreadLog4n
+        Utils.ConfigureThreadLog4netProperties(WorkingDirectory, "log");
+
+        //CharLevelTransformerInference();
+        //Retrain();
+        //LaunchNeuralNetworkHPO(1);
+        //SpeedTest();
+        PredictNextWord("97B423C404", "my name is", 1, 0.0);
+        //PredictNextWord("97B423C404", "groot is my", 50, 0.0);
+    }
+
+    private static string PredictNextWord(string networkName, string startingText, int nbTokenToPredictAfterText,double maxAllowedError)
+    {
+        using var nn = Network.LoadTrainedNetworkModel(WorkingDirectory, networkName);
+        nn.Sample.LogNetworkPropagation = true;
+        //nn.Sample.SetResourceId(-1);
+        var datasetSample = (MyNameIsGrootDatasetSample)ModelAndDatasetPredictionsSample.LoadDatasetSample(WorkingDirectory, networkName);
+        var max_length = datasetSample.max_length;
+        var tokenizer = datasetSample.GetTokenizer();
+
+        var xInputSingleRow = new CpuTensor<float>(new[] { 1, max_length });
+        var xInputSingleRowSpan = xInputSingleRow.SpanContent;
+
+        Log.Info($"Starting text = {startingText}");
+        var r = new Random();
+
+        List<int> startingTextSequence = tokenizer.TextsToSequences(new[] { startingText })[0].ToList();
+
+        int[] newSequence = new int[max_length + nbTokenToPredictAfterText];
+        int idxFromStartingText = startingTextSequence.Count-1;
+        for (int j = max_length-1; j >=0; --j)
+        {
+            newSequence[j] = (idxFromStartingText>=0)?startingTextSequence[idxFromStartingText--] :0;
+        }
+
+        int nextIndexToGenerate = max_length;
+        while (nextIndexToGenerate < newSequence.Length)
+        {
+            //we know the sequence newSequence[nextIndexToGenerate-max_length] to newSequence[nextIndexToGenerate-1]
+            //we want to compute next sequence item at position newSequence[nextIndexToGenerate]
+
+            for (int i = 0; i < max_length; i++)
+            {
+                xInputSingleRowSpan[i] = newSequence[nextIndexToGenerate - max_length + i];
+            }
+
+            var prediction = nn.Predict(xInputSingleRow, false);
+            var proba = prediction.ContentAsFloatArray();
+            var indexNextToken = GetIndexPrediction(proba, r, maxAllowedError);
+            newSequence[nextIndexToGenerate] = indexNextToken;
+            ++nextIndexToGenerate;
+        }
+        var generateText = tokenizer.SequenceToText(newSequence.Skip(max_length));
+        Log.Info($"Generated text = {generateText}");
+     
