@@ -148,4 +148,57 @@ public static class MyNameIsGrootUtils
         }
         var generateText = tokenizer.SequenceToText(newSequence.Skip(max_length));
         Log.Info($"Generated text = {generateText}");
-     
+        return generateText;
+    }
+
+    public static void CharLevelTransformerInference()
+    {
+        var nn = Network.LoadTrainedNetworkModel(WorkingDirectory, "340065842F");
+        foreach (var maxAllowedError in new[] { 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16 })
+        {
+            Log.Info($"---------------------------");
+            Log.Info($"maxAllowedError={maxAllowedError}");
+            var textGenerated = GenerateText(nn, 2000, maxAllowedError);
+            Log.Info(textGenerated);
+        }
+        return;
+    }
+
+    public static void Retrain()
+    {
+        ChallengeTools.Retrain(WorkingDirectory, "1E68E0FFA0", null, 0.9, retrainOnFullDataset: false, useAllAvailableCores: true);
+    }
+
+    private static void SpeedTest()
+    {
+        var speedTestWorkingDirectory = Path.Join(WorkingDirectory, "SpeedTest");
+        Utils.ConfigureGlobalLog4netProperties(speedTestWorkingDirectory, "log");
+        Utils.ConfigureThreadLog4netProperties(speedTestWorkingDirectory, "log");
+        ChallengeTools.Retrain(speedTestWorkingDirectory, "v0", null, 0.9, retrainOnFullDataset: false, useAllAvailableCores: false, computeAndSavePredictions: false, computeValidationRankingScore: false, saveTrainedModel: false);
+    }
+
+    public static void LaunchNeuralNetworkHPO(int numEpochs, int maxAllowedSecondsForAllComputation = 0)
+    {
+        var searchSpace = new Dictionary<string, object>
+        {
+            //related to Dataset
+            //{"MaxCharacterLengthForTraining", 1000 },
+            //{ "KFold", 3 },
+            {nameof(AbstractDatasetSample.PercentageInTraining), new[]{0.5}},
+            {nameof(AbstractDatasetSample.ShuffleDatasetBeforeSplit), true},
+
+            //related to model
+            //{nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.SparseCategoricalCrossentropy)},
+            //{nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.SparseAccuracy)},
+            {nameof(NetworkSample.LossFunction), nameof(EvaluationMetricEnum.CategoricalCrossentropy)},
+            {nameof(NetworkSample.EvaluationMetrics), nameof(EvaluationMetricEnum.Accuracy)},
+            {nameof(NetworkSample.CompatibilityMode), "TensorFlow"},
+            {"max_length", new[]{3} },
+            
+            {"embedding_dim", new[]{2} },
+            
+
+            //{"max_length", 256},
+            //{"embedding_dim", 384},
+            //{"max_length", 256},
+            //{"e
