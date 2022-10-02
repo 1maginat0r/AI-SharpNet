@@ -72,4 +72,68 @@ public static class TextTransformersUtils
     }
 
 
-    private stati
+    private static int GetIndexPrediction(float[] proba, Random r, double maxAllowedError)
+    {
+        List<Tuple<float, int>> probaWithIndex = new List<Tuple<float, int>>();
+        for (int i = 0; i < proba.Length; i++)
+        {
+            probaWithIndex.Add(new Tuple<float, int>(proba[i], i));
+        }
+        probaWithIndex = probaWithIndex.OrderByDescending(x => x.Item1).ToList();
+        int selectionChoice = 1;
+        for (int i = 1; i < probaWithIndex.Count; i++)
+        {
+            if (probaWithIndex[i].Item1 > (1.0*probaWithIndex[0].Item1- maxAllowedError))
+            {
+                ++selectionChoice;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return probaWithIndex[r.Next(selectionChoice)].Item2;
+    }
+
+    public static void Run()
+    {
+        Utils.ConfigureGlobalLog4netProperties(WorkingDirectory, "log");
+        Utils.ConfigureThreadLog4netProperties(WorkingDirectory, "log");
+
+        //CharLevelTransformerInference();
+        //Retrain();
+        LaunchNeuralNetworkHPO(1);
+        //SpeedTest();
+    }
+
+    public static void CharLevelTransformerInference()
+    {
+        var nn = Network.LoadTrainedNetworkModel(WorkingDirectory, "340065842F");
+        foreach (var maxAllowedError in new[] { 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16 })
+        {
+            Log.Info($"---------------------------");
+            Log.Info($"maxAllowedError={maxAllowedError}");
+            var textGenerated = GenerateText(nn, 2000, maxAllowedError);
+            Log.Info(textGenerated);
+        }
+        return;
+    }
+
+    public static void Retrain()
+    {
+        ChallengeTools.Retrain(WorkingDirectory, "1E68E0FFA0", null, 0.9, retrainOnFullDataset: false, useAllAvailableCores: true);
+    }
+
+    private static void SpeedTest()
+    {
+        var speedTestWorkingDirectory = Path.Join(WorkingDirectory, "SpeedTest");
+        Utils.ConfigureGlobalLog4netProperties(speedTestWorkingDirectory, "log");
+        Utils.ConfigureThreadLog4netProperties(speedTestWorkingDirectory, "log");
+        ChallengeTools.Retrain(speedTestWorkingDirectory, "v0", null, 0.9, retrainOnFullDataset: false, useAllAvailableCores: false, computeAndSavePredictions: false, computeValidationRankingScore: false, saveTrainedModel: false);
+    }
+
+    public static void LaunchNeuralNetworkHPO(int numEpochs, int maxAllowedSecondsForAllComputation = 0)
+    {
+        var searchSpace = new Dictionary<string, object>
+        
