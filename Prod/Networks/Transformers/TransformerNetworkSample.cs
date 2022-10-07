@@ -167,3 +167,208 @@ public class TransformerNetworkSample : NetworkSample
     //{
     //    encoder_num_transformer_blocks = encoder_num_heads = encoder_feed_forward_dim = -1;
     //    encoder_mha_dropout = encoder_feed_forward_dropout = 0.0f;
+    //    encoder_mha_use_bias = true;
+    //    return this;
+    //}
+    //private TransformerNetworkSample DisableDecoders()
+    //{
+    //    decoder_num_transformer_blocks = decoder_num_heads = decoder_feed_forward_dim = -1;
+    //    decoder_mha_dropout = decoder_feed_forward_dropout = 0.0f;
+    //    decoder_mha_use_bias = true;
+    //    decoder_add_layer_norm_before_mha = false;
+    //    decoder_add_layer_norm_after_mha = true;
+    //    return this;
+    //}
+    private void AddTransformers(Network network, int numClass, int layerIndexInputEmbedding, int layerIndexOutputEmbedding)
+    {
+        AddEncoders(network, layerIndexInputEmbedding);
+        AddDecoders(network, layerIndexOutputEmbedding, network.LastLayerIndex);
+        if (layer_norm_before_last_dense)
+        {
+            network.LayerNorm(1, layer_norm_epsilon, "last_layer_norm");
+        }
+
+        if (pooling_before_dense_layer == POOLING_BEFORE_DENSE_LAYER.GlobalAveragePooling)
+        {
+            network.GlobalAvgPooling("avg_pool");
+        }
+        else if (pooling_before_dense_layer == POOLING_BEFORE_DENSE_LAYER.GlobalMaxPooling)
+        {
+            network.GlobalMaxPooling("max_pool");
+        }
+
+        network.Dense(numClass, network.Sample.lambdaL2Regularization, true, "probs");
+
+        if (output_shape_must_be_scalar)
+        {
+            network.Dense(1, network.Sample.lambdaL2Regularization, false, "probs_scalar");
+        }
+
+        network.Activation(LastActivationLayer);
+    }
+
+
+    private void AddEncoders(Network network, int layerIndexInputEmbedding)
+    {
+        if (encoder_num_transformer_blocks <= 0)
+        {
+            return;
+        }
+        AssertValidParameters();
+        var shapeInputEmbeddingLayer = network.Layers[layerIndexInputEmbedding].OutputShape(1);
+        if (shapeInputEmbeddingLayer.Length != 3)
+        {
+            throw new ArgumentException($"The Input Embedding Layer (before encoder) must have a shape of 3 dimensions (batch, sequence, embedding) but has a shape of {shapeInputEmbeddingLayer.Length} dimensions");
+        }
+        if (shapeInputEmbeddingLayer[2] != embedding_dim)
+        {
+            throw new ArgumentException($"The observed embedding_dim of the Input Embedding Layer {shapeInputEmbeddingLayer[2]} is not equal to the expected one ({nameof(embedding_dim)}={embedding_dim}");
+        }
+        for (int encoderBlock = 0; encoderBlock < encoder_num_transformer_blocks; ++encoderBlock)
+        {
+            var inputLayerIndex = (encoderBlock ==0) ? layerIndexInputEmbedding : network.LastLayerIndex;
+            var layerPrefix = "encoder_" + encoderBlock + "_";
+
+            // Multi-Head Self Attention in Encoder
+            AddMultiHeadAttentionBlock(network, layerPrefix+"mha_",
+                network.LastLayerIndex, encoder_num_heads, 
+                encoder_mha_use_bias_Q_V_K, encoder_mha_use_bias_O, encoder_use_causal_mask, inputLayerIndex, inputLayerIndex, inputLayerIndex, encoder_mha_dropout, layer_norm_epsilon, encoder_add_layer_norm_before_mha, encoder_add_layer_norm_after_mha);
+
+            //Feed Forward in Encoder
+            AddFeedForwardBlock(network, layerPrefix+"ffd_", embedding_dim, encoder_feed_forward_dim, encoder_feed_forward_dropout, layer_norm_epsilon, layer_norm_before_ffd, layer_norm_after_ffd);
+        }
+    }
+
+    private void AddDecoders(Network network, int layerIndexOutputEmbedding, int layerIndexOutputEncoders)
+    {
+        if (decoder_num_transformer_blocks <= 0)
+        {
+            return;
+        }
+        AssertValidParameters();
+        var shapeEncodersOutput = network.Layers[layerIndexOutputEncoders].OutputShape(1);
+        if (shapeEncodersOutput.Length != 3)
+        {
+            throw new ArgumentException($"The encoders output must have a shape of 3 dimensions (batch, sequence, embedding) but has a shape of {shapeEncodersOutput.Length} dimensions");
+        }
+        if (shapeEncodersOutput[2] != embedding_dim)
+        {
+            throw new ArgumentException($"The observed embedding_dim of the encoders output {shapeEncodersOutput[2]} is not equal to the expected one ({nameof(embedding_dim)}={embedding_dim}");
+        }
+        var shapeOutputEmbeddingLayer = network.Layers[layerIndexOutputEncoders].OutputShape(1);
+        if (shapeOutputEmbeddingLayer.Length != 3)
+        {
+            throw new ArgumentException($"The Output Embedding Layer (before encoder) must have a shape of 3 dimensions (batch, sequence, embedding) but has a shape of {shapeOutputEmbeddingLayer.Length} dimensions");
+        }
+        if (shapeOutputEmbeddingLayer[2] != embedding_dim)
+        {
+            throw new ArgumentException($"The observed embedding_dim of the Output Embedding Layer {shapeOutputEmbeddingLayer[2]} is not equal to the expected one ({nameof(embedding_dim)}={embedding_dim}");
+        }
+        for (int decoderBlock = 0; decoderBlock < decoder_num_transformer_blocks; ++decoderBlock)
+        {
+            var layerPrefix = "decoder_" + decoderBlock + "_";
+
+            // Masked Multi-Head Self Attention in Decoder
+            AddMultiHeadAttentionBlock(network, layerPrefix+"_masked_mha",
+                layerIndexOutputEmbedding, decoder_num_heads, 
+                decoder_mha_use_bias_Q_V_K, decoder_mha_use_bias_O,true, layerIndexOutputEmbedding, layerIndexOutputEmbedding, layerIndexOutputEmbedding, decoder_mha_dropout, layer_norm_epsilon, encoder_add_layer_norm_before_mha, encoder_add_layer_norm_after_mha);
+
+            // Multi-Head Cross Attention in Decoder
+            AddMultiHeadAttentionBlock(network, layerPrefix+"_mha",
+                network.LastLayerIndex, decoder_num_heads, 
+                decoder_mha_use_bias_Q_V_K, decoder_mha_use_bias_O, false, network.LastLayerIndex, layerIndexOutputEncoders, layerIndexOutputEncoders, decoder_mha_dropout, layer_norm_epsilon, decoder_add_layer_norm_before_mha, decoder_add_layer_norm_after_mha);
+
+            //Feed Forward in Decoder
+            AddFeedForwardBlock(network, layerPrefix+"_ffd", embedding_dim, decoder_feed_forward_dim, decoder_feed_forward_dropout, layer_norm_epsilon, layer_norm_before_ffd, layer_norm_after_ffd);
+        }
+    }
+
+    private static void AddMultiHeadAttentionBlock(Network network, string layerPrefix, int inputLayerIndex, int num_heads,
+        bool use_bias_Q_V_K, bool use_bias_O, bool use_causal_mask,
+        int queriesLayerIndex, int valuesLayerIndex, int keysLayerIndex, float dropoutRate, float layer_norm_epsilon, bool addLayerNormBeforeMha, bool addLayerNormAfterMha)
+    {
+        if (addLayerNormBeforeMha)
+        {
+            if (queriesLayerIndex != valuesLayerIndex || queriesLayerIndex != keysLayerIndex)
+            {
+                throw new ArgumentException($"The queries, values and keys must be the same layer when using layer normalization before the multi-head attention");
+            }
+            network.LayerNorm(1, layer_norm_epsilon, layerPrefix + "layer_norm_before", valuesLayerIndex);
+            queriesLayerIndex = valuesLayerIndex = keysLayerIndex = network.LastLayerIndex;
+        }
+        int embedding_dim = network.Layers[valuesLayerIndex].OutputShape(1)[2];
+        int key_dim = embedding_dim / num_heads;
+        int value_dim = embedding_dim / num_heads;
+        network.MultiHeadAttention(num_heads, key_dim, value_dim, use_bias_Q_V_K, use_bias_O, use_causal_mask, queriesLayerIndex, valuesLayerIndex, keysLayerIndex, layerPrefix + "mha");
+        network.Dropout(dropoutRate, layerPrefix + "dropout");
+        network.AddLayer(network.LastLayerIndex, inputLayerIndex, layerPrefix + "add");
+        if (addLayerNormAfterMha)
+        {
+            network.LayerNorm(1, layer_norm_epsilon, layerPrefix + "layer_norm_after");
+        }
+    }
+    private static void AddFeedForwardBlock(Network network, string layerPrefix, int embedding_dim, int feed_forward_dim, float feed_forward_dropoutRate, float layer_norm_epsilon, bool addLayerNormBeforeFeedForward, bool addLayerNormAfterFeedForward)
+    {
+        var inputLayerIndex = network.LastLayerIndex;
+        if (addLayerNormBeforeFeedForward)
+        {
+            network.LayerNorm(1, layer_norm_epsilon, layerPrefix + "layer_norm_before");
+        }
+
+        network.Dense(feed_forward_dim, network.Sample.lambdaL2Regularization, true, layerPrefix + "dense1");
+        network.Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU, layerPrefix + "activation");
+        network.Dense(embedding_dim, network.Sample.lambdaL2Regularization, true, layerPrefix + "dense2");
+        
+        network.Dropout(feed_forward_dropoutRate, layerPrefix + "dropout");
+        network.AddLayer(network.LastLayerIndex, inputLayerIndex, layerPrefix + "add");
+        if (addLayerNormAfterFeedForward)
+        {
+            network.LayerNorm(1, layer_norm_epsilon, layerPrefix + "layer_norm_after");
+        }
+    }
+    private void AssertValidParameters()
+    {
+        if (embedding_dim <= 0)
+        {
+            throw new ArgumentException($"{nameof(embedding_dim)} must be >0");
+        }
+        
+        if (encoder_num_transformer_blocks >= 1)
+        {
+            if (encoder_num_heads <= 0)
+            {
+                throw new ArgumentException($"{nameof(encoder_num_heads)} must be >0");
+            }
+            if (encoder_feed_forward_dim <= 0)
+            {
+                throw new ArgumentException($"{nameof(encoder_feed_forward_dim)} must be >0");
+            }
+            if (embedding_dim % encoder_num_heads != 0)
+            {
+                throw new ArgumentException($"{nameof(embedding_dim)} ({embedding_dim}) must be a multiple of {nameof(encoder_num_heads)} ({encoder_num_heads})");
+            }
+        }
+        
+        if (decoder_num_transformer_blocks >= 1)
+        {
+            if (decoder_num_heads <= 0)
+            {
+                throw new ArgumentException($"{nameof(decoder_num_heads)} must be >0");
+            }
+            if (decoder_feed_forward_dim <= 0)
+            {
+                throw new ArgumentException($"{nameof(decoder_feed_forward_dim)} must be >0");
+            }
+            if (embedding_dim % decoder_num_heads != 0)
+            {
+                throw new ArgumentException($"{nameof(embedding_dim)} ({embedding_dim}) must be a multiple of {nameof(decoder_num_heads)} ({decoder_num_heads})");
+            }
+        }
+
+
+        if (encoder_num_transformer_blocks <= 0 && decoder_num_transformer_blocks <= 0)
+        {
+            throw new ArgumentException($"{nameof(encoder_num_transformer_blocks)} and {nameof(decoder_num_transformer_blocks)} can not be 0 at the same time");
+        }
+    }
+}
