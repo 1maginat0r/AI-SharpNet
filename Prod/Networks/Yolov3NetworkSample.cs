@@ -45,4 +45,65 @@ namespace SharpNet.Networks
             var config = (Yolov3NetworkSample)new Yolov3NetworkSample(blocks ?? YOLOV3Config)
             {
                     LossFunction = EvaluationMetricEnum.CategoricalCrossentropy,
-                    CompatibilityMode = Compatibility
+                    CompatibilityMode = CompatibilityModeEnum.TensorFlow,
+                    lambdaL2Regularization = 0.0005,
+                    ResourceIds = resourceIds.ToList(),
+            }
+                .WithSGD(0.9, false)
+                .WithCyclicCosineAnnealingLearningRateScheduler(10, 2);
+            return config;
+        }
+        #endregion
+
+        // ReSharper disable once UnusedMember.Global
+        public Network Build()
+        {
+            LoadNetDescription();
+            var network = BuildNetworkWithoutLayers(Path.Combine(DefaultWorkingDirectory, "YOLO"), "YOLO V3");
+
+            network.Input(InputShape_CHW[0], InputShape_CHW[1], InputShape_CHW[2], "input_1");
+
+            for (int i = 1; i < _blocks.Count; ++i)
+            {
+                switch (_blocks[i].Item1)
+                {
+                    case "convolutional":
+                        AddConvolution(network, i);
+                        break;
+                    case "shortcut":
+                        AddShortcut(network, i);
+                        break;
+                    case "upsample":
+                        AddUpSample(network, i);
+                        break;
+                    case "route":
+                        AddRoute(network, i);
+                        break;
+                    case "yolo":
+                        AddYolo(network, i);
+                        break;
+                }
+            }
+
+            var yoloLayers = network.Layers.Where(l => l.GetType() == typeof(YOLOV3Layer)).Select(l => l.LayerIndex).ToArray();
+            Debug.Assert(yoloLayers.Length == 3);
+
+            //all predictions of the network
+            network.ConcatenateLayer(yoloLayers, "tf_op_layer_concat_6");
+
+            //we remove (set box confidence to 0) low predictions  after non max suppression
+            network.NonMaxSuppression(MinScore, IOU_threshold_for_duplicate, MaxOutputSize, MaxOutputSizePerClass, "NonMaxSuppression");
+
+            return network;
+        }
+
+        private void LoadNetDescription()
+        {
+            if (_blocks[0].Item1 != "net")
+            {
+                throw new ArgumentException("the first item in the config must be 'net'");
+            }
+            var block = _blocks[0].Item2;
+            InputShape_CHW = new[] { int.Parse(block["channels"]), int.Parse(block["height"]), int.Parse(block["width"]) };
+            if (block.TryGetValue("momentum", out var value))
+      
