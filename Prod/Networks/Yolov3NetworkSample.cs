@@ -157,4 +157,49 @@ namespace SharpNet.Networks
         {
             var block = _blocks[blockId].Item2;
             var layerName = GetLayerName(network, "tf_op_layer_AddV2", typeof(AddLayer));
-            network.AddLayer(_blockIdToLastLayerIndex[blockId - 1], BlockOffsetToLastLayerIndex(int.Parse(block["from"]), block
+            network.AddLayer(_blockIdToLastLayerIndex[blockId - 1], BlockOffsetToLastLayerIndex(int.Parse(block["from"]), blockId), layerName);
+            if (block.ContainsKey("activation") && !block["activation"].Equals("linear"))
+            {
+                var activationFunction = ExtractActivation(block["activation"], out var alphaActivation);
+                network.Activation(activationFunction, alphaActivation);
+            }
+            _blockIdToLastLayerIndex[blockId] = network.LastLayerIndex;
+        }
+        private void AddUpSample(Network network, int blockId)
+        {
+            var block = _blocks[blockId].Item2;
+            var stride = int.Parse(block["stride"]);
+            var layerName = GetLayerName(network, "up_sampling2d", typeof(UpSampling2DLayer));
+            network.UpSampling2D(stride, stride, UpSampling2DLayer.InterpolationEnum.Nearest, layerName);
+            _blockIdToLastLayerIndex[blockId] = network.LastLayerIndex;
+        }
+        private void AddYolo(Network network, int blockId)
+        {
+            var block = _blocks[blockId].Item2;
+            var layerName = GetLayerName(network, "yolo", typeof(YOLOV3Layer));
+            var selectedAnchorId = ExtractIntArray(block["mask"]);
+            var anchors = ExtractIntArray(block["anchors"]);
+            var selectedAnchors = new List<int>();
+            foreach (var m in selectedAnchorId)
+            {
+                selectedAnchors.Add(anchors[2*m]);
+                selectedAnchors.Add(anchors[2*m+1]);
+            }
+            network.YOLOV3Layer(selectedAnchors.ToArray(), _blockIdToLastLayerIndex[blockId-1], layerName);
+            _blockIdToLastLayerIndex[blockId] = network.LastLayerIndex;
+        }
+        private void AddRoute(Network network, int blockId)
+        {
+            var block = _blocks[blockId].Item2;
+            var layerIndexes = ExtractIntArray(block["layers"]).Select(blockOffset => BlockOffsetToLastLayerIndex(blockOffset, blockId)).ToArray();
+            switch(layerIndexes.Length)
+            {
+                case 1:
+                    _blockIdToLastLayerIndex[blockId] = layerIndexes[0];
+                    return;
+                case 2:
+                    network.ConcatenateLayer(layerIndexes[0], layerIndexes[1], GetLayerName(network, "tf_op_layer_concat", typeof(ConcatenateLayer)));
+                    _blockIdToLastLayerIndex[blockId] = network.LastLayerIndex;
+                    return;
+                default:
+                    throw new Argument
