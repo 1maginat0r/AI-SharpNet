@@ -106,4 +106,55 @@ namespace SharpNet.Networks
             var block = _blocks[0].Item2;
             InputShape_CHW = new[] { int.Parse(block["channels"]), int.Parse(block["height"]), int.Parse(block["width"]) };
             if (block.TryGetValue("momentum", out var value))
-      
+            {
+                BatchNormMomentum = double.Parse(value, CultureInfo.InvariantCulture);
+            }
+            _blockIdToLastLayerIndex[0] = 0;
+            //TODO: support decay
+            //other fields (ignored) : 
+            //        batch=64
+            //        subdivisions=16
+            //        decay=0.0005
+            //        angle=0
+            //        saturation = 1.5
+            //        exposure = 1.5
+            //        hue=.1
+
+        }
+        private void AddConvolution(Network network, int blockId)
+        {
+            var block = _blocks[blockId].Item2;
+            bool batch_normalize = block.ContainsKey("batch_normalize") && int.Parse(block["batch_normalize"]) >= 1;
+            var stride = int.Parse(block["stride"]);
+            int lastLayerIndex = _blockIdToLastLayerIndex[blockId - 1];
+            if (stride > 1)
+            {
+                var layerName = GetLayerName(network, "zero_padding2d", typeof(ZeroPadding2DLayer));
+                network.ZeroPadding2D(1, 0, 1, 0, lastLayerIndex, layerName);
+                lastLayerIndex = network.LastLayerIndex;
+            }
+            network.Convolution(
+                int.Parse(block["filters"]),
+                int.Parse(block["size"]),
+                stride,
+                (stride > 1) ? ConvolutionLayer.PADDING_TYPE.VALID:ConvolutionLayer.PADDING_TYPE.SAME,
+                0.0, //lambdaL2Regularization
+                !batch_normalize,
+                lastLayerIndex,
+                "conv_" + (blockId - 1));
+            if (batch_normalize)
+            {
+                network.BatchNorm(BatchNormMomentum, BatchNormEpsilon, "bnorm_" + (blockId - 1));
+            }
+            if (block.ContainsKey("activation") && !block["activation"].Equals("linear"))
+            {
+                var activationFunction = ExtractActivation(block["activation"], out var alphaActivation);
+                network.Activation(activationFunction, alphaActivation, "leaky_" + (blockId - 1));
+            }
+            _blockIdToLastLayerIndex[blockId] = network.LastLayerIndex;
+        }
+        private void AddShortcut(Network network, int blockId)
+        {
+            var block = _blocks[blockId].Item2;
+            var layerName = GetLayerName(network, "tf_op_layer_AddV2", typeof(AddLayer));
+            network.AddLayer(_blockIdToLastLayerIndex[blockId - 1], BlockOffsetToLastLayerIndex(int.Parse(block["from"]), block
