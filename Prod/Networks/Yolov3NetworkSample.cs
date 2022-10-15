@@ -202,4 +202,58 @@ namespace SharpNet.Networks
                     _blockIdToLastLayerIndex[blockId] = network.LastLayerIndex;
                     return;
                 default:
-                    throw new Argument
+                    throw new ArgumentException("invalid route layers " + block["layers"]);
+            }
+        }
+        private static int[] ExtractIntArray(string str)
+        {
+            return str.Trim().Split(",", StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).Select(int.Parse).ToArray();
+        }
+        private static string GetLayerName(Network network, string layerPrefix, Type layerType)
+        {
+            int nbExistingAddLayer = network.NbLayerOfType(layerType);
+            if (nbExistingAddLayer >= 1)
+            {
+                return layerPrefix + "_" + nbExistingAddLayer;
+            }
+            return layerPrefix;
+        }
+        private int BlockOffsetToLastLayerIndex(int offset, int blockId)
+        {
+            if (offset >= 0)
+            {
+                return _blockIdToLastLayerIndex[offset + 1];
+            }
+            return _blockIdToLastLayerIndex[blockId + offset];
+        }
+        private cudnnActivationMode_t ExtractActivation(string activationName, out Tensor activationParameter)
+        {
+            switch (activationName)
+            {
+                case "leaky":
+                    activationParameter = Tensor.SingleFloat((float)Alpha_LeakyRelu);
+                    return cudnnActivationMode_t.CUDNN_ACTIVATION_LEAKY_RELU;
+                default:
+                    throw new ArgumentException("invalid activation function: " + activationName);
+            }
+
+        }
+        //public static List<Tuple<string, Dictionary<string, string>>> ExtractConfigFileFromPath(string cfgFilePath)
+        //{
+        //    return ExtractConfigFileFromContent(File.ReadAllText(cfgFilePath));
+        //}
+        private static List<Tuple<string, Dictionary<string, string>>> ExtractConfigFileFromContent(string cfgFileContent)
+        {
+            //"C:\Projects\darknet\cfg\yolov3.cfg"
+            var result = new List<Tuple<string, Dictionary<string, string>>>();
+            string sectionName = "";
+            var sectionContent = new Dictionary<string, string>();
+            foreach (var l in cfgFileContent.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = l.Trim();
+                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
+                {
+                    continue;
+                }
+
+                if (trimmed.StartsWith("[")
