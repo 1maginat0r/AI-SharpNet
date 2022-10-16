@@ -256,4 +256,34 @@ namespace SharpNet.Networks
                     continue;
                 }
 
-                if (trimmed.StartsWith("[")
+                if (trimmed.StartsWith("["))
+                {
+                    if (sectionContent.Count != 0)
+                    {
+                        result.Add(Tuple.Create(sectionName, sectionContent));
+                    }
+                    sectionContent = new Dictionary<string, string>();
+                    sectionName = trimmed.Trim('[', ']').Trim();
+                    continue;
+                }
+
+                int idx = trimmed.IndexOf('=');
+                if (idx >= 0)
+                {
+                    var key = trimmed.Substring(0, idx).Trim();
+                    var value = trimmed.Substring(idx + 1).Trim();
+                    sectionContent[key] = value;
+                    continue;
+                }
+
+                Console.WriteLine("ignoring line: " + Environment.NewLine + l);
+            }
+
+            if (sectionContent.Count != 0)
+            {
+                result.Add(Tuple.Create(sectionName, sectionContent));
+            }
+            return result;
+        }
+    }
+}
