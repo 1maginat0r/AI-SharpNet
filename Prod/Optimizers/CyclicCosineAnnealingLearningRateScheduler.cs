@@ -53,4 +53,30 @@ namespace SharpNet.Optimizers
                 }
                 EndEpochForEachCycle.Add(lastEpochInCurrentRun);
                 _values.Add(Tuple.Create(lastEpochInCurrentRun+1 - 1e-6, 1.0));
-       
+                if (lastEpochInCurrentRun >= nbEpochs)
+                {
+                    break;
+                }
+                firstEpochInCurrentRun = firstEpochInNextRun;
+                nbEpochsInCurrentRun = nbEpochsInNextRun;
+            }
+            _minLearningRate = minLearningRate;
+            MaxLearningRate = maxLearningRate;
+        }
+        public bool ShouldCreateSnapshotForEpoch(int epoch)
+        {
+            int epochIdx= EndEpochForEachCycle.IndexOf(epoch);
+            return (epochIdx>=0) && (epochIdx >= EndEpochForEachCycle.Count-3);
+        }
+
+        public double LearningRate(int epoch, double percentagePerformedInEpoch)
+        {
+            var currentEpoch = epoch + percentagePerformedInEpoch;
+            var multiplier = Utils.Interpolate(_values, currentEpoch);
+            var learningRate = _minLearningRate + 0.5* (MaxLearningRate - _minLearningRate) * (1.0 + Math.Cos(multiplier * Math.PI));
+            return learningRate;
+        }
+
+        public double MaxLearningRate { get; }
+    }
+}
