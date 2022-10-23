@@ -77,4 +77,37 @@ namespace SharpNet.Optimizers
             for (int blockId = 10 + nbBlocksBetweenAFactor10InLearningRate;blockId < _smoothedLosses.Count - 5;++blockId)
             {
                 var learningRateForBatchBlock = LearningRate(1, blockId/(double)_nbBlocksPerEpoch, 1.0);
-                //we measure the redu
+                //we measure the reduction of the loss between:
+                //  the loss observed with the learning rate used at 'blockId' (=learningRateForBatchBlock)
+                //  the loss observed with a learning rate 10x lower (=learningRateForBatchBlock/10) as observed at 'blockId- nbBlocksBetweenAFactor10InLearningRate'
+                var observedDecreaseInLoss = _smoothedLosses[blockId- nbBlocksBetweenAFactor10InLearningRate] - _smoothedLosses[blockId];
+                if (observedDecreaseInLoss > maxDecreaseInLoss)
+                {
+                    maxDecreaseInLoss = observedDecreaseInLoss;
+                    bestLearningRate = learningRateForBatchBlock;
+                }
+            }
+            return bestLearningRate;
+        }
+        public string AsCsv()
+        {
+            var sb = new StringBuilder();
+            sb.Append("Sep=;" + Environment.NewLine);
+            sb.Append("LearningRate;LearningRateLog;Loss" + Environment.NewLine);
+            for (int miniBatchBlockId = 0; miniBatchBlockId < _loss.Count; ++miniBatchBlockId)
+            {
+                var learningRateForBatchBlock = LearningRate(1, miniBatchBlockId/(double)_loss.Count, 1.0);
+                sb.Append(learningRateForBatchBlock.ToString(CultureInfo.InvariantCulture) + ";"+Math.Log10(learningRateForBatchBlock).ToString(CultureInfo.InvariantCulture) + ";" + _smoothedLosses[miniBatchBlockId] + Environment.NewLine);
+            }
+            return sb.ToString();
+        }
+        public bool ShouldReduceLrOnPlateau(List<EpochData> previousEpochsData, EvaluationMetricEnum loss) {return false;}
+        public double MultiplicativeFactorFromReduceLrOnPlateau(List<EpochData> previousEpochsData, EvaluationMetricEnum loss) {return 1.0;}
+        public bool ShouldCreateSnapshotForEpoch(int epoch)
+        {
+            return false;
+        }
+
+        public double MaxLearningRate { get; }
+    }
+}
