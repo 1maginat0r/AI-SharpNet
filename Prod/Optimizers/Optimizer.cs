@@ -33,4 +33,22 @@ namespace SharpNet.Optimizers
         public abstract void UpdateWeights(double learningRate, double maxLearningRate, int batchSize, Tensor weights,
             Tensor weightGradients, Tensor bias, Tensor biasGradient);
         /// <summary>
-        /// reset( by setting to 0) all embedded tensors in the current optim
+        /// reset( by setting to 0) all embedded tensors in the current optimizer
+        /// </summary>
+        public void ZeroMemory()
+        {
+            EmbeddedTensors.ForEach(t => t.ZeroMemory());
+        }
+        public abstract string Serialize();
+
+        public virtual bool IsOrthogonal => false;
+
+        protected static float PonderedLearning(double learningRate, int batchSize)
+        {
+            return (float)learningRate / batchSize;
+        }
+        public virtual void Dispose()
+        {
+        }
+    }
+}
