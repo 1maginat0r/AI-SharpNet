@@ -106,4 +106,22 @@ namespace SharpNet.Optimizers
         }
         private static LearningRateScheduler ByInterval(int epoch1, double learningRate1, int epoch2, double learningRate2, int epoch3, double learningRate3, int epoch4, double learningRate4, bool constantByInterval)
         {
-            return new LearningR
+            return new LearningRateScheduler(new List<Tuple<double, double>>
+                                             {
+                                                 new (epoch1, learningRate1),
+                                                 new (epoch2, learningRate2),
+                                                 new (epoch3, learningRate3),
+                                                 new (epoch4, learningRate4)
+                                             }, constantByInterval, true);
+        }
+        private static LearningRateScheduler ByInterval(int epoch1, double learningRate1, int epoch2, double learningRate2, int epoch3, double learningRate3, bool constantByInterval)
+        {
+            return new LearningRateScheduler(new List<Tuple<double, double>>
+                                             {
+                                                 new (epoch1, learningRate1),
+                                                 new (epoch2, learningRate2),
+                                                 new (epoch3, learningRate3),
+                                             }, constantByInterval, true);
+        }
+    }
+}
