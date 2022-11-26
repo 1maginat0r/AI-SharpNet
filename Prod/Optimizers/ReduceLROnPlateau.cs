@@ -42,3 +42,49 @@ namespace SharpNet.Optimizers
             {
                 return 0;
             }
+            var minLoss = epochData.Select(x => x.GetTrainingLoss(loss)).Min();
+            int nbConsecutiveEpochsWithoutProgress = 0;
+            for (int i = epochData.Count - 1; i >= 0; --i)
+            {
+                //if progress observed
+                if (epochData[i].GetTrainingLoss(loss) <= minLoss+1e-8)
+                {
+                    break;
+                }
+                ++nbConsecutiveEpochsWithoutProgress;
+                if (nbConsecutiveEpochsWithoutProgress >= maxNbConsecutiveEpochsToReport)
+                {
+                    break;
+                }
+            }
+            return nbConsecutiveEpochsWithoutProgress;
+        }
+        public static int NbConsecutiveEpochsWithSameMultiplicativeFactor(List<EpochData> epochData)
+        {
+            for (int i = epochData.Count - 2; i >= 0; --i)
+            {
+                if (Math.Abs(epochData[i].LearningRateMultiplicativeFactorFromReduceLrOnPlateau- epochData[i+1].LearningRateMultiplicativeFactorFromReduceLrOnPlateau)>1e-30)
+                {
+                    return epochData.Count - 1 - i;
+                }
+            }
+            return epochData.Count;
+        }
+
+        /// <summary>
+        /// Check if we should reduce the learning rate because we have reached a plateau
+        /// (a plateau: no improvement in several epochs in a row)
+        /// </summary>
+        /// <param name="previousEpochData">stats associated with the previous computed epochs</param>
+        /// <param name="loss"></param>
+        /// <returns>true if we should reduce the learning rate</returns>
+        public bool ShouldReduceLrOnPlateau(List<EpochData> previousEpochData, EvaluationMetricEnum loss)
+        {
+            var nbConsecutiveEpochWithoutProgress = NbConsecutiveEpochsWithoutProgress(previousEpochData, loss, _patienceForReduceLrOnPlateau+1);
+            if (_patienceForReduceLrOnPlateau <= 0 || nbConsecutiveEpochWithoutProgress <= _patienceForReduceLrOnPlateau || FactorForReduceLrOnPlateau <= 0.0)
+            {
+                return false;
+            }
+
+            //we are about to reduce the learning rate. We must make sure that it has not been reduced recently (cooldown factor)
+            if (_cooldownForReduceLrOnPlateau >= 1 && NbConsecutiveEpochsWithSameMultiplicativeFactor(previousEpochData) <= _cooldownForReduce
