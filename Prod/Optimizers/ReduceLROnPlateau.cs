@@ -87,4 +87,12 @@ namespace SharpNet.Optimizers
             }
 
             //we are about to reduce the learning rate. We must make sure that it has not been reduced recently (cooldown factor)
-            if (_cooldownForReduceLrOnPlateau >= 1 && NbConsecutiveEpochsWithSameMultiplicativeFactor(previousEpochData) <= _cooldownForReduce
+            if (_cooldownForReduceLrOnPlateau >= 1 && NbConsecutiveEpochsWithSameMultiplicativeFactor(previousEpochData) <= _cooldownForReduceLrOnPlateau)
+            {
+                return false;
+            }
+
+            return true;
+        }
+    }
+}
