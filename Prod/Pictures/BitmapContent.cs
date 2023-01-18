@@ -101,3 +101,57 @@ namespace SharpNet.Pictures
                 Debug.Assert(GetChannels() == fileNames.Length);
                 for (int channel = 0; channel < GetChannels(); ++channel)
                 {
+                    var bmp = AsBitmapForChannel(channel);
+                    PictureTools.SavePng(bmp, fileNames[channel]);
+                    bmp.Dispose();
+                }
+            }
+        }
+        public RGBColor AverageColor(RGBColorFactoryWithCache cache)
+        {
+            var acc = new ColorAccumulator();
+            Debug.Assert(3 == Shape[0]);
+            var content = SpanContent;
+            for (int i = 0; i < MultDim0; ++i)
+            {
+                acc.Add(cache.Build(content[i], content[i+MultDim0], content[i + 2*MultDim0]));
+            }
+            return acc.Average;
+        }
+        /// <summary>
+        /// Compute Sum / Sum^2 / Count of each channel.
+        /// THis will be used to compute Mean/Volatility of each channel
+        /// </summary>
+        /// <param name="_sum_SumSquare_Count_For_Each_Channel">
+        /// _Sum_SumSquare_Count_For_Each_Channel[3*channel+0] : sum of all elements in channel 'channel'
+        /// _Sum_SumSquare_Count_For_Each_Channel[3*channel+1] : sum of squares of all elements in channel 'channel'
+        /// _Sum_SumSquare_Count_For_Each_Channel[3*channel+2] : count of all elements in channel 'channel'
+        /// </param>
+        public void UpdateWith_Sum_SumSquare_Count_For_Each_Channel(float[] _sum_SumSquare_Count_For_Each_Channel)
+        {
+            var content = ReadonlyContent;
+            for (int channel = 0; channel < GetChannels(); ++channel)
+            {
+                var sum = 0f;
+                var sumSquare = 0f;
+                var startIdx = Idx(channel, 0, 0);
+                var endIdxExcluded = Idx(channel+1, 0, 0);
+                for (int idx = startIdx; idx< endIdxExcluded; ++idx)
+                {
+                    var val = content[idx];
+                    sum += val;
+                    sumSquare += val * val;
+                }
+                lock (_sum_SumSquare_Count_For_Each_Channel)
+                {
+                    _sum_SumSquare_Count_For_Each_Channel[3 * channel] += sum;
+                    _sum_SumSquare_Count_For_Each_Channel[3 * channel + 1] += sumSquare;
+                    _sum_SumSquare_Count_For_Each_Channel[3 * channel + 2] += GetWidth()*GetHeight();
+                }
+            }
+        }
+
+
+        public static BitmapContent Resize(string path, int targetWidth, int targetHeight)
+        {
+            return CropAndResize(
