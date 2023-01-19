@@ -272,4 +272,60 @@ namespace SharpNet.Pictures
         public RGBColor[,] RGBColorContent(RGBColorFactoryWithCache cache)
         {
             var result = new RGBColor[GetHeight(), GetWidth()];
-            var 
+            var aContent = SpanContent;
+            int aIndex = 0;
+            for (int row = 0; row < GetHeight(); row++)
+            {
+                for (int col = 0; col < GetWidth(); col++)
+                {
+                    result[row,col] = cache.Build(aContent[aIndex], aContent[aIndex + MultDim0], aContent[aIndex + 2 * MultDim0]);
+                    ++aIndex;
+                }
+            }
+            return result;
+        }
+
+        public Bitmap AsBitmap(Func<int, int, byte, byte, byte, (byte R, byte G, byte B)> get)
+        {
+            Debug.Assert(GetChannels() == 3);
+            var bmp = new Bitmap(GetWidth(), GetHeight(), PixelFormat.Format24bppRgb);
+            var rect = new Rectangle(0, 0, GetWidth(), GetHeight());
+            // Lock the bitmap bits.  
+            var bmpData = bmp.LockBits(rect, ImageLockMode.WriteOnly, bmp.PixelFormat);
+            var rgbValues = new byte[bmpData.Stride * bmpData.Height];
+            int index = 0;
+            for (int row = 0; row < bmpData.Height; row++)
+            {
+                for (int col = 0; col < bmpData.Width; col++)
+                {
+                    var (R, G, B) = get(row, col, Get(0, row, col), Get(1, row, col), Get(2, row, col));
+                    rgbValues[index + 2] = R;
+                    rgbValues[index + 1] = G;
+                    rgbValues[index] = B;
+                    index += 3;
+                }
+                index += bmpData.Stride - bmpData.Width * 3;
+            }
+            Marshal.Copy(rgbValues, 0, bmpData.Scan0, rgbValues.Length);
+            // Unlock the bits.
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+
+        public Bitmap AsBitmap()
+        {
+            Debug.Assert(GetChannels() == 3);
+            var bmp = new Bitmap(GetWidth(), GetHeight(), PixelFormat.Format24bppRgb);
+            var rect = new Rectangle(0, 0, GetWidth(), GetHeight());
+            // Lock the bitmap bits.  
+            var bmpData = bmp.LockBits(rect, ImageLockMode.WriteOnly, bmp.PixelFormat);
+            var rgbValues = new byte[bmpData.Stride * bmpData.Height];
+            int index = 0;
+            for (int row = 0; row < bmpData.Height; row++)
+            {
+                for (int col = 0; col < bmpData.Width; col++)
+                {
+                    rgbValues[index + 2] = Get(0, row, col);    //R
+                    rgbValues[index + 1] = Get(1, row, col);    //G
+                    rgbValues[index] = Get(2, row, col);        //B
+                    in
