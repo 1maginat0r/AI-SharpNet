@@ -154,4 +154,60 @@ namespace SharpNet.Pictures
 
         public static BitmapContent Resize(string path, int targetWidth, int targetHeight)
         {
-            return CropAndResize(
+            return CropAndResize(path, null, targetWidth, targetHeight);
+        }
+
+        public static BitmapContent CropAndResize(string path, Rectangle? croppedRectangle, int targetWidth, int targetHeight)
+        {
+            var settings = new ProcessImageSettings {Width = targetWidth, Height = targetHeight, SaveFormat =FileFormat.Bmp};
+            if (croppedRectangle.HasValue)
+            {
+                settings.Crop = croppedRectangle.Value;
+                settings.ResizeMode = CropScaleMode.Crop;
+            }
+            else
+            {
+                settings.ResizeMode = CropScaleMode.Stretch;
+            }
+            using var stream = new MemoryStream();
+            MagicImageProcessor.ProcessImage(path, stream, settings);
+            return ValueFromBmpContent(stream.ToArray(), targetWidth, targetHeight);
+        }
+        
+        private static BitmapContent ValueFromBmpContent(byte[] bmpData, int width, int height)
+        {
+            var shape = new[] { 3, height, width };
+            var result = new BitmapContent(shape, null);
+            var resultContent = result.SpanContent;
+            int rowSizeInBytes = ((3*width + 3) / 4) * 4; //each row must have a size that is a multiple of 4
+            var delta = bmpData.Length - rowSizeInBytes * height;
+            int i = 0;
+            for (int row = height-1; row >=0; --row)
+            {
+                for (int col = 0; col < width; col++)
+                {
+                    int j = delta+3 *col+row* rowSizeInBytes;
+                    resultContent[i] = bmpData[j+2]; //R
+                    resultContent[i + result.MultDim0] = bmpData[j + 1]; //G
+                    resultContent[i + 2 * result.MultDim0] = bmpData[j+0]; //B
+                    ++i;
+                }
+            }
+            return result;
+        }
+        public static BitmapContent ValueFomSingleRgbBitmap(Bitmap bmp)
+        {
+            var width = bmp.Width;
+            var height = bmp.Height;
+            var rect = new Rectangle(0, 0, width, height);
+            var bmpData = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            var shape = new []{3, height, width};
+            var result = new BitmapContent(shape, null);
+            var stride = bmpData.Stride;
+            var resultContent = result.SpanContent;
+            unsafe
+            {
+                var imgPtr = (byte*)(bmpData.Scan0);
+                int i = 0;
+                for (int row = 0; row < height; row++)
+    
