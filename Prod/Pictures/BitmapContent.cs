@@ -328,4 +328,58 @@ namespace SharpNet.Pictures
                     rgbValues[index + 2] = Get(0, row, col);    //R
                     rgbValues[index + 1] = Get(1, row, col);    //G
                     rgbValues[index] = Get(2, row, col);        //B
-                    in
+                    index += 3;
+                }
+                index += bmpData.Stride - bmpData.Width * 3;
+            }
+            Marshal.Copy(rgbValues, 0, bmpData.Scan0, rgbValues.Length);
+            // Unlock the bits.
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+        private Bitmap AsBitmapForChannel(int channel)
+        {
+            Debug.Assert(GetChannels() == 3);
+            var bmp = new Bitmap(GetWidth(), GetHeight(), PixelFormat.Format24bppRgb);
+            var rect = new Rectangle(0, 0, GetWidth(), GetHeight());
+            // Lock the bitmap bits.  
+            var bmpData = bmp.LockBits(rect, ImageLockMode.WriteOnly, bmp.PixelFormat);
+            var rgbValues = new byte[bmpData.Stride * bmpData.Height];
+            int index = 0;
+            for (int row = 0; row < bmpData.Height; row++)
+            {
+                for (int col = 0; col < bmpData.Width; col++)
+                {
+                    var rgbValue = Get(channel, row, col);
+                    rgbValues[index + 2] = rgbValue;    //R
+                    rgbValues[index + 1] = rgbValue;    //G
+                    rgbValues[index] = rgbValue;        //B
+                    index += 3;
+                }
+                index += bmpData.Stride - bmpData.Width * 3;
+            }
+            Marshal.Copy(rgbValues, 0, bmpData.Scan0, rgbValues.Length);
+            // Unlock the bits.
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+        /// <summary>
+        /// Construct a Volume from several bitmaps: each contain a single (grey scale) channel
+        /// </summary>
+        /// <param name="bmps">List of bitmap, one per channel</param>
+        /// <returns></returns>
+        private static BitmapContent ValueFromSeveralSingleChannelBitmaps(IReadOnlyList<Bitmap> bmps)
+        {
+            var width = bmps[0].Width;
+            var height = bmps[0].Height;
+            var shape = new[] { bmps.Count, height, width };
+            var result = new BitmapContent(shape, null);
+
+            for (var channel = 0; channel < bmps.Count; channel++)
+            {
+                var bmpForChannel = bmps[channel];
+                Debug.Assert(bmpForChannel.Height == height);
+                Debug.Assert(bmpForChannel.Width == width);
+                var rect = new Rectangle(0, 0, width, height);
+                var bmpData = bmpForChannel.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+                var stri
