@@ -382,4 +382,27 @@ namespace SharpNet.Pictures
                 Debug.Assert(bmpForChannel.Width == width);
                 var rect = new Rectangle(0, 0, width, height);
                 var bmpData = bmpForChannel.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-                var stri
+                var stride = bmpData.Stride;
+                unsafe
+                {
+                    var imgPtr = (byte*)(bmpData.Scan0);
+                    for (int row = 0; row < height; row++)
+                    {
+                        for (int col = 0; col < width; col++)
+                        {
+                            result.Set(channel, row, col, *(imgPtr + 2)); //R
+                            //We ensure that it is a grey scale bitmap (Red = Green = Blue)
+                            Debug.Assert(*(imgPtr + 2) == *(imgPtr + 1));   //Red byte == Green Byte
+                            Debug.Assert(*(imgPtr + 2) == *(imgPtr));       //Red byte == Blue Byte
+                            imgPtr += 3;
+                        }
+                        imgPtr += stride - width * 3;
+                    }
+                }
+                // Unlock the bits.
+                bmpForChannel.UnlockBits(bmpData);
+            }
+            return result;
+        }
+    }
+}
