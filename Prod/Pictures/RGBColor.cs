@@ -81,4 +81,106 @@ public class RGBColor : IEquatable<RGBColor>
         double hueDistanceInDegrees = Math.Abs(hue1InDegrees - hue2InDegrees);
         if (hueDistanceInDegrees >= 180)
         {
-            hue
+            hueDistanceInDegrees = 360 - hueDistanceInDegrees;
+        }
+
+        return hueDistanceInDegrees;
+    }
+       
+
+
+    public static RGBColor Average(List<RGBColor> colors)
+    {
+        if (colors.Count == 1)
+        {
+            return colors[0];
+        }
+
+        var acc = new ColorAccumulator();
+        foreach(var c in colors)
+        {
+            acc.Add(c);
+        }
+
+        return acc.Average;
+    }
+
+    public static RGBColor PonderedAverage(List<KeyValuePair<RGBColor, int>> colors)
+    {
+        if (colors.Count == 1)
+        {
+            return colors[0].Key;
+        }
+
+        var acc = new ColorAccumulator();
+        foreach (var c in colors)
+        {
+            acc.Add(c.Key, c.Value);
+        }
+
+        return acc.Average;
+    }
+    public override string ToString()
+    {
+        string result = ("(" + Red + "," + Green + "," + Blue + ")" + "(" + Lab + ")");
+        return result;
+    }
+
+    public static void SortByLabBrightestFirst(List<RGBColor> colors)
+    {
+        colors.Sort((x, y) => (int)(1000000 * (y.Lab.L - x.Lab.L)));
+    }
+
+    public double MinDistanceTo(IEnumerable<RGBColor> colors, Func<RGBColor, RGBColor, double> ColorDistance)
+    {
+        double result = double.MaxValue;
+        foreach (var c in colors)
+        {
+            result = Math.Min(ColorDistance(this, c), result);
+        }
+
+        return result;
+    }
+    public override int GetHashCode()
+    {
+        return Index24Bits;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (!(obj is RGBColor))
+        {
+            return false;
+        }
+
+        return Equals((RGBColor)obj);
+    }
+    public bool Equals(RGBColor other)
+    {
+        return other != null && Index24Bits == other.Index24Bits;
+    }
+    public double MaxDistanceTo(IEnumerable<RGBColor> colors, Func<RGBColor, RGBColor, double> ColorDistance)
+    {
+        double result = 0;
+        foreach (var c in colors)
+        {
+            result = Math.Max(ColorDistance(this, c), result);
+        }
+
+        return result;
+    }
+
+
+    public static RGBColor ToRGB(double r_255, double g_255, double b_255)
+    {
+        return new RGBColor(ToRGBColor(r_255), ToRGBColor(g_255), ToRGBColor(b_255));
+    }
+    public static double LabColorDistance(RGBColor a, RGBColor b)
+    {
+        return a.Lab.Distance(b.Lab);
+    }
+    public static double BlackLabColorDistance(RGBColor a, RGBColor b)
+    {
+        var res = a.Lab.Distance(b.Lab);
+
+   
