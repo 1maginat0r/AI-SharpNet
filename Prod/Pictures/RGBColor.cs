@@ -183,4 +183,133 @@ public class RGBColor : IEquatable<RGBColor>
     {
         var res = a.Lab.Distance(b.Lab);
 
-   
+        const double mult = 4.0;
+        if (b.Red == 0)
+        {
+            res /= mult;
+        }
+        if (b.Green == 0)
+        {
+            res /= mult;
+        }
+        if (b.Blue == 0)
+        {
+            res /= mult;
+        }
+
+        //var min = Math.Min(b.Red, Math.Min(b.Green, b.Blue));
+        //if (min < 10)
+        //{
+        //    res /= mult;
+        //}
+
+
+        if (b.Red != 0 && b.Green != 0 && b.Blue != 0)
+        {
+            res *= mult;
+        }
+
+        int sum = b.Red + b.Green + b.Blue;
+        if (sum > 20.0)
+        {
+            res *= sum/20.0;
+        }
+        
+        //if (sum < 10.0)
+        //{
+        //    res *= (10-sum) / 10.0;
+        //}
+
+
+        //if (b.Red > 5 && b.Green > 5 && b.Blue > 5)
+        //{
+        //    res *= mult;
+        //}
+
+        var max = Math.Max(b.Red, Math.Max(b.Green, b.Blue));
+        if (max >= 30)
+        {
+            return 1.0;
+        }
+
+        //if (max <= 10)
+        //{
+        //    return 0.0;
+        //}
+
+        return res;
+    }
+
+
+    public static double YellowLabColorDistance(RGBColor a, RGBColor b)
+    {
+        var aLab = a.Lab;
+        var bLab = b.Lab;
+        var res = aLab.Distance(bLab);
+        return res;
+    }
+
+    public static double WhiteLabColorDistance(RGBColor a, RGBColor b)
+    {
+        var aLab = a.Lab;
+        var bLab = b.Lab;
+        //var res0 = aLab.Distance(bLab);
+
+        //if (Math.Abs(bLab.B) > 5)
+        //{
+        //    return 1.0;
+        //}
+
+        //var res1 = a.HSB2.DistanceISS(b.HSB2);
+        //return res0;
+
+        var res = aLab.Distance(bLab);
+
+        var errorR = 255 - b.Red;
+        var errorG = 255 - b.Green;
+        var errorB = 255 - b.Blue;
+        
+
+        const double mult = 4.0;
+        if (errorR == 0)
+        {
+            res /= mult;
+        }
+        if (errorG == 0)
+        {
+            res /= mult;
+        }
+        if (errorB == 0)
+        {
+            res /= mult;
+        }
+
+
+      
+
+        if (errorR != 0 && errorG != 0 && errorB != 0)
+        {
+            res *= mult;
+        }
+
+
+
+        int sum = errorR + errorG + errorB;
+        if (sum > 20.0)
+        {
+            res *= sum / 20.0;
+        }
+
+
+        //if (sum < 10.0)
+        //{
+        //    res *= (10-sum) / 10.0;
+        //}
+
+
+        //if (b.Red > 5 && b.Green > 5 && b.Blue > 5)
+        //{
+        //    res *= mult;
+        //}
+
+        var max = Math.Max(er
