@@ -312,4 +312,12 @@ public class RGBColor : IEquatable<RGBColor>
         //    res *= mult;
         //}
 
-        var max = Math.Max(er
+        var max = Math.Max(errorR, Math.Max(errorG, errorB));
+        if (max >= 35)
+        {
+            return 1.0;
+        }
+
+        return res;
+    }
+}
