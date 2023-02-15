@@ -59,4 +59,40 @@ namespace SharpNet.Pictures
         }
         public static XYZColor RGB2XYZ(byte r, byte g, byte b)
         {
-            doubl
+            double var_R = GetGammaCorrectedV2(r / 255.0) * 100;
+            double var_G = GetGammaCorrectedV2(g / 255.0) * 100;
+            double var_B = GetGammaCorrectedV2(b / 255.0) * 100;
+
+            //Observer. = 2�, Illuminant = D65
+            return new XYZColor(var_R * 0.4124564 + var_G * 0.3575761 + var_B * 0.1804375,
+                                     var_R * 0.2126729 + var_G * 0.7151522 + var_B * 0.0721750,
+                                     var_R * 0.0193339 + var_G * 0.1191920 + var_B * 0.9503041);
+            /*
+            return new XYZColor(0.436052025f * var_R + 0.385081593f * var_G + 0.143087414f * var_B,
+                                     0.222491598f * var_R + 0.71688606f * var_G + 0.060621486f * var_B,
+                                        0.013929122f * var_R + 0.097097002f * var_G + 0.71418547f * var_B);
+            */
+
+
+
+        }
+        public override string ToString()
+        {
+            return Math.Round(X, 2) + ";" + Math.Round(Y, 2) + ";" + Math.Round(Z, 2);
+        }
+        public override int GetHashCode()
+        {
+            return X.GetHashCode() + Y.GetHashCode() + Z.GetHashCode();
+        }
+        public override bool Equals(object obj)
+        {
+            if (!(obj is XYZColor))
+            {
+                return false;
+            }
+
+            var other = (XYZColor)obj;
+            return (X == other.X) && (Y == other.Y) && (Z == other.Z);
+        }
+    }
+}
