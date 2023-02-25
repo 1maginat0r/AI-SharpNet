@@ -61,4 +61,11 @@ public class Score : IScore
         {
             throw new ArgumentException($"can't compare score between {Metric} and {other.Metric}");
         }
-        return Utils.IsBetterScor
+        return Utils.IsBetterScore(Value, other.Value, Metric);
+    }
+
+    public override string ToString()
+    {
+        return $"{Value.ToString(CultureInfo.InvariantCulture)} ({Utils.ToString(Metric)})";
+    }
+}

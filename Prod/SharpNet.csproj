@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <LangVersion>11</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="GPU/Kernels/SinglePrecision.cu" />
+    <EmbeddedResource Include="ObjectDetection\yolov3.cfg" />
+    <PackageReference Include="log4net" Version="2.0.10" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="4.7.0" />
+    <PackageReference Include="System.Drawing.Common" Version="4.7.2" />
+	<PackageReference Include="JetBrains.Annotations" Version="2019.1.3" />
+	<PackageReference Include="HDF.PInvoke" Version="1.10.6.1" />
+    <PackageReference Include="PhotoSauce.MagicScaler" Version="0.11.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="protobuf-net" Version="3.0.73" />
+    <PackageReference Include="System.Management" Version="6.0.0" />
+	<PackageReference Include="CsvHelper" Version="30.0.1" />
+	<PackageReference Include="Porter2StemmerStandard" Version="1.1.0" />
+	<PackageReference Include="UDE.CSharp" Version="1.1.0" />
+    <Compile Remove="Properties\AssemblyInfo.cs" />
+    <None Remove="packages.config" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Temp\Misc.cs" Link="Misc.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+		<Reference Include="HDF.PInvoke">
+		  <HintPath>..\Dependencies\HDF.PInvoke.dll</HintPath>
+		  <Private>true</Private>
+		</Reference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="log4net.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Datasets\CFM84\" />
+    <Folder Include="Datasets\QRT97\" />
+  </ItemGroup>
+
+
+</Project>
