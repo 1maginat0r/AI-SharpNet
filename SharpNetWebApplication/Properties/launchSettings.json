@@ -20,4 +20,11 @@
     "SharpNetWebApplication": {
       "commandName": "Project",
       "launchBrowser": true,
-      "lau
+      "launchUrl": "cancelidentification",
+      "applicationUrl": "http://localhost:44307",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
