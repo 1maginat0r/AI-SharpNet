@@ -13,4 +13,21 @@ namespace SharpNetTests.CatBoost
             //{
             //    Directory.CreateDirectory(workingDirectory);
             //}
-           // Utils.Conf
+           // Utils.ConfigureGlobalLog4netProperties(workingDirectory, "log");
+           // Utils.ConfigureThreadLog4netProperties(workingDirectory, "log");
+
+           // const int num_boost_round = 100;
+           // var catBoostSample = new CatBoostSample();
+           //var datasetHyperparameters = new AmazonEmployeeAccessChallengeDatasetHyperparameters();
+           // catBoostSample.iterations = num_boost_round;
+           // catBoostSample.loss_function = CatBoostSample.loss_function_enum.Logloss;
+           // catBoostSample.verbose = num_boost_round / 10;
+           // catBoostSample.eval_metric = CatBoostSample.metric_enum.AUC;
+           // catBoostSample.random_seed = 1;
+           // catBoostSample.allow_writing_files = false;
+           // //sample.CatBoostSample.set_early_stopping_rounds(200);
+           // var model = new CatBoostModel(catBoostSample, workingDirectory, catBoostSample.ComputeHash());
+           // datasetHyperparameters.Fit(model, true);
+        }
+    }
+}
