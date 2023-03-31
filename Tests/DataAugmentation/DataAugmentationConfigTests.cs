@@ -30,4 +30,9 @@ namespace SharpNetTests.DataAugmentation
             //var errors = "";
             //var equals = da.Equals(deserialized, 1e-6, "id", ref errors);
             //Assert.IsTrue(equals, errors);
-            /
+            //deserialized.VerticalFlip = true;
+            //equals = da.Equals(deserialized, 1e-6, "id", ref errors);
+            //Assert.IsFalse(equals, "VerticalFlip is different");
+        }
+    }
+}
