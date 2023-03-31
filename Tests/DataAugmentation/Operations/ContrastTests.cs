@@ -5,24 +5,23 @@ using SharpNet.DataAugmentation.Operations;
 namespace SharpNetTests.DataAugmentation.Operations
 {
     [TestFixture]
-    public class BrightnessTests
+    public class ContrastTests
     {
         [Test]
-        public void TestBrightness()
+        public void TestContrast()
         {
-            // 1x1 matrix, 3 channels, no normalization
             var input = new[] { 250f, 150f, 50f };
-            const float blackMean = 0f;
+            const float greyMean = 191f;
+            var operation = new Contrast(0.5f, greyMean);
 
             var inputShape = new[] { 1, 3, 1, 1 };
-            var expected = new[] { (input[0] + blackMean) / 2, (input[1] + blackMean) / 2, (input[2] + blackMean) / 2 };
-            var operation = new Brightness(0.5f, blackMean);
+            var expected = new[] { (input[0] + greyMean) / 2, (input[1] + greyMean) / 2, (input[2] + greyMean) / 2 };
             OperationTests.Check(operation, input, inputShape, expected, null, ImageDataGenerator.FillModeEnum.Nearest);
 
             // 1x1 matrix, 3 channels, with normalization
             input = new[] { (250f - 10f) / 5f, (150f - 20f) / 10f, (50f - 40f) / 20f };
             //var meanAndVolatilityForEachChannel = new List<Tuple<float, float>> { Tuple.Create(10f, 5f), Tuple.Create(20f, 10f), Tuple.Create(40f, 20f) };
-            expected = new[] { (input[0] + blackMean) / 2, (input[1] + blackMean) / 2, (input[2] + blackMean) / 2 };
+            expected = new[] { (input[0] + greyMean) / 2, (input[1] + greyMean) / 2, (input[2] + greyMean) / 2 };
             OperationTests.Check(operation, input, inputShape, expected, null, ImageDataGenerator.FillModeEnum.Nearest);
 
             Assert.IsFalse(operation.ChangeCoordinates());
