@@ -49,4 +49,10 @@ namespace SharpNetTests.DataAugmentation.Operations
             yExpected.Set(0, 4, 1/8f);
             //2nd picture categoryIndex = 4 (100%)
             yExpected.Set(1, 4, 1f);
-            var operation = new CutMix(0, 0, 1, 1, 1, xOrigina
+            var operation = new CutMix(0, 0, 1, 1, 1, xOriginalMiniBatch);
+            OperationTests.Check(operation, input, inputShape, expected, (x => x == 0 ? 0 : 4), ImageDataGenerator.FillModeEnum.Nearest, yOriginal, yExpected);
+
+            Assert.IsFalse(operation.ChangeCoordinates());
+        }
+    }
+}
