@@ -41,4 +41,27 @@ namespace SharpNetTests.DataAugmentation.Operations
         public void TestEqualize()
         {
             // 1x1 matrix, 3 channels, no normalization
- 
+            var input = new[] { 250f, 150f, 50f };
+            var originalPixelToEqualizedPixelByChannel = new List<int[]>();
+            originalPixelToEqualizedPixelByChannel.Add(new int[256]);
+            originalPixelToEqualizedPixelByChannel[0][250] = 25;
+            originalPixelToEqualizedPixelByChannel.Add(new int[256]);
+            originalPixelToEqualizedPixelByChannel[1][150] = 15;
+            originalPixelToEqualizedPixelByChannel.Add(new int[256]);
+            originalPixelToEqualizedPixelByChannel[2][50] = 5;
+
+            var inputShape = new[] { 1, 3, 1, 1 };
+            var expected = new[] { 25f, 15f, 5f };
+            OperationTests.Check(new Equalize(originalPixelToEqualizedPixelByChannel, null), input, inputShape, expected, null, ImageDataGenerator.FillModeEnum.Nearest);
+
+            // 1x1 matrix, 3 channels, with normalization
+            input = new[] { (250f - 10f) / 5f, (150f - 20f) / 10f, (50f - 40f) / 20f };
+            var meanAndVolatilityForEachChannel = new List<Tuple<float, float>> { Tuple.Create(10f, 5f), Tuple.Create(20f, 10f), Tuple.Create(40f, 20f) };
+            expected = new[] { (25f - 10f) / 5f, (15f - 20f) / 10f, (5f - 40f) / 20f };
+            var operation = new Equalize(originalPixelToEqualizedPixelByChannel, meanAndVolatilityForEachChannel);
+            OperationTests.Check(operation, input, inputShape, expected, null, ImageDataGenerator.FillModeEnum.Nearest);
+
+            Assert.IsFalse(operation.ChangeCoordinates());
+        }
+    }
+}
