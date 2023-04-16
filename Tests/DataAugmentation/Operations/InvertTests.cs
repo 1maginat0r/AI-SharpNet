@@ -23,4 +23,16 @@ namespace SharpNetTests.DataAugmentation.Operations
             input = new[] { 253f, 254f, 255f };
             inputShape = new[] { 1, 3, 1, 1 };
             expected = new[] { 2f, 1f, 0f};
-            OperationTests.Check(new Invert(null), input, inputShape, expected, null, ImageDataGenerator.FillModeEn
+            OperationTests.Check(new Invert(null), input, inputShape, expected, null, ImageDataGenerator.FillModeEnum.Nearest, null, null);
+
+            // 1x1 matrix, 3 channels, with normalization
+            input = new[] { (253f-10f)/5f, (254f-20f)/10f, (255f-40f)/20f };
+            var meanAndVolatilityForEachChannel = new List<Tuple<float, float>> {Tuple.Create(10f,5f), Tuple.Create(20f, 10f), Tuple.Create(40f, 20f)};
+            expected = new[] { (2f- 10f) / 5f, (1f - 20f) / 10f, (0f - 40f) / 20f };
+            var operation = new Invert(meanAndVolatilityForEachChannel);
+            OperationTests.Check(operation, input, inputShape, expected, null, ImageDataGenerator.FillModeEnum.Nearest, null, null);
+
+            Assert.IsFalse(operation.ChangeCoordinates());
+        }
+    }
+}
