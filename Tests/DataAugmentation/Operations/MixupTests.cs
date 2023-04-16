@@ -33,3 +33,15 @@ namespace SharpNetTests.DataAugmentation.Operations
 
             expected = new[] { 0.25f * 0 + 0.75f * 8, 0.25f * 1 + 0.75f * 9, 0.25f * 2 + 0.75f * 10, 0.25f * 3 + 0.75f * 11, 0.25f * 4 + 0.75f * 12, 0.25f * 5 + 0.75f * 13, 0.25f * 6 + 0.75f * 14, 0.25f * 7 + 0.75f * 15, 0, 0, 0, 0, 0, 0, 0, 0 };
             yExpected = new CpuTensor<float>(new[] { inputShape[0], 5 });
+            //1st picture categoryIndex = 0 (25%) + 4 (75%)
+            yExpected.Set(0, 0, 0.25f);
+            yExpected.Set(0, 4, 0.75f);
+            //2nd picture categoryIndex = 4 (100%)
+            yExpected.Set(1, 4, 1f);
+            var operation = new Mixup(0.25f, 1, xOriginalMiniBatch);
+            OperationTests.Check(operation, input, inputShape, expected, (x => x == 0 ? 0 : 4), ImageDataGenerator.FillModeEnum.Nearest, yOriginal, yExpected);
+
+            Assert.IsFalse(operation.ChangeCoordinates());
+        }
+    }
+}
