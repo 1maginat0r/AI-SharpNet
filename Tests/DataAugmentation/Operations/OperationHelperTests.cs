@@ -37,4 +37,36 @@ namespace SharpNetTests.DataAugmentation.Operations
             operations = new List<Operation> { translateX, vFlip, translateY, invert, translateY, hFlip, cutout };
             Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
             operations = new List<Operation> { equalize, vFlip, translateY, invert, equalize, hFlip, cutout };
-   
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            //operations = new List<Operation> { vFlip, invert, hFlip, invert, cutout };
+            //Assert.Throws<ArgumentException>(() => OperationHelper.CheckIntegrity(operations));
+            //operations = new List<Operation> { vFlip, invert, hFlip, hFlip, cutout };
+            //Assert.Throws<ArgumentException>(() => OperationHelper.CheckIntegrity(operations));
+
+            //cutout is allowed only as last param
+            operations = new List<Operation>{invert, hFlip, cutout};
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, cutout, hFlip};
+            Assert.Throws<ArgumentException>(() => OperationHelper.CheckIntegrity(operations));
+
+            //cutMix and mixup are not allowed at same time
+            operations = new List<Operation> { invert, hFlip, mixup };
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, hFlip, cutMix };
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, hFlip, mixup, cutMix };
+            Assert.Throws<ArgumentException>(() => OperationHelper.CheckIntegrity(operations));
+
+            //cutMix must be the last operation (if no Cutout operation is used) or the operation just before Cutout (if Cutout is used)
+            operations = new List<Operation> { invert, hFlip, vFlip, cutMix, cutout };
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, hFlip, vFlip, cutMix};
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, hFlip, cutMix, vFlip, cutout };
+            Assert.Throws<ArgumentException>(() => OperationHelper.CheckIntegrity(operations));
+
+            //Mixup must be the last operation (if no Cutout operation is used) or the operation just before Cutout (if Cutout is used)
+            operations = new List<Operation> { invert, hFlip, vFlip, mixup, cutout };
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, hFlip, vFlip, mixup };
+           
