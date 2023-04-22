@@ -69,4 +69,9 @@ namespace SharpNetTests.DataAugmentation.Operations
             operations = new List<Operation> { invert, hFlip, vFlip, mixup, cutout };
             Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
             operations = new List<Operation> { invert, hFlip, vFlip, mixup };
-           
+            Assert.DoesNotThrow(() => OperationHelper.CheckIntegrity(operations));
+            operations = new List<Operation> { invert, hFlip, mixup, vFlip, cutout };
+            Assert.Throws<ArgumentException>(() => OperationHelper.CheckIntegrity(operations));
+        }
+    }
+}
