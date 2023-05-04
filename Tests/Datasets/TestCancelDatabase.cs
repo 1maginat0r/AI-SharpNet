@@ -53,4 +53,45 @@ namespace SharpNetTests.Datasets
             var prediction = CancelDatabase.Hierarchy.ExpectedPrediction(path);
             var observedCancelName = CancelDatabase.Hierarchy.ExtractPredictionWithProba(prediction).Item1;
             Assert.AreEqual(expectedCancelName, observedCancelName);
-     
+        }
+
+        private static List<string> AllCombinations(List<char> available, int length)
+        {
+            var allItems = new List<List<char>>();
+            while (allItems.Count < length)
+            {
+                allItems.Add(available);
+            }
+            var result = new List<string>();
+            foreach (var comb in AllCombinations(allItems))
+            {
+                result.Add(new string(comb.ToArray()));
+            }
+            return result;
+        }
+
+        private static IEnumerable<List<T>> AllCombinations<T>(IList<List<T>> allItems)
+        {
+            var result = new List<List<T>>();
+            if ((allItems == null) || (allItems.Count == 0) || allItems.Any(x => (x == null) || (x.Count == 0)))
+            {
+                return result;
+            }
+            AllCombinationsHelper(allItems, new List<T>(), result);
+            return result;
+        }
+        private static void AllCombinationsHelper<T>(IList<List<T>> allItems, List<T> currentSolutionInProgress, List<List<T>> allSolutionSoFar)
+        {
+            if (currentSolutionInProgress.Count == allItems.Count)
+            {
+                allSolutionSoFar.Add(currentSolutionInProgress); // a new combination has been found
+                return;
+            }
+            foreach (var t in allItems[currentSolutionInProgress.Count])
+            {
+                AllCombinationsHelper(allItems, new List<T>(currentSolutionInProgress) { t }, allSolutionSoFar);
+            }
+        }
+
+    }
+}
