@@ -68,4 +68,44 @@ namespace SharpNetTests.Datasets
                 stars.ExpectedPrediction(new [] {"1digit", "5" }), 1e-6));
             Assert.IsTrue(Utils.SameContent(new float[] { 30, 0, -160, 30, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -100, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                 stars.ExpectedPrediction(new[] { "1digit", "*" }), 1e-6));
-            Assert.IsTrue(Utils.
+            Assert.IsTrue(Utils.SameContent(new float[] { 30, 1, -160, 30, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -100, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                stars.ExpectedPrediction(new [] {"2digits" }), 1e-6));
+            Assert.IsTrue(Utils.SameContent(new float[] { 30, 1, 21, -40, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, -100, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                stars.ExpectedPrediction(new [] {"2digits", "*", "6" }), 1e-6));
+            Assert.IsTrue(Utils.SameContent(new float[] { 30, 1, 21, 30, 1, 0, 0, 100, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, -100, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                stars.ExpectedPrediction(new [] {"2digits", "1", "6" }), 1e-6));
+            Assert.IsTrue(Utils.SameContent(new float[] { 30, 1, 21, 30, 1, 0, 0, -110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -100, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                stars.ExpectedPrediction(new [] {"2digits", "1", "*" }), 1e-6));
+            Assert.IsTrue(Utils.SameContent(new float[] { 30, 1, 21, -40, 0, 0, 0, -110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -100, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                stars.ExpectedPrediction(new [] {"2digits", "*", "*" }), 1e-6));
+        }
+
+
+        [Test, Explicit]
+        public void TestPredictions()
+        {
+            var root = CancelDatabase.Hierarchy;
+            var network = CancelDatabase.GetDefaultNetwork();
+
+            ((InputLayer)network.Layers[0]).SetInputHeightAndWidth(235, 200);
+            using var dataSet = FromDirectory(@"C:\Download\ToWork", root);
+            var p = network.Predict(dataSet, System.Math.Min(32, dataSet.Count));
+            for (int row = 0; row < p.Shape[0]; ++row)
+            {
+                var rowPrediction = p.RowSlice(row, 1).AsReadonlyFloatCpuSpan;
+                var predictionWithProba = root.ExtractPredictionWithProba(rowPrediction);
+                Model.Log.Error(predictionWithProba);
+            }
+
+        }
+
+        private static DirectoryDataSet FromDirectory(string path, CategoryHierarchy hierarchy)
+        {
+            Debug.Assert(hierarchy != null);
+            var allFiles = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Where(PictureTools.IsPicture).ToList();
+            var elementIdToPaths = new List<List<string>>();
+            var elementIdToCategoryIndex = new List<int>();
+            foreach (var f in allFiles)
+            {
+                elementIdToPaths.Add(new List<string> { f });
+                elementIdToCategoryIndex.Add(-
