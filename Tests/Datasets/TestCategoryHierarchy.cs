@@ -108,4 +108,31 @@ namespace SharpNetTests.Datasets
             foreach (var f in allFiles)
             {
                 elementIdToPaths.Add(new List<string> { f });
-                elementIdToCategoryIndex.Add(-
+                elementIdToCategoryIndex.Add(-1);
+            }
+
+            int numClass = hierarchy.RootPrediction().Length;
+            return new DirectoryDataSet(
+                elementIdToPaths,
+                elementIdToCategoryIndex,
+                null,
+                path,
+                Objective_enum.Classification,
+                new []{3,-1 /* height */,-1 /* width */}, //!D update with actual height and width
+                numClass,
+                CancelDatabase.CancelMeanAndVolatilityForEachChannel,
+                ResizeStrategyEnum.BiggestCropInOriginalImageToKeepSameProportion,
+                null,
+                null, null);
+        }
+
+        public static CategoryHierarchy StarExample()
+        {
+            var root = CategoryHierarchy.NewRoot("star", "etoile");
+            root.AddAllNumbersWithSameNumberOfDigits("2digits", "", 39);
+            root.Add("full", "_pleine");
+            root.AddAllNumbersWithSameNumberOfDigits("1digit", "", 9);
+            return root;
+        }
+    }
+}
