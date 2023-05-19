@@ -85,4 +85,57 @@ namespace SharpNetTests.GPU
         }
 
         [Test, Explicit]
-     
+        public void BenchmarkTest()
+        {
+            var km = new KernelManager(GpuWrapper);
+
+            const int size = 1<<20;
+            var shape = new [] {1, size, 1, 1};
+            var aCpu = RandomTensor(shape);
+            var bCpu = RandomTensor(shape);
+            var resultCpu = new CpuTensor<float>(shape);
+            const int nbBatchCpu = 10;
+            const int nbBatchGPU = 1000;
+
+            var sw = Stopwatch.StartNew();
+            for (int batchId = 0; batchId < nbBatchCpu; ++batchId)
+            {
+                for (int i = 0; i < aCpu.Count; ++i)
+                {
+                    resultCpu[i] = aCpu[i] + bCpu[i];
+                }
+            }
+            Console.WriteLine("1 CPU Time: " + (sw.Elapsed.TotalMilliseconds / (nbBatchCpu)) + "ms");
+            Console.WriteLine("8 CPU Time: " + (sw.Elapsed.TotalMilliseconds / (nbBatchCpu * 8)) + "ms");
+            Tensor a = aCpu.ToGPU<float>(GpuWrapper);
+            Tensor b = bCpu.ToGPU<float>(GpuWrapper);
+            Tensor resultGpu = new GPUTensor<float>(shape, null, GpuWrapper);
+            sw = Stopwatch.StartNew();
+            for (int batchId = 0; batchId < nbBatchGPU; ++batchId)
+            {
+                km.RunKernel("Sum", resultGpu.Count, new object[] {a, b, resultGpu}, 0);
+            }
+            Console.WriteLine("1 GPU Time: " + (sw.Elapsed.TotalMilliseconds / nbBatchGPU) + "ms");
+        }
+
+        [Test, Explicit]
+        public void BenchmarkTestV2()
+        {
+            var km = new KernelManager(GpuWrapper);
+            const int rows = 1_000;
+            const int cols = 1024;
+            var shape = new[] { rows, cols };
+            var aCpu = TestNetworkPropagation.numpy_array_for_tests(shape); 
+
+            Tensor a = aCpu.ToGPU<float>(GpuWrapper);
+            Tensor mean = new GPUTensor<float>(new[]{ rows},null, GpuWrapper);
+            Tensor variance = new GPUTensor<float>(new[]{ rows},null, GpuWrapper);
+            var sw = Stopwatch.StartNew();
+            const int nb_computes = 100_000;
+            //const int nb_computes = 1;
+
+            var (blocksPerGrid, threadsPerBlock) = KernelManager.Compute_BlocksPerGrid_ThreadsPerBlock_From_rows_cols(rows, cols, GpuWrapper.ThreadsByMultiprocessor);
+            int dynamicSharedMemory = sizeof(float) * (cols+1+cols);
+            int nextColsPowerOf2 = Utils.NextPowerOf2(cols);
+
+            for (int batchId = 0; batchId < nb_computes; ++batch
