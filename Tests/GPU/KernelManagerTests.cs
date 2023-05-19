@@ -138,4 +138,30 @@ namespace SharpNetTests.GPU
             int dynamicSharedMemory = sizeof(float) * (cols+1+cols);
             int nextColsPowerOf2 = Utils.NextPowerOf2(cols);
 
-            for (int batchId = 0; batchId < nb_computes; ++batch
+            for (int batchId = 0; batchId < nb_computes; ++batchId)
+            {
+                km.RunKernel("Compute_Row_Mean_Variance_V2", blocksPerGrid * threadsPerBlock, new object[] { a, mean, variance, cols, nextColsPowerOf2, false }, blocksPerGrid, threadsPerBlock, dynamicSharedMemory);
+                //a.Compute_Row_Mean_Variance(mean, variance, false);
+            }
+            Console.WriteLine($"Total Time: {sw.Elapsed.TotalMilliseconds}ms, {sw.Elapsed.TotalMilliseconds / nb_computes}ms/compute");
+
+            var expectedSum = 0f;
+            var expectedSumSquare = 0f;
+            foreach (var v in aCpu.SpanContent)
+            {
+                expectedSum += v;
+                expectedSumSquare += v*v;
+            }
+
+
+            Console.WriteLine($"Expected Sum of mean: {expectedSum/cols}" );
+            Console.WriteLine($"Observed Sum of mean: {mean.ContentAsFloatArray().Sum()}");
+            Console.WriteLine($"Observed Sum of variance: {variance.ContentAsFloatArray().Sum()}");
+        }
+
+        private CpuTensor<float> RandomTensor(int[] shape)
+        {
+            return TestCpuTensor.RandomFloatTensor(shape, _rand, -1.5, +1.5);
+        }
+    }
+}
