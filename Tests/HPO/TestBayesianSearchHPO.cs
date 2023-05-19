@@ -40,4 +40,36 @@ public class TestBayesianSearchHPO
                        + MathF.Abs(E - 4)
                        + MathF.Abs((E - 4) * (D - 3))
                        + MathF.Abs(G);  
-            return new Score(
+            return new Score(cost,EvaluationMetricEnum.Mae);
+        }
+
+        public override string ToString()
+        {
+            return   "A:"+A
+                   + " B:" + B
+                   + " C:" + C
+                   + " D:" + D
+                   + " E:" + E
+                   + " G:" + G;
+        }
+    }
+
+
+
+    [Test, Explicit]
+    public void TestConvergence()
+    {
+        var testDirectory = Path.Combine(Utils.ChallengesPath, "Natixis70", "Temp");
+        var searchSpace = new Dictionary<string, object>
+        {
+            { "A", Range(-10f, 10f) },
+            { "B", Range(-10f, 10f) },
+            { "C", Range(2, 2) },
+            { "D", Range(-10f, 10f) },
+            { "E", Range(-10f, 10f) },
+            { "G", Range(0f, 0f) },
+        };
+        var hpo = new BayesianSearchHPO(searchSpace, () => new TempClass(), testDirectory);
+        hpo.Process(t => ((TempClass)t).Cost(), 60 );
+    }
+}
