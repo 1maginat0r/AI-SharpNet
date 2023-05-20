@@ -64,4 +64,54 @@ namespace SharpNetTests.NonReg
             var loss_before = (float)lossAccuracyBefore.First(t => t.Key == model.NetworkSample.LossFunction).Value;
 
             Log.Info("-");
-            Log.Info("----------------------------------------
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(model, X, Y, lr, numEpochs, batch_size);
+
+            var predict_after = model.Predict(X, false).ToNumpy();
+            List<KeyValuePair<EvaluationMetricEnum, double>> lossAccuracyAfter = model.ComputeMetricsForValidationDataSet(batch_size, trainingDataSet);
+            var loss_after = (float)lossAccuracyAfter.First(t => t.Key == model.NetworkSample.LossFunction).Value;
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + lr);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batch_size= " + batch_size);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+            return (loss_before, loss_after);
+        }
+
+
+        [Test, Explicit]
+        public void TestParallelRunWithPyTorch_Mse()
+        {
+            using var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_2_3_4_5);
+            using var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_2_3);
+            const double momentum = 0.9;
+            const int deviceId = -1;
+
+            var sample = new NetworkSample
+                {
+                    LossFunction = EvaluationMetricEnum.Mse,
+                    ShuffleDatasetBeforeEachEpoch = false,
+                    AutoSaveIntervalInMinutes = -1,
+                    CompatibilityMode = NetworkSample.CompatibilityModeEnum.PyTorch,
+                    LogNetworkPropagation = true,
+                    ResourceIds = new List<int> { deviceId }
+                }
+                .WithSGD(momentum, false);
+
+            var model = new Network(sample, null, GetDefaultWorkingDirectory(), nameof(TestParallelRunWithPyTorch_Mse), false);
+            model
+                .Input(X.Shape[1], X.Shape[2], X.Shape[3])
+                .Dense(3, 0.0, true)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dense(3, 0.0, false)
+                ;
+
+            TestNetworkPropagation.FromNumpyArray_and_Transpose(
+                    "[[-0.0033482015132904053, 0.23990488052368164, -0.368076980113
