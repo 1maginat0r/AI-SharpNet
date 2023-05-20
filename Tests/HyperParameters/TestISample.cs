@@ -75,4 +75,6 @@ public class TestISample
         Assert.AreEqual("a1", datasetSample.Test_XDatasetPath_InTargetFormat);
         Assert.AreEqual("b1", cloned.DatasetSample.Test_XDatasetPath_InTargetFormat);
         Assert.AreEqual("a2", datasetSample.Test_YDatasetPath_InTargetFormat);
-        Assert.AreEqual("b2", cloned.DatasetSample.Test_YDa
+        Assert.AreEqual("b2", cloned.DatasetSample.Test_YDatasetPath_InTargetFormat);
+    }
+}
