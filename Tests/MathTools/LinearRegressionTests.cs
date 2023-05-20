@@ -54,4 +54,7 @@ namespace SharpNetTests.MathTools
             Assert.AreEqual(expectedPearsonCorrelationCoefficient, lr.PearsonCorrelationCoefficient, 1e-3);
             Assert.AreEqual(expectedPearsonCorrelationCoefficient* expectedPearsonCorrelationCoefficient, lr.RSquared, 1e-3);
             Assert.AreEqual(-39.061955918838656, lr.Estimation(0), 1e-6);
-            Assert.AreEqual(60.198986279375397,
+            Assert.AreEqual(60.198986279375397, lr.Estimation(1.62), 1e-6);
+        }
+    }
+}
