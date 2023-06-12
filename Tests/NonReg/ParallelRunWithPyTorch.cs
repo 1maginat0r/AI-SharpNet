@@ -181,4 +181,8 @@ namespace SharpNetTests.NonReg
 
             Assert.AreEqual(0.6883244514465332, loss_before, 1e-6);
             Assert.AreEqual(0.5018750429153442, loss_after, 1e-6);
-       
+        }
+
+    }
+
+}
