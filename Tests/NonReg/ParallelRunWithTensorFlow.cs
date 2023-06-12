@@ -46,4 +46,53 @@ namespace SharpNetTests.NonReg
             //we ensure that the network prediction is the same as in Keras
             var networkBuilder = EfficientNetNetworkSample.CIFAR10();
             networkBuilder.SetResourceId(0);
-            var network = networkBuilder.EfficientNetB0(NetworkSample.DefaultWo
+            var network = networkBuilder.EfficientNetB0(NetworkSample.DefaultWorkingDirectory, true, "imagenet", new[] {3, 224, 224});
+            var yPredicted = network.Predict(X, false);
+            Assert.IsTrue(TensorExtensions.SameFloatContent(yExpectedFromKeras, yPredicted, 1e-5));
+
+            //we save the network
+            network.Save(network.WorkingDirectory, network.ModelName);
+            network.Dispose();
+
+            //we ensure that the saved version of the network behave the same as the original one
+            var networkFromSavedFile = Network.LoadTrainedNetworkModel(network.WorkingDirectory, network.ModelName);
+            var yPredictedFromSavedFile = networkFromSavedFile.Predict(X, false);
+            Assert.IsTrue(TensorExtensions.SameFloatContent(yExpectedFromKeras, yPredictedFromSavedFile, 1e-5));
+
+            var savedModelFile = Network.ToModelFilePath(network.WorkingDirectory, network.ModelName);
+            File.Delete(savedModelFile);
+            var saveParametersFile = Network.ToParameterFilePath(network.WorkingDirectory, network.ModelName);
+            File.Delete(saveParametersFile);
+        }
+
+
+        /// <summary>
+        /// the width and height of the processed image must be a multiple of '32' in YOLO V3
+        /// </summary>
+        /// <param name="originalHeight"></param>
+        /// <param name="originalWidth"></param>
+        /// <param name="resizedHeight"></param>
+        /// <param name="resizedWidth"></param>
+        // ReSharper disable once UnusedMember.Local
+        private static void PreferredResizedSizeForYoloV3(int originalHeight, int originalWidth, out int resizedHeight, out int resizedWidth)
+        {
+            const double capacity = 608 * 608;
+            double originalCount = originalHeight * originalWidth;
+
+            resizedHeight = originalHeight;
+            resizedWidth = originalWidth;
+
+            if (originalCount > capacity)
+            {
+                double coeff = Math.Sqrt(originalCount / capacity);
+                resizedHeight = (int)(resizedHeight / coeff);
+                resizedWidth = (int)(resizedWidth / coeff);
+            }
+
+            const int forcedSizeMultiple = 32;
+            resizedHeight = forcedSizeMultiple * ((resizedHeight + forcedSizeMultiple - 1) / forcedSizeMultiple);
+            resizedWidth = forcedSizeMultiple * ((resizedWidth + forcedSizeMultiple - 1) / forcedSizeMultiple);
+        }
+
+
+        [Test, Expli
