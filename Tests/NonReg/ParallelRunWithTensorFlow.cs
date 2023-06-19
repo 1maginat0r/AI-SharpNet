@@ -148,4 +148,55 @@ namespace SharpNetTests.NonReg
             Log.Info("--------------------------------------------------------------------");
             Log.Info("-");
 
+            TestNetwork.Fit(network, X, Y, learningRate, numEpochs, batchSize);
+            //network.LogContent();
+
+            var predict_after_tensor = network.Predict(X, false);
+            var predict_after = PredictionToString(predict_after_tensor, "C# prediction_after");
+
+            //network.LogContent();
+
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+        }
+
+        private static string PredictionToString(Tensor prediction, string description)
+        {
+            var tmp = prediction.ToCpuFloat().ReadonlyContent;
+
+            string result = description + " " + Tensor.ShapeToString(prediction.Shape) + Environment.NewLine;
+            int idxMax = tmp.IndexOf(tmp.Max());
+            result += description + "[" + idxMax + "]=" + tmp[idxMax] + Environment.NewLine;
+            result += prediction.ToNumpy();
+            return result;
+        }
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Convolution()
+        {
+            const int numEpochs = 10;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_2_3_4_5);
+            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_2_2);
+
+            int batchSize = X.Shape[0];
+            //var gpuDeviceId = -1;
+            const int gpuDeviceId = 0;
+
+            var sample = new NetworkSample
+                    {
+                        LossFunction = EvaluationMetricEnum.CategoricalCrossentropy,
+                        ShuffleDatasetBeforeEachEpoch = false,
+                        CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                        ResourceIds = new List<int> { gpuDeviceId }
            
