@@ -95,4 +95,57 @@ namespace SharpNetTests.NonReg
         }
 
 
-        [Test, Expli
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Efficientnet()
+        {
+            const int numEpochs = 1;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+
+            var hp = EfficientNetNetworkSample.CIFAR10();
+            hp.SetResourceId(0);
+
+            //int defaultHeight = 32;
+            const int defaultHeight = 224;
+
+            var network = hp.EfficientNetB0(DenseNetNetworkSample.Cifar10WorkingDirectory, true, "imagenet", new[] { 3, defaultHeight, defaultHeight });
+            //network.Save();
+            //var logFileName = Utils.ConcatenatePathWithFileName(NetworkSample.DefaultLogDirectory, "Efficientnet_" + System.Diagnostics.Process.GetCurrentProcess().Id + "_" + System.Threading.Thread.CurrentThread.ManagedThreadId + ".log");
+            //var logger = new Logger(logFileName, true);
+
+            //var xShape = new[] { 1, 3, defaultHeight, defaultHeight };
+            var X = TestNetworkPropagation.FromNumpyArray(Path.Combine(NetworkSample.DefaultDataDirectory, "NonReg", "X_1_224_224_3.txt"));
+            X = (CpuTensor<float>)X.ChangeAxis(new[] { 0, 3, 1, 2 });
+            //for (int i = 0; i < X.Count; ++i)
+            //{
+            //    X.Content[i] = 0;
+            //}
+
+
+            //var X = new CpuTensor<float>(xShape, null, "input_1");
+            //X.Content[0] = 1;
+            //Utils.RandomizeNormalDistribution(X.Content, new Random(), 0, 1);
+            int batchSize = X.Shape[0];
+            var Y = new CpuTensor<float>(new[] { batchSize, 1000 }, null);
+            Y.SpanContent[388] = 1; //panda
+
+            Log.Info("x_train" + Environment.NewLine + X.ToNumpy());
+            Log.Info("y_train" + Environment.NewLine + Y.ToNumpy());
+
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            var predict_before_tensor = network.Predict(X, false);
+            var predict_before = PredictionToString(predict_before_tensor, "C# prediction_before");
+
+            //network.LogContent();
+
+            using var trainingDataSet = new InMemoryDataSet(X, Y, "", Objective_enum.Classification, null);
+            var lossAccuracyBefore = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("-");
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+           
