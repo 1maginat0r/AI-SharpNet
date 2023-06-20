@@ -256,4 +256,39 @@ namespace SharpNetTests.NonReg
             const bool use_causal_mask = false;
 
             var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_3_4_5);
-            //var X = TestNetworkPropagatio
+            //var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_1_1_2);
+            //var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[[0.25,1.25]]], numpy.float)");
+            //var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[[0.25,1.25,2.5]]], numpy.float)");
+            //var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[[0.25,1.25,2.5]]], numpy.float)");
+            //var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[[0.25],[1.25]]], numpy.float)");
+            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_3_3);
+            //var Y = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[1,0]], numpy.float)");
+
+            int batchSize = X.Shape[0];
+            //const int  gpuDeviceId = -1;
+            const int gpuDeviceId = 0;
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.CategoricalCrossentropy,
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ConvolutionAlgoPreference = GPUWrapper.ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM,
+                            ResourceIds = new List<int> { gpuDeviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "TestParallelRunWithTensorFlow_DotProductAttention"
+                );
+
+            network.Input(X.Shape[1], X.Shape[2], -1);
+            var lastLayerIndex = network.LastLayerIndex;
+
+            var conv1D_Q = network.Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true, lastLayerIndex, "conv1D_Q").Layers.Last();
+            var conv1D_V = network.Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true, lastLayerIndex, "conv1D_V").Layers.Last();
+            var conv1D_K = network.Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true, lastLayerIndex, "conv1D_K").Layers.Last();
+
+            network.ScaledDotProductAttention(use_scale, use_causal_mask,conv1D_Q.LayerIndex, conv1D_V.LayerIndex, conv1D_K.LayerIndex);
+            network.Flatten()
+                .Dense(Y.Shape[1], lambdaL2Regularization, false)
+   
