@@ -398,4 +398,58 @@ namespace SharpNetTests.NonReg
             Log.Info("--------------------------------------------------------------------");
             Log.Info("-");
 
-            TestNetwork.Fit(network, X, Y
+            TestNetwork.Fit(network, X, Y, learningRate, numEpochs, batchSize);
+
+            var predict_after = network.Predict(X, false).ToNumpy();
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+        }
+
+
+
+
+        [Test, Explicit]
+        public void Test_Speed_MultiHeadAttention()
+        {
+            const int numEpochs = 50;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            const bool use_causal_mask = true;
+            const int num_heads = 8;
+            const int key_dim = 64;
+            const int value_dim = 64;
+            const bool use_bias_Q_V_K = true;
+            const bool use_bias_O = true;
+            const int embedding_dim = 512;
+
+            var X = TestNetworkPropagation.numpy_array_for_tests(1024, 128, embedding_dim);
+            var Y = TestNetworkPropagation.y_numpy_array_for_tests(X.Shape[0], 3);
+
+            const int batchSize = 32;
+            //const int  gpuDeviceId = -1;
+            const int gpuDeviceId = 0;
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.CategoricalCrossentropy,
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ConvolutionAlgoPreference = GPUWrapper.ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM,
+                            ResourceIds = new List<int> { gpuDeviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "TestParallelRunWithTensorFlow_MultiHeadAttention"
+                );
+
+            network.Input(X.Shape[1], X.Shape[2], -1);
+            var lastLayerI
