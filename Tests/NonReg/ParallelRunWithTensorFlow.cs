@@ -497,4 +497,38 @@ namespace SharpNetTests.NonReg
         [Test, Explicit]
         public void TestParallelRunWithTensorFlow_Conv1D()
         {
-            const int numEpochs 
+            const int numEpochs = 10;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_3_4_5);
+            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_3_3);
+
+            int batchSize = X.Shape[0];
+            //const int  gpuDeviceId = -1;
+            const int gpuDeviceId = 0;
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.CategoricalCrossentropy,
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ResourceIds = new List<int> { gpuDeviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "TestParallelRunWithTensorFlow_Convolution"
+                );
+
+            network.Input(X.Shape[1], X.Shape[2], -1)
+                .Conv1D(2, 3, 1, ConvolutionLayer.PADDING_TYPE.VALID, lambdaL2Regularization, true)
+                .Conv1D(2, 3, 2, ConvolutionLayer.PADDING_TYPE.CAUSAL, lambdaL2Regularization, true)
+                .Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true)
+                .Flatten().Dense(Y.Shape[1], lambdaL2Regularization, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX);
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            //network.Layers[1].Weights.ZeroMemory();
+            TestNetworkPropagation.FromConvNumpyArray("[[[0.09934896230697632, -0.11215364933013916], [0.3982505798339844, 0.342079758644104], [-0.06867659091949463, -0.46536481380462646], [0.2547714114189148, -0.08702009916305542]], [[-0.5021747350692749, -0.1221388578414917], [-0.3608691096305847, 0.3861338496208191], [0.10946327447891235, -0.052802085876464844], [-0.016413629055023193, 0.3857215642929077]], [[0.4184006452560425, -0.2657143771648407], [0.296006977558136, -0.28657031059265137], [-0.016508877277374268, -0.2890245020389557], [0.1388271450996399, 0.02789127826690674]]]").CopyTo(network.Layers[1].Weights);
+            //network.Layers[2].Weights.Zero
