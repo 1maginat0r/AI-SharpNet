@@ -452,4 +452,49 @@ namespace SharpNetTests.NonReg
                 );
 
             network.Input(X.Shape[1], X.Shape[2], -1);
-            var lastLayerI
+            var lastLayerIndex = network.LastLayerIndex;
+
+            var conv1D_Q = network.Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true, lastLayerIndex, "conv1D_Q").Layers.Last();
+            var conv1D_K = network.Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true, lastLayerIndex, "conv1D_K").Layers.Last();
+            var conv1D_V = network.Conv1D(2, 1, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, true, lastLayerIndex, "conv1D_V").Layers.Last();
+
+            network.MultiHeadAttention(num_heads, key_dim, value_dim, use_bias_Q_V_K, use_bias_O, use_causal_mask, conv1D_Q.LayerIndex, conv1D_V.LayerIndex, conv1D_K.LayerIndex);
+            network.Flatten()
+                .Dense(Y.Shape[1], lambdaL2Regularization, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX);
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+
+            network.Sample.LogNetworkPropagation = false;
+            var predict_before = network.Predict(X, false).ToNumpy();
+
+            using var trainingDataSet = new InMemoryDataSet(X, Y);
+            var lossAccuracyBefore = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("-");
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+            var sp = Stopwatch.StartNew();
+
+            TestNetwork.Fit(network, X, Y, learningRate, numEpochs, batchSize);
+
+            var predict_after = network.Predict(X, false).ToNumpy();
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+            Log.Info("Training took " + sp.ElapsedMilliseconds + " ms");
+
+        }
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Conv1D()
+        {
+            const int numEpochs 
