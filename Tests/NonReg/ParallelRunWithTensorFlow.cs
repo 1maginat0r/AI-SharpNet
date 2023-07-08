@@ -635,4 +635,59 @@ namespace SharpNetTests.NonReg
             Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
         }
 
-        [T
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Embedding_3D()
+        {
+            const int numEpochs = 5;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            const int batchSize = 2;
+            const int deviceId = -1;
+            //var deviceId = 0;
+
+            //'X' shape (4,2,3)
+            var X = TestNetworkPropagation.FromNumpyArray("[ [[3000,2,3001,0],[1000,0,1001,5]], [[2000,1,2001,7],[1002,0,1003,9]], [[2002,1,2003,2],[3002,2,3003,8]], [[1003,0,1004,6],[2004,1,2005,4]] ]");
+            //'Y' shape (4,1)
+            var Y = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[1], [0], [1], [0]], numpy.float)");
+
+            var networkSample = new NetworkSample
+            {
+                LossFunction = EvaluationMetricEnum.BinaryCrossentropy,
+                ShuffleDatasetBeforeEachEpoch = false,
+                CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                ResourceIds = new List<int> { deviceId }
+            };
+
+            var network = TestNetwork.NewForTests(
+                        networkSample
+                       .WithAdam(0.9, 0.999, 1e-7),
+                        //.WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "Embedding_3D"
+                );
+
+            network
+                .Input(X.Shape[1], X.Shape[2], -1)
+                .Embedding(new []{3,10}, new[] { 5,5 }, new[] { 1, 3 }, new[] { 0, 1 }, 0.0)
+                //.Flatten()
+                .Dense(1, 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID);
+
+            Log.Info(network.Summary() + Environment.NewLine);
+            
+            var predict_before = network.Predict(X, false).ToNumpy();
+
+            using var trainingDataSet = new InMemoryDataSet(X, Y);
+
+            var lossAccuracyBefore = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("-");
+            Log.Info("- Fit -------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(network, trainingDataSet, learningRate, numEpochs, batchSize, null);
+
+            Log.Info("-");
+            Log.Info("- Using Trained Network -------------------------------------------------------------------");
+            Log.Info(
