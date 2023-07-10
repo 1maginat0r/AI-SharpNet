@@ -745,4 +745,41 @@ namespace SharpNetTests.NonReg
             network.Input(maxWordsBySentence, -1, -1)
                 .Embedding(new [] { vocabularySize }, new[] { embeddingDim }, new[] { -1 }, new[] { 0 }, 0.0)
                 .GlobalAvgPooling()
-      
+                .Dense(4, 0.0, false).Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dense(1, 0.0, false).Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID);
+
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            TestNetworkPropagation.FromNumpyArray("[[-0.020802486687898636, -0.02934335544705391, 0.0035390742123126984, 0.006125748157501221, -0.008332550525665283], [0.0307827927172184, -0.0006774887442588806, 0.0498129241168499, 0.019673515111207962, -0.037462640553712845], [0.020981673151254654, 0.016241561621427536, 0.007225655019283295, -0.013524651527404785, -0.007948171347379684]]")
+                .CopyTo(((EmbeddingLayer)network.Layers[1]).Weights);
+            TestNetworkPropagation.FromNumpyArray("[[0.09049081802368164, -0.45512667298316956, 0.5959198474884033, 0.4528021812438965], [0.2369745969772339, 0.04958134889602661, -0.7929145097732544, 0.6099379062652588], [-0.04944407939910889, -0.18497097492218018, 0.6305867433547974, 0.22337579727172852], [-0.813431978225708, 0.5842254161834717, -0.6403303146362305, 0.7512772083282471], [-0.47131311893463135, 0.26539182662963867, -0.6189195513725281, -0.5728708505630493]]")
+                .CopyTo(((DenseLayer)network.Layers[3]).Weights);
+            TestNetworkPropagation.FromNumpyArray("[[-0.6677531003952026], [0.5261931419372559], [-0.026724934577941895], [0.8222856521606445]]")
+                .CopyTo(((DenseLayer)network.Layers[5]).Weights);
+
+
+            network.Sample.LogNetworkPropagation = true;
+            var predict_before = network.Predict(X, false).ToNumpy();
+
+            using var trainingDataSet = new InMemoryDataSet(X, Y);
+
+
+            var lossAccuracyBefore = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("-");
+            Log.Info("- Fit -------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(network, trainingDataSet, learningRate, numEpochs, batchSize, null);
+
+            Log.Info("-");
+            Log.Info("- Using Trained Network -------------------------------------------------------------------");
+            Log.Info("-");
+
+            var predict_after = network.Predict(X, false).ToNumpy();
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regu
