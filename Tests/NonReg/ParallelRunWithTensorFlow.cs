@@ -690,4 +690,59 @@ namespace SharpNetTests.NonReg
 
             Log.Info("-");
             Log.Info("- Using Trained Network -------------------------------------------------------------------");
-            Log.Info(
+            Log.Info("-");
+
+            var predict_after = network.Predict(X, false).ToNumpy();
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batchSize= " + batchSize);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+        }
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Embedding_GlobalPooling()
+        {
+            const int numEpochs = 5;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            const int batchSize = 2;
+            const int deviceId = -1;
+            //var deviceId = 0;
+            const int vocabularySize = 3;
+            const int embeddingDim = 5;
+            const int maxWordsBySentence = 4;
+
+            var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[1, 1, 1, 2], [2, 2, 2, 2], [1, 2, 2, 2],[1, 1, 1, 1]], numpy.float)");
+            var Y = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[1], [0], [0], [1]], numpy.float)");
+
+
+            var networkSample = new NetworkSample
+            {
+                LossFunction = EvaluationMetricEnum.BinaryCrossentropy,
+                ShuffleDatasetBeforeEachEpoch = false,
+                CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                ResourceIds = new List<int> { deviceId }
+            };
+
+            var network = TestNetwork.NewForTests(
+                        networkSample
+                       .WithAdam(0.9, 0.999, 1e-7),
+                        //.WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "Embedding_GlobalPooling"
+                );
+            network.Sample.LogNetworkPropagation = true;
+
+            Debug.Assert(network.Layers.Count == 0);
+            network.Input(maxWordsBySentence, -1, -1)
+                .Embedding(new [] { vocabularySize }, new[] { embeddingDim }, new[] { -1 }, new[] { 0 }, 0.0)
+                .GlobalAvgPooling()
+      
