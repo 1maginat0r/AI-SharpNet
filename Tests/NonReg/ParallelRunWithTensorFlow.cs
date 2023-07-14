@@ -782,4 +782,58 @@ namespace SharpNetTests.NonReg
 
             Log.Info("C# numEpochs= " + numEpochs);
             Log.Info("C# learningRate= " + learningRate);
-            Log.Info("C# l2regu
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batchSize= " + batchSize);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+        }
+
+
+        private class SarcasmEntry
+        {
+            [JsonProperty("article_link")]
+            public string ArticleLink { get; set; }
+            [JsonProperty("headline")]
+            public string Headline { get; set; }
+            [JsonProperty("is_sarcastic")]
+            public bool IsSarcastic { get; set; }
+        }
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Sarcasm()
+        {
+            const int numEpochs = 30;
+            const double learningRate = 0.001;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            const int batchSize = 128;
+            //var deviceId = -1;
+            const int deviceId = 0;
+            const int vocab_size = 10000;
+            const int embedding_dim = 16;
+            const int max_length = 100;
+            const string oov_tok = "<OOV>";
+            const int training_size = 20000;
+
+            var jsonText = File.ReadAllText(Path.Combine(NetworkSample.DefaultDataDirectory, "Sarcasm", "sarcasm.json"));
+            var allEntries = JsonConvert.DeserializeObject<List< SarcasmEntry>>(jsonText);
+
+            // ReSharper disable once AssignNullToNotNullAttribute
+            var trainingEntries = allEntries.Take(training_size).ToList();
+            var trainingHeadlines = trainingEntries.Select(e => e.Headline).ToList();
+            var tokenizer = new Tokenizer(vocab_size, oov_tok);
+
+            tokenizer.FitOnTexts(trainingHeadlines);
+            var training_sequences = tokenizer.TextsToSequences(trainingHeadlines);
+            //var training_sequences = tokenizer.FitOnTextsAndTextsToSequences(trainingHeadlines);
+
+            var X  = PadSequenceTools.PadSequence(training_sequences, max_length, false, false).Select(x=>(float)x);
+            var Y  = new CpuTensor<float>(new[]{X.Shape[0],1}, trainingEntries.Select(e => e.IsSarcastic?1f:0f).ToArray());
+
+            var networkSample = new NetworkSample
+            {
+                LossFunction = EvaluationMetricEnum.BinaryCrossentropy,
+            
