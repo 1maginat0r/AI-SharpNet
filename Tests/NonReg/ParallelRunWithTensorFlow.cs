@@ -836,4 +836,46 @@ namespace SharpNetTests.NonReg
             var networkSample = new NetworkSample
             {
                 LossFunction = EvaluationMetricEnum.BinaryCrossentropy,
-            
+                ShuffleDatasetBeforeEachEpoch = true,
+                CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                ResourceIds = new List<int> { deviceId }
+            };
+
+            var network = TestNetwork.NewForTests(
+                        networkSample
+                        .WithAdam(0.9, 0.999, 1e-7),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "TestParallelRunWithTensorFlow_Sarcasm"
+                );
+
+            Debug.Assert(network.Layers.Count == 0);
+            network.Input(max_length, -1, -1)
+                .Embedding(new [] { vocab_size }, new[] { embedding_dim }, new[] { -1 }, new[] { 0 }, 0.0)
+                .GlobalAvgPoolingOnHeight()
+                .Dense(24, 0.0, false).Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dense(1, 0.0, false).Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID);
+        
+            //Log.Info(network.Summary() + Environment.NewLine);
+            //network.Sample.LogNetworkPropagation = true;
+            var predict_before = network.Predict(X, false).ToNumpy();
+
+            using var trainingDataSet = new InMemoryDataSet(X, Y);
+            var validationEntries = allEntries.Skip(training_size).ToList();
+            var validationHeadlines = validationEntries.Select(e => e.Headline).ToList();
+            var validation_sequences = tokenizer.TextsToSequences(validationHeadlines);
+            var X_val = PadSequenceTools.PadSequence(validation_sequences, max_length, false, false).Select(x => (float)x);
+            var Y_val = new CpuTensor<float>(new[] { X_val.Shape[0], 1 }, validationEntries.Select(e => e.IsSarcastic ? 1f : 0f).ToArray());
+            using var validationDataSet = new InMemoryDataSet(X_val, Y_val);
+
+            var lossAccuracyBefore = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            //Log.Info("-");
+            //Log.Info("--------------------------------------------------------------------");
+            //Log.Info("-");
+
+            TestNetwork.Fit(network, trainingDataSet, learningRate, numEpochs, batchSize, validationDataSet);
+
+            var predict_after = network.Predict(X, false).ToNumpy();
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numE
