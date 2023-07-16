@@ -878,4 +878,57 @@ namespace SharpNetTests.NonReg
             var predict_after = network.Predict(X, false).ToNumpy();
             var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
 
-            Log.Info("C# numEpochs= " + numE
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+        }
+
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_DownSampling2D()
+        {
+            const int numEpochs = 10;
+            const double learningRate = 0.01;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_2_3_4_5);
+            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_2_3);
+
+            int batchSize = X.Shape[0];
+            const int gpuDeviceId = -1;
+            //var gpuDeviceId = 0;
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.CategoricalCrossentropy,
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ConvolutionAlgoPreference = GPUWrapper.ConvolutionAlgoPreference.FASTEST_DETERMINIST_NO_TRANSFORM,
+                            ResourceIds = new List<int> { gpuDeviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "TestParallelRunWithTensorFlow_DownSampling2D"
+                );
+
+
+            network.Sample.LogNetworkPropagation = true;
+
+            network
+                .Input(X.Shape[1], X.Shape[2], X.Shape[3])
+                .Convolution(4,1,1,ConvolutionLayer.PADDING_TYPE.SAME, 0.0, true)
+                .UpSampling2D(3,2,UpSampling2DLayer.InterpolationEnum.Nearest)
+                .Convolution(1, 3, 2, ConvolutionLayer.PADDING_TYPE.SAME, 0.0, true).Dense(Y.Shape[1], 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SOFTMAX);
+
+            network.Sample.LogNetworkPropagation = true;
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+
+            TestNetworkPropagatio
