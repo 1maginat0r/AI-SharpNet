@@ -1021,4 +1021,54 @@ namespace SharpNetTests.NonReg
 
             Log.Info("C# numEpochs= " + numEpochs);
             Log.Info("C# learningRate= " + learningRate);
-            Log.Info("C# 
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batchSize= " + batchSize);
+            Log.Info(predict_before);
+            Log.Info("C# metrics_before= " + Model.MetricsToString(lossAccuracyBefore, ""));
+            Log.Info(predict_after);
+            Log.Info("C# metrics_after= " + Model.MetricsToString(lossAccuracyAfter, ""));
+        }
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_Mse()
+        {
+            //var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[0,1,2],[3,4,5]], numpy.float)");
+            //var Y = TestNetworkPropagation.FromNumpyArray(@"numpy.array([[0],[5]], numpy.float)");
+
+            var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_2_3_4_5);
+            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_2_3);
+
+
+            const int numEpochs = 10;
+            const double learningRate = 0.1;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            int batchSize = X.Shape[0];
+
+
+            const int deviceId = 0;
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.Mse,
+                            EvaluationMetrics = new List<EvaluationMetricEnum> { EvaluationMetricEnum.Mae },
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ResourceIds = new List<int> { deviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "Mse"
+                );
+
+            network
+                .Input(X.Shape[1], X.Shape[2], X.Shape[3])
+                .Dense(3, 0.0, true)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dense(3, 0.0, false)
+                ;
+
+
+            Log.Info(network.Summary() + Environment.NewLine);
+            TestNetworkPropagation.FromNumpyArray("[[0.14902335405349731, -0.16823047399520874, 0.5973758101463318], [0.513119637966156, -0.10301488637924194, -0.6980472207069397], [0.3821571469306946, -0.13053011894226074, -0.7532621622085571], [-0.18320828676223755, -
