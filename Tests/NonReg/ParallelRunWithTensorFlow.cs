@@ -970,4 +970,55 @@ namespace SharpNetTests.NonReg
             const int batchSize = 2;
 
             var X = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.X_2_3_4_5);
-            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_2_
+            var Y = TestNetworkPropagation.FromNumpyArray(TestNetworkPropagation.Y_2_3);
+
+            const int deviceId = -1;
+            //var deviceId = 0;
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.Huber,
+                            //LossFunction = LossFunctionEnum.BinaryCrossentropy,
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ResourceIds = new List<int> { deviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "Huber"
+                );
+
+            network
+                .Input(X.Shape[1], 1, -1)
+                .Dense(3, 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dense(1, 0.0, false)
+                ;
+
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            TestNetworkPropagation.FromNumpyArray("[[0.17207741737365723, -0.19425582885742188, 0.6897902488708496], [0.5924994945526123, -0.11895132064819336, -0.8060355186462402], [0.44127702713012695, -0.15072321891784668, -0.8697922229766846]]")
+                .CopyTo(((DenseLayer)network.Layers[1]).Weights);
+            TestNetworkPropagation.FromNumpyArray("[[0.6883463859558105], [0.9837051630020142], [0.17996716499328613]]")
+                .CopyTo(((DenseLayer)network.Layers[3]).Weights);
+
+            network.Sample.LogNetworkPropagation = true;
+            var predict_before = network.Predict(X, false).ToNumpy();
+
+            using var trainingDataSet = new InMemoryDataSet(X, Y);
+
+            var lossAccuracyBefore = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("-");
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(network, X, Y, learningRate, numEpochs, batchSize);
+
+            var predict_after = network.Predict(X, false).ToNumpy();
+            var lossAccuracyAfter = network.ComputeMetricsForValidationDataSet(batchSize, trainingDataSet);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# 
