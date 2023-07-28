@@ -1146,4 +1146,58 @@ namespace SharpNetTests.NonReg
             //var Y = TestNetworkPropagation.FromNumpyArray(@"numpy.array([ [[2],[3]] ], numpy.float)");
 
             //var X = TestNetworkPropagation.FromNumpyArray(@"numpy.array([ [[1]] ], numpy.float)");
-            /
+            //var Y = TestNetworkPropagation.FromNumpyArray(@"numpy.array([ [[2]]] ], numpy.float)");
+
+            const int numEpochs = 15;
+            const double learningRate = 0.1;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            int batchSize = X.Shape[0];
+            int timeSteps = X.Shape[1];     //number of words in each sentence
+            int inputSize = X.Shape[2];     //number of distinct words in the dictionary 
+            var returnSequences = Y.Shape[1] != 1;
+            const int deviceId = 0;
+            const int hiddenSize = 2;
+
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.Huber,
+                            EvaluationMetrics = new List<EvaluationMetricEnum> { EvaluationMetricEnum.Mae },
+                            ShuffleDatasetBeforeEachEpoch = false,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ResourceIds = new List<int> { deviceId }
+                        }
+                       .WithSGD(momentum, false),
+                        NetworkSample.DefaultWorkingDirectory,
+                        "GRU"
+                );
+
+
+            network
+                .Input(timeSteps, inputSize, -1)
+                .SimpleRNN(hiddenSize, returnSequences, true)
+                .Dense(1, 0.0, true)
+                ;
+
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            //1 unit
+            //network.Layers[1].Weights.ZeroMemory();
+            //TestNetworkPropagation.FromNumpyArray("[[0.9734686613082886]]").CopyTo(network.Layers[2].Weights);
+
+            //1 unit bidirectional
+            //network.Layers[1].Weights.ZeroMemory();
+            //TestNetworkPropagation.FromNumpyArray("[[-1.243709683418274], [0.6433604955673218]]").CopyTo(network.Layers[2].Weights);
+
+            //2 units
+            //network.Layers[1].Weights.ZeroMemory();
+            //TestNetworkPropagation.FromNumpyArray("[[-1.243709683418274], [0.6433604955673218]]").CopyTo(((DenseLayer)network.Layers[2]).Weights);
+
+            //2 units bidirectional
+            network.Layers[1].Weights.ZeroMemory();
+            TestNetworkPropagation.FromNumpyArray("[[0.18850135803222656], [-0.2127966284751892], [0.7556273937225342], [0.6490507125854492]]").CopyTo(network.Layers[2].Weights);
+
+            network.Sample.LogNetworkPropagation = true;
+            var predict_befor
