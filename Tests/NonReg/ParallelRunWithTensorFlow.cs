@@ -1200,4 +1200,59 @@ namespace SharpNetTests.NonReg
             TestNetworkPropagation.FromNumpyArray("[[0.18850135803222656], [-0.2127966284751892], [0.7556273937225342], [0.6490507125854492]]").CopyTo(network.Layers[2].Weights);
 
             network.Sample.LogNetworkPropagation = true;
-            var predict_befor
+            var predict_before = network.Predict(X, false);
+
+            Log.Info("-");
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(network, X, Y, learningRate, numEpochs, batchSize);
+
+            var predict_after = network.Predict(X, false);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batchSize= " + batchSize);
+            Log.Info("C# hiddenSize= " + hiddenSize);
+            Log.Info("C# return_sequences= " + returnSequences);
+            Log.Info(predict_before.ToShapeAndNumpy());
+            Log.Info("C# metrics_before= " + Model.MetricsToString(network.EpochData[0].TrainingMetrics, ""));
+            Log.Info(predict_after.ToShapeAndNumpy());
+            Log.Info("C# metrics_after= " + Model.MetricsToString(network.EpochData.Last().TrainingMetrics, ""));
+        }
+
+
+        // Mae: 4.87 - val_Mae: 6.24        DEFAULT learningRate = 5*1e-7;
+        // Mae: 4.87 - val_Loss: 71.559 - val_Mae: 6.2359
+        // Mae: 5.78 - val_Mae: 9.15        Huber Loss
+        // Mae: 5.12 - val_Mae: 5.02        Normalization (0 => 1) of input
+        // Mae: 5.31 - val_Mae: 7.29        Input with Mean=0 and Vol=1
+        // Mae: 4.86 - val_Mae: 6.24        WithCyclicCosineAnnealingLearningRateScheduler(2, 2)
+        //-0.16     hiddenSize = 64
+        //-0.09     no shuffle
+        //-0.04     timeSteps = 10
+        //+0.03     timeSteps = 50
+        //+0.03     learningRate = 5*1e-8;
+        //+0.04     learningRate = 1e-7;
+        //+0.15     OLD DEFAULT (Weights_aa.Orthogonal / lr=1e-6 / IsBidirectional / LSTM)
+        //+0.17     Weights_aa.NormalDistribution
+        //+0.35     Weights_aa.GlorotUniform
+        //+0.36     GRU
+        //+0.59     Constant LearningRate
+        //+1.50     learningRate = 1e-8;
+        //+3.00     !IsBidrectional
+        //+6.00     learningRate = 1e-5;
+
+
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_UnivariateTimeSeries()
+        {
+            const int numEpochs = 300;
+            const double learningRate = 5*1e-7;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            const int batchSize = 32;
+            const int trainingDataSetCount = 31*ba
