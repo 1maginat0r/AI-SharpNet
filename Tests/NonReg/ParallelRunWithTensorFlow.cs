@@ -1286,4 +1286,54 @@ namespace SharpNetTests.NonReg
 
             var network = TestNetwork.NewForTests(
                 new NetworkSample
-                 
+                    {
+                        LossFunction = EvaluationMetricEnum.Mse,
+                        EvaluationMetrics = new List<EvaluationMetricEnum> { EvaluationMetricEnum.Mae },
+                        ShuffleDatasetBeforeEachEpoch = shuffle,
+                        CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                        ResourceIds = new List<int> { deviceId }
+                    }
+                    .WithSGD(momentum, false)
+                    .WithCyclicCosineAnnealingLearningRateScheduler(10, 2),
+                NetworkSample.DefaultWorkingDirectory,
+                "TimeSeries"
+                );
+
+            const bool isBidirectional = true;
+            network
+                .Input(timeSteps, inputSize, -1)
+                //.Linear(aNormalization, bNormalization)
+                .LSTM(hiddenSize, true, isBidirectional, 1, 0.0, false)
+                .LSTM(hiddenSize, false, isBidirectional, 1, 0.0, false)
+                .Dense(1, 0.0, true)
+                //.Linear(1f/aNormalization, -bNormalization/aNormalization)
+                .Linear(100f, 0)
+                ;
+
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            //looking for best learning rate
+            //using var resizedDataSet = MappedDataSet.Resize(dataSet, batchSize * 1000, true);
+            //var res = network.FindBestLearningRate(resizedDataSet, 1e-9, 1, batchSize); return;
+
+            //network.Sample.LogNetworkPropagation = true;
+            //var predict_before = network.Predict(trainAndTestDataSet.Training, batchSize);
+
+            Log.Info("-");
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(network, trainAndTestDataSet.Training, learningRate, numEpochs, batchSize, trainAndTestDataSet.Test);
+
+            //var predict_after = network.Predict(dataSet, batchSize);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# trainingDataSetCount= " + trainAndTestDataSet.Training.Count);
+            Log.Info("C# testDataSetCount= " + trainAndTestDataSet.Test.Count);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batchSize= " + batchSize);
+            Log.Info("C# hiddenSize= " + hiddenSize);
+            Log.Info("C# timeSteps= " + timeSteps);
