@@ -1337,3 +1337,54 @@ namespace SharpNetTests.NonReg
             Log.Info("C# batchSize= " + batchSize);
             Log.Info("C# hiddenSize= " + hiddenSize);
             Log.Info("C# timeSteps= " + timeSteps);
+            Log.Info("C# return_sequences= " + returnSequences);
+            Log.Info("C# shuffle= " + shuffle);
+            //Log.Info(predict_before.ToShapeAndNumpy());
+            Log.Info("C# metrics_before= " + Model.TrainingAndValidationMetricsToString(network.EpochData[0].TrainingMetrics, network.EpochData[0].ValidationMetrics));
+            //Log.Info(predict_after.ToShapeAndNumpy());
+            Log.Info("C# metrics_after= " + Model.TrainingAndValidationMetricsToString(network.EpochData.Last().TrainingMetrics, network.EpochData.Last().ValidationMetrics));
+        }
+
+
+
+        [Test, Explicit]
+        public void TestParallelRunWithTensorFlow_IMDB()
+        {
+            const int numEpochs = 10;
+            const double learningRate = 0.001;
+            const double lambdaL2Regularization = 0.00;
+            const double momentum = 0.9;
+            const int batchSize = 32;
+            const int deviceId = 0;
+
+            const int maxWordsBySentence = 250;
+            const int vocabularySize = 2000;
+            const int embeddingDim = 32;
+            
+
+            const bool shuffle = true;
+
+
+            using var fullTrainingAndTestDataSet = new ImdbTrainingAndTestDataset();
+            using var trainAndTestDataSet = fullTrainingAndTestDataSet.Training.SplitIntoTrainingAndValidation(0.8, false, false);
+
+            var network = TestNetwork.NewForTests(
+                        new NetworkSample
+                        {
+                            LossFunction = EvaluationMetricEnum.BinaryCrossentropy,
+                            EvaluationMetrics =  new List<EvaluationMetricEnum> { EvaluationMetricEnum.Accuracy },
+                            ShuffleDatasetBeforeEachEpoch = shuffle,
+                            CompatibilityMode = NetworkSample.CompatibilityModeEnum.TensorFlow,
+                            ResourceIds = new List<int> { deviceId }
+                        }
+                       //.WithSGD(momentum, false),
+                       .WithAdam(),
+                        //.WithCyclicCosineAnnealingLearningRateScheduler(10, 2)
+                        NetworkSample.DefaultWorkingDirectory,
+                        "IMDB"
+                );
+
+            const bool isBidirectional = false;
+            Debug.Assert(network.Layers.Count == 0);
+            network.Input(maxWordsBySentence, -1, -1)
+                .Embedding(new [] { vocabula
