@@ -193,3 +193,144 @@ namespace SharpNetTests.NonReg
         //    var xMiniBatchShape = new[] { miniBatchSize, 3, dataset.Sample.Encoder_TimeSteps, p.CFM60Hyperparameters.Encoder_InputSize };
 
         //    var rand = new Random(0);
+        //    var shuffledElementId = Enumerable.Range(0, dataset.Count).ToArray();
+        //    Utils.Shuffle(shuffledElementId, rand);
+
+        //    var xOriginalNotAugmentedMiniBatchCpu = new CpuTensor<float>(xMiniBatchShape);
+        //    var yBufferMiniBatchCpu = new CpuTensor<float>(yMiniBatchShape);
+
+        //    yBufferMiniBatchCpu.ZeroMemory();
+        //    var swLoad = new Stopwatch();
+
+        //    int count = 0;
+        //    for (int firstElementId = 0; firstElementId <= (dataset.Count - miniBatchSize); firstElementId += miniBatchSize)
+        //    {
+        //        count += miniBatchSize;
+        //        int MiniBatchIdxToElementId(int miniBatchIdx) => shuffledElementId[firstElementId + miniBatchIdx];
+        //        swLoad.Start();
+        //        if (useMultiThreading)
+        //        {
+        //            Parallel.For(0, miniBatchSize, indexInBuffer => dataset.LoadAt(MiniBatchIdxToElementId(indexInBuffer), indexInBuffer, xOriginalNotAugmentedMiniBatchCpu, yBufferMiniBatchCpu, false));
+        //        }
+        //        else
+        //        {
+        //            for (int indexInMiniBatch = 0; indexInMiniBatch < miniBatchSize; ++indexInMiniBatch)
+        //            {
+        //                dataset.LoadAt(MiniBatchIdxToElementId(indexInMiniBatch), indexInMiniBatch, xOriginalNotAugmentedMiniBatchCpu, yBufferMiniBatchCpu, false);
+        //            }
+        //        }
+        //        swLoad.Stop();
+        //    }
+        //    var comment = "count=" + count.ToString("D4") + ",miniBatchSize=" + miniBatchSize.ToString("D4") + ", useMultiThreading=" + (useMultiThreading ? 1 : 0);
+        //    comment += " ; load into memory took " + swLoad.ElapsedMilliseconds.ToString("D4") + " ms";
+        //    Log.Info(comment);
+        //}
+
+
+        //gpu=>gpu (same device)
+        [TestCase("gpu0", "gpu0"), Explicit]
+        //gpu=>gpu (different device)
+        [TestCase("gpu0", "gpu1")]
+        //gpu=>cpu
+        [TestCase("gpu0", "cpu")]
+        //cpu=>gpu
+        [TestCase("cpu", "gpu0")]
+        public void Test_MemoryCopy_Benchmark(string srcDescription, string destDescription)
+        {
+            var chunkSize = new[] { 1_000, 5_000, 10_000, 50_000, 100_000, 500_000, 1_000_000, 5_000_000, 10_000_000, 50_000_000, 100_000_000, 500_000_000, 1_000_000_000 };
+            var maxChunkSize = chunkSize.Max();
+            var src = GetTensor(srcDescription, maxChunkSize);
+            var dest = GetTensor(destDescription, maxChunkSize);
+            foreach (var byteCount in chunkSize)
+            { 
+                ulong loopId = 0;
+                src.ReshapeInPlace(byteCount);
+                dest.ReshapeInPlace(byteCount);
+                var sw = Stopwatch.StartNew();
+                while (sw.ElapsedMilliseconds < 5000)
+                {
+                    src.CopyTo(dest);
+                    ++loopId;
+                }
+                sw.Stop();
+                var speed = (loopId* src.ReallyNeededMemoryInBytes / sw.Elapsed.TotalSeconds) / 1e9;
+                Console.WriteLine("ByteCount: "+Utils.MemoryBytesToString((ulong)byteCount) + ", Avg speed: " + speed + " GB/s");
+                System.IO.File.AppendAllText(Utils.ConcatenatePathWithFileName(NetworkSample.DefaultWorkingDirectory, "MemoryCopy_Benchmark.csv"), DateTime.Now.ToString("F", CultureInfo.InvariantCulture) + ";"+ srcDescription + ";"+ destDescription + ";"+ byteCount + ";"+ speed + ";"+ Environment.NewLine);
+            }
+        }
+        private static Tensor GetTensor(string tensorDescription, int chunkSize)
+        {
+            if (tensorDescription == "gpu1" && GPUWrapper.GetDeviceCount() < 2)
+            {
+                tensorDescription = "gpu0";
+            }
+            switch (tensorDescription)
+            {
+                default:
+                    //case "gpu":
+                    //case "gpu0":
+                    return new GPUTensor<byte>(new[] { chunkSize }, null, GPUWrapper.FromDeviceId(0));
+                case "gpu1":
+                    return new GPUTensor<byte>(new[] { chunkSize }, null, GPUWrapper.FromDeviceId(1));
+                case "cpu":
+                    return new CpuTensor<byte>(new[] { chunkSize }, null);
+            }
+        }
+        [Test, Explicit]
+        public void TestGPUBenchmark_Speed()
+        {
+            var mnist = new MnistDataset();
+            const double learningRate = 0.01;
+            var network = TestNetwork.NewForTests(
+                new NetworkSample()
+                {
+                    ResourceIds = new List<int> { 0 },
+                    BatchSize = 64,
+                    NumEpochs = 5,
+                    DisableReduceLROnPlateau = true
+                }.WithAdam()
+                .WithConstantLearningRateScheduler(learningRate)
+                ,
+                NetworkSample.DefaultWorkingDirectory,
+                "GPUBenchmark"
+                );
+            network
+                .Input(MnistDataset.Shape_CHW)
+                .Convolution(16, 3, 1, ConvolutionLayer.PADDING_TYPE.SAME, 0.0, true)
+                .BatchNorm(0.99, 1e-5)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dropout(0.2)
+                .MaxPooling(2, 2, 2, 2)
+
+                .Convolution(32, 3, 1, ConvolutionLayer.PADDING_TYPE.SAME, 0.0, true)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU).Dense(1000, 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dropout(0.2).Dense(MnistDataset.NumClass, 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID);
+
+            var sw = Stopwatch.StartNew();
+            network.Fit(mnist.Training, mnist.Test);
+            var elapsedMs = sw.Elapsed.TotalSeconds;
+            var lossAndAccuracy = network.ComputeMetricsForValidationDataSet(network.Sample.BatchSize, mnist.Test);
+
+            System.IO.File.AppendAllText(Utils.ConcatenatePathWithFileName(NetworkSample.DefaultWorkingDirectory, "GPUBenchmark_Speed.csv" ), 
+                DateTime.Now.ToString("F", CultureInfo.InvariantCulture) +";"
+                +"MNIST;"
+                + network.GpuWrapper?.DeviceName() + ";"
+                + network.TotalParams() + ";"
+                + network.Sample.NumEpochs + ";"
+                + network.Sample.BatchSize + ";"
+                + learningRate + ";"
+#if DEBUG
+                +"DEBUG;"
+#else
+                + "RELEASE;"
+#endif
+                +elapsedMs+";"
+                +TestNetworkPropagation.GetMetricValue(lossAndAccuracy,EvaluationMetricEnum.CategoricalCrossentropy) +";"
+                +TestNetworkPropagation.GetMetricValue(lossAndAccuracy,EvaluationMetricEnum.Accuracy)
+                +Environment.NewLine
+                );
+        }
+    }
+}
