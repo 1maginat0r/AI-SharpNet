@@ -52,4 +52,29 @@ namespace SharpNetTests.NonReg
                 Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-16-8_GAP_MAX_20200224_0922_70.txt")
             };
 
- 
+            //96.76 <= 96.65 (150 epochs) + 95.88 (70 epochs)
+            //var files = new[]
+            //{
+            //    Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-16-10_GAP_MAX_20200224_1134_150.txt"),
+            //    Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-16-10_GAP_MAX_20200224_1134_70.txt"),
+            //};
+
+            //96.84 <= 96.58 (150 epochs) + 96.00 (70 epochs)
+            //var files = new[]
+            //{
+            //    Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-28-8_GAP_MAX_20200224_1245_150.txt"),
+            //    Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-28-8_GAP_MAX_20200224_1245_70.txt"),
+            //};
+
+            //96.79 <= 96.40 (150 epochs) + 96.05 (70 epochs)
+            //var files = new[]
+            //{
+            //    Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-28-10_20190824_2117_150.txt"),
+            //    Path.Combine(NetworkSample.DefaultDataDirectory, "WRN-28-10_20190824_0947_70.txt"),
+            //};
+
+            var ensembleLearning = new EnsembleLearning(files);
+            ensembleLearning.Predict(cifar10.Test, 64);
+        }
+    }
+}
