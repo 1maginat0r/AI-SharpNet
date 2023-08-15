@@ -1387,4 +1387,43 @@ namespace SharpNetTests.NonReg
             const bool isBidirectional = false;
             Debug.Assert(network.Layers.Count == 0);
             network.Input(maxWordsBySentence, -1, -1)
-                .Embedding(new [] { vocabula
+                .Embedding(new [] { vocabularySize }, new[] { embeddingDim }, new[] { -1 }, new[] { 0 }, lambdaL2Regularization)
+                .Dropout(0.2)
+                .LSTM(32, false, isBidirectional, 1, 0.0, false).Dense(256, lambdaL2Regularization, true)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dropout(0.2).Dense(1, lambdaL2Regularization, true)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID)
+                ;
+
+            Log.Info(network.Summary() + Environment.NewLine);
+
+            //looking for best learning rate
+            //using var resizedDataSet = MappedDataSet.Resize(fullDataSet.Training, batchSize * 1000, true);
+            //var res = network.FindBestLearningRate(resizedDataSet, 1e-9, 1, batchSize); return;
+
+            //network.Sample.LogNetworkPropagation = true;
+            //var predict_before = network.Predict(trainAndTestDataSet.Training.Resize(batchSize, false), batchSize);
+
+            Log.Info("-");
+            Log.Info("--------------------------------------------------------------------");
+            Log.Info("-");
+
+            TestNetwork.Fit(network, trainAndTestDataSet.Training, learningRate, numEpochs, batchSize, trainAndTestDataSet.Test);
+
+            //var predict_after = network.Predict(dataSet, batchSize);
+
+            Log.Info("C# numEpochs= " + numEpochs);
+            Log.Info("C# trainingDataSetCount= " + trainAndTestDataSet.Training.Count);
+            Log.Info("C# testDataSetCount= " + trainAndTestDataSet.Test.Count);
+            Log.Info("C# learningRate= " + learningRate);
+            Log.Info("C# l2regularizer= " + lambdaL2Regularization);
+            Log.Info("C# momentum= " + momentum);
+            Log.Info("C# batchSize= " + batchSize);
+            Log.Info("C# shuffle= " + shuffle);
+            //Log.Info(predict_before.ToShapeAndNumpy());
+            Log.Info("C# metrics_before= " + Model.TrainingAndValidationMetricsToString(network.EpochData[0].TrainingMetrics, network.EpochData[0].ValidationMetrics));
+            //Log.Info(predict_after.ToShapeAndNumpy());
+            Log.Info("C# metrics_after= " + Model.TrainingAndValidationMetricsToString(network.EpochData.Last().TrainingMetrics, network.EpochData.Last().ValidationMetrics));
+        }
+    }
+}
