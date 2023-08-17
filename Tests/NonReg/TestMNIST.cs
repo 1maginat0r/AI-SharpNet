@@ -37,4 +37,27 @@ namespace SharpNetTests.NonReg
             network.Sample.WidthShiftRangeInPercentage = 0.1;
             network.Sample.HeightShiftRangeInPercentage = 0.1;
 
-            var mnist 
+            var mnist = new MnistDataset();
+
+            const double lambdaL2Regularization = 0.0;
+
+            network
+                .Input(MnistDataset.Shape_CHW[0], MnistDataset.Shape_CHW[1], MnistDataset.Shape_CHW[2])
+
+                .Convolution_BatchNorm_Activation(16, 3, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .MaxPooling(2, 2, 2, 2)
+                //.AddBatchNorm()
+                //.AddPooling(2, 2)
+
+                //.AddDropout(0.2)
+
+                .Convolution_BatchNorm_Activation(32, 3, 1, ConvolutionLayer.PADDING_TYPE.SAME, lambdaL2Regularization, cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .MaxPooling(2, 2, 2, 2).Dense(1000, 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_RELU)
+                .Dropout(0.5).Dense(MnistDataset.NumClass, 0.0, false)
+                .Activation(cudnnActivationMode_t.CUDNN_ACTIVATION_SIGMOID);
+
+            network.Fit(mnist.Training, mnist.Test);
+        }
+    }
+}
