@@ -57,4 +57,28 @@ namespace SharpNetTests.ObjectDetection
         [Test]
         public void Test_Union()
         {
-            Assert.AreEqual(topLef
+            Assert.AreEqual(topLeft.Union(bottomRight), 0.5*0.5+0.5*0.5, 1e-6);
+            Assert.AreEqual(topLeft.Union(center), 0.5 * 0.5 + 0.5 * 0.5-0.25*0.25, 1e-6);
+            Assert.AreEqual(bottomRight.Union(center), 0.5 * 0.5 + 0.5 * 0.5-0.25*0.25, 1e-6);
+            Assert.AreEqual(2066.975636, b1.Union(b2), 1e-6);
+            Assert.AreEqual(2066.975636, b2.Union(b1), 1e-6);
+        }
+
+        [Test]
+        public void Test_IoU()
+        {
+            Assert.AreEqual(topLeft.IoU(bottomRight), 0, 1e-6);
+            Assert.AreEqual(topLeft.IoU(center), topLeft.Intersection(center)/ topLeft.Union(center), 1e-6);
+            Assert.AreEqual(bottomRight.IoU(center), topLeft.Intersection(center) / topLeft.Union(center), 1e-6);
+            Assert.AreEqual(0.018287184106, b1.IoU(b2), 1e-6);
+            Assert.AreEqual(0.018287184106, b2.IoU(b1), 1e-6);
+        }
+
+        [Test]
+        public void Test_UpSampling()
+        {
+            Assert.IsTrue(new BoundingBox(3*132.625, 2*76.742, 3*24.594, 2*41.12).Equals(b1.UpSampling(2.0, 3.0), 1e-6));
+        }
+
+    }
+}
