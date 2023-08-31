@@ -26,4 +26,22 @@
 	<PackageReference Include="HDF.PInvoke" Version="1.10.6.1" />
     <PackageReference Include="PhotoSauce.MagicScaler" Version="0.11.1" />
 	<PackageReference Include="CsvHelper" Version="30.0.1" />	
-	<PackageReference Include="Por
+	<PackageReference Include="Porter2StemmerStandard" Version="1.1.0" />
+    <Compile Remove="Properties\AssemblyInfo.cs" />
+    <None Remove="packages.config" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Prod\log4net.config" Link="log4net.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="HDF.PInvoke">
+      <HintPath>..\Dependencies\HDF.PInvoke.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
