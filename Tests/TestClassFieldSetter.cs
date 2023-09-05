@@ -73,4 +73,37 @@ namespace SharpNetTests
             p.Double = 39;
             Assert.AreEqual(39, ClassFieldSetter.Get(p, "Double"));
 
-            p.Doubles = new List<double> { 10.0, 11.
+            p.Doubles = new List<double> { 10.0, 11.0, 12.0 }.ToList();
+            CollectionAssert.AreEqual(new List<double> { 10.0, 11.0, 12.0 }.ToList(), (List<double>)ClassFieldSetter.Get(p, "Doubles"));
+
+            p.String= "38";
+            Assert.AreEqual("38", ClassFieldSetter.Get(p, "String"));
+            p.Enum = NotUsedEnum.A;
+            Assert.AreEqual(NotUsedEnum.A, ClassFieldSetter.Get(p, "Enum"));
+
+            var listEnums = new[] { NotUsedEnum.B, NotUsedEnum.A };
+            p.Enums1 = listEnums.ToList();
+            CollectionAssert.AreEqual(listEnums.ToList(), (List<NotUsedEnum>)ClassFieldSetter.Get(p, "Enums1"));
+
+            p.Enums2 = listEnums.ToArray();
+            CollectionAssert.AreEqual(listEnums.ToArray(), (NotUsedEnum[])ClassFieldSetter.Get(p, "Enums2"));
+        }
+
+        [Test]
+        public void TestToConfigContent()
+        {
+            var p = new TestClass();
+            var observed = ClassFieldSetter.ToConfigContent(p).Trim();
+            var expected = "Bool = True" + Environment.NewLine
+                                         + "Double = 42" + Environment.NewLine
+                                         + "Doubles = 50,51,52" + Environment.NewLine
+                                         + "Enum = C" + Environment.NewLine
+                                         + "Enums1 = C,B" + Environment.NewLine
+                                         + "Enums2 = A,B,B,C" + Environment.NewLine
+                                         + "Float = 42" + Environment.NewLine
+                                         + "Int = 42" + Environment.NewLine
+                                         + "String = 42";
+            Assert.AreEqual(expected, observed);
+        }
+    }
+}
