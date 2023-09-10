@@ -24,4 +24,11 @@ public class TestPorter2StemmerStandard
         Assert.AreEqual(" 17wop7 ", _stemmer.Stem(" 17WoP7 ").Value);
         Assert.AreEqual("walked.", _stemmer.Stem("WalkED.").Value);
         Assert.AreEqual(".walk", _stemmer.Stem(".WalkED").Value);
-        Assert.AreEqual("i walked wait", _stemmer.Stem("I Walked Waiting
+        Assert.AreEqual("i walked wait", _stemmer.Stem("I Walked Waiting").Value);
+
+        //Assert.AreEqual("spec’ed", _stemmer.Stem("spec’ed").Value);
+
+    }
+
+
+}
