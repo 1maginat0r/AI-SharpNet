@@ -38,4 +38,19 @@ namespace SharpNetTests.TextPreprocessing
 
             //pre and post truncating changing the length
             //pre truncating
-         
+            observed = PadSequenceTools.PadSequence(sequences, 2, true, true);
+            expected = new CpuTensor<int>(new[] { 2, 2 }, new[] { 1, 2, 3, 4});
+            Assert.IsTrue(expected.SpanContent.SequenceEqual(observed.SpanContent));
+            observed = PadSequenceTools.PadSequence(sequences, 1, true, true);
+            expected = new CpuTensor<int>(new[] { 2, 1 }, new[] { 2, 4 });
+            Assert.IsTrue(expected.SpanContent.SequenceEqual(observed.SpanContent));
+            //post truncating
+            observed = PadSequenceTools.PadSequence(sequences, 2, true, false);
+            expected = new CpuTensor<int>(new[] { 2, 2 }, new[] { 0, 1, 3, 4 });
+            Assert.IsTrue(expected.SpanContent.SequenceEqual(observed.SpanContent));
+            observed = PadSequenceTools.PadSequence(sequences, 1, true, false);
+            expected = new CpuTensor<int>(new[] { 2, 1 }, new[] { 0, 3 });
+            Assert.IsTrue(expected.SpanContent.SequenceEqual(observed.SpanContent));
+        }
+    }
+}
