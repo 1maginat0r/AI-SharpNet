@@ -49,4 +49,20 @@ namespace SharpNetTests.TextPreprocessing
             Assert.IsTrue(new[] { 2, 3, 1, 4, 5, 1 }.SequenceEqual(tokenizer.TextToSequence("z b g c d f")));
 
             tokenizer = new Tokenizer(3+1, "<OOV>"); //only the 3 most common words +"<OOV>"
-            tokenizer.FitOnTexts(new[] { "z 
+            tokenizer.FitOnTexts(new[] { "z b c d", "b c z", "z b", "z" });
+            Assert.IsTrue(new[] { 2, 3, 1, 4, 1, 1 }.SequenceEqual(tokenizer.TextToSequence("z b g c d f")));
+
+            tokenizer = new Tokenizer(2 + 1); //only the 3 most common words
+            tokenizer.FitOnTexts(new[] { "z b c d", "b c z", "z b", "z" });
+            Assert.IsTrue(new[] { 1, 2, 3}.SequenceEqual(tokenizer.TextToSequence("z b g c d f")));
+        }
+
+        [Test]
+        public void TestSequenceToText()
+        {
+            var tokenizer = new Tokenizer();
+            tokenizer.FitOnTexts(new[] {"z b c d", "b c z", "z b", "z"});
+            Assert.AreEqual("z z d", tokenizer.SequenceToText(new List<int> {1, 1, 4}));
+        }
+    }
+}
